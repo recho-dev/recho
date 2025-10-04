@@ -6,11 +6,13 @@ import {group} from "d3-array";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import * as stdlib from "./stdlib.js";
 import {OUTPUT_MARK} from "./constant.js";
+import {Mutator} from "./mutator.js";
 
 const PREFIX = `//${OUTPUT_MARK}`;
 
 const BUILTINS = {
   recho: () => stdlib,
+  __Mutator__: () => Mutator,
 };
 
 function uid() {
@@ -247,7 +249,8 @@ export function createRuntime(initialCode) {
       for (const variable of variables) variable.delete();
     }
 
-    // @ref https://github.com/observablehq/notebook-kit/blob/02914e034fd21a50ebcdca08df57ef5773864125/src/runtime/define.ts#L33
+    // Derived from Observable Notebook Kit's define.
+    // https://github.com/observablehq/notebook-kit/blob/02914e034fd21a50ebcdca08df57ef5773864125/src/runtime/define.ts#L33
     for (const node of enter) {
       const vid = uid();
       const state = {values: [], variables: [], error: null, doc: false};
