@@ -14,3 +14,4 @@ export {mandelbrotSet} from "./mandelbrot-set.js";
 export {matrixRain} from "./matrix-rain.js";
 export {jsDocString} from "./js-doc-string.js";
 export {commentLink} from "./comment-link.js";
+export {echoKey} from "./echo-key.js";

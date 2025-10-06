@@ -2,7 +2,7 @@ import {transpileJavaScript} from "@observablehq/notebook-kit";
 import {Runtime} from "@observablehq/runtime";
 import inspector from "object-inspect";
 import {parse} from "acorn";
-import {group} from "d3-array";
+import {group, groups} from "d3-array";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import * as stdlib from "./stdlib.js";
 import {OUTPUT_MARK} from "./constant.js";
@@ -46,10 +46,14 @@ function inspect(value, {limit = 200, quote = "double", indent = null} = {}) {
   return string;
 }
 
-function format(value, options) {
-  const string = inspect(value, options);
+function embed(string) {
   const lines = string.split("\n");
   return lines.map((line) => `${PREFIX} ${line}`).join("\n");
+}
+
+function format(value, options) {
+  const string = inspect(value, options);
+  return embed(string);
 }
 
 export function createRuntime(initialCode) {
@@ -71,10 +75,15 @@ export function createRuntime(initialCode) {
     for (const node of nodes) {
       const start = node.start;
       const {values} = node.state;
-      if (values.length) {
-        const output = values.map(({value, options}) => format(value, options)).join("\n") + "\n";
-        changes.push({from: start, insert: output});
+      const groupValues = groups(values, (v) => v.options?.key);
+      let output = "";
+      for (let i = 0; i < groupValues.length; i++) {
+        const [key, values] = groupValues[i];
+        const f = values.map(({value, options}) => inspect(value, options));
+        output += key === undefined ? f : key + ": " + f;
+        output += i === groupValues.length - 1 ? "" : "\n";
       }
+      if (output) changes.push({from: start, insert: embed(output) + "\n"});
     }
 
     dispatch(changes);
