@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useEffect, useRef, useCallback} from "react";
+import {useState, useEffect, useRef, useCallback, useMemo} from "react";
 import {useParams} from "next/navigation";
 import {cn} from "../../../cn.js";
 import {susItems, susScaleLabels, nasaTlxDimensions} from "../../questionnaire-data.ts";
@@ -10,8 +10,10 @@ export default function EvaluationDetailPage() {
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [replayState, setReplayState] = useState({playing: false, index: 0, doc: ""});
+  const [replayIndex, setReplayIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const timerRef = useRef(null);
+  const codeRef = useRef(null);
 
   useEffect(() => {
     fetch(`/api/evaluations/${params.id}`)
@@ -30,7 +32,6 @@ export default function EvaluationDetailPage() {
 
   // Apply a single transaction's changes to a document string
   const applyChanges = useCallback((doc, changes) => {
-    // Process changes in reverse order to keep indices valid
     const sorted = [...changes].sort((a, b) => b.from - a.from);
     let result = doc;
     for (const change of sorted) {
@@ -39,34 +40,82 @@ export default function EvaluationDetailPage() {
     return result;
   }, []);
 
-  // Start replay for selected task
-  function startReplay() {
+  // Precompute all document states and change positions for the selected task
+  const {docStates, changePositions, totalTransactions} = useMemo(() => {
+    if (!evaluation || selectedTask === null || !evaluation.tasks[selectedTask]) {
+      return {docStates: [""], changePositions: [null], totalTransactions: 0};
+    }
     const task = evaluation.tasks[selectedTask];
-    if (!task || task.transactions.length === 0) return;
-
-    // Find the initial doc state from the first transaction that has an initialDoc annotation
-    const initialDoc = task.initialCode || "";
-    setReplayState({playing: true, index: 0, doc: initialDoc});
-
-    let idx = 0;
-    let currentDoc = initialDoc;
-
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      if (idx >= task.transactions.length) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-        setReplayState((s) => ({...s, playing: false}));
-        return;
-      }
-
-      const tx = task.transactions[idx];
+    const states = [];
+    const positions = [];
+    let doc = task.initialCode || "";
+    states.push(doc);
+    positions.push(null);
+    for (const tx of task.transactions) {
       if (tx.docChanged && tx.changes.length > 0) {
-        currentDoc = applyChanges(currentDoc, tx.changes);
+        doc = applyChanges(doc, tx.changes);
+        positions.push(tx.changes[0].from);
+      } else {
+        positions.push(null);
       }
-      idx++;
-      setReplayState({playing: true, index: idx, doc: currentDoc});
+      states.push(doc);
+    }
+    return {docStates: states, changePositions: positions, totalTransactions: task.transactions.length};
+  }, [evaluation, selectedTask, applyChanges]);
+
+  const task = selectedTask !== null && evaluation ? evaluation.tasks[selectedTask] : null;
+
+  // Reset replay index when task changes — show final code
+  useEffect(() => {
+    stopReplay();
+    setReplayIndex(totalTransactions);
+  }, [selectedTask, totalTransactions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll to editing position during replay
+  useEffect(() => {
+    if (!codeRef.current || replayIndex <= 0) return;
+    const charPos = changePositions[replayIndex];
+    if (charPos == null) return;
+    const doc = docStates[replayIndex] || "";
+    const lineNum = doc.substring(0, Math.min(charPos, doc.length)).split("\n").length - 1;
+    const lineHeight = 20;
+    codeRef.current.scrollTop = Math.max(0, lineNum * lineHeight - codeRef.current.clientHeight / 2);
+  }, [replayIndex, docStates, changePositions]);
+
+  // Playback timer
+  useEffect(() => {
+    if (!playing) return;
+
+    const timer = setInterval(() => {
+      setReplayIndex((prev) => {
+        if (prev >= totalTransactions) {
+          clearInterval(timer);
+          setPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
     }, 50);
+
+    timerRef.current = timer;
+
+    return () => {
+      clearInterval(timer);
+      timerRef.current = null;
+    };
+  }, [playing, totalTransactions]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  function startReplay() {
+    if (totalTransactions === 0) return;
+    setReplayIndex(0);
+    setPlaying(true);
   }
 
   function stopReplay() {
@@ -74,22 +123,14 @@ export default function EvaluationDetailPage() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    setReplayState((s) => ({...s, playing: false}));
+    setPlaying(false);
   }
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  // When selected task changes, reset replay and show final code
-  useEffect(() => {
+  function handleSeek(e) {
+    const newIndex = parseInt(e.target.value, 10);
     stopReplay();
-    if (evaluation && selectedTask !== null && evaluation.tasks[selectedTask]) {
-      setReplayState({playing: false, index: 0, doc: evaluation.tasks[selectedTask].finalCode || ""});
-    }
-  }, [selectedTask, evaluation]); // eslint-disable-line react-hooks/exhaustive-deps
+    setReplayIndex(newIndex);
+  }
 
   if (loading) {
     return (
@@ -107,7 +148,6 @@ export default function EvaluationDetailPage() {
     );
   }
 
-  const task = selectedTask !== null ? evaluation.tasks[selectedTask] : null;
   const questionnaire = evaluation.questionnaire;
 
   function formatDuration(start, end) {
@@ -117,6 +157,8 @@ export default function EvaluationDetailPage() {
     const secs = seconds % 60;
     return `${minutes}m ${secs}s`;
   }
+
+  const currentDoc = docStates[replayIndex] ?? "";
 
   return (
     <div className={cn("max-w-screen-lg mx-auto px-4 py-8")}>
@@ -172,8 +214,8 @@ export default function EvaluationDetailPage() {
               </div>
 
               {/* Replay controls */}
-              <div className={cn("flex items-center gap-2 mb-3")}>
-                {replayState.playing ? (
+              <div className={cn("flex items-center gap-2 mb-2")}>
+                {playing ? (
                   <button
                     onClick={stopReplay}
                     className={cn("px-3 py-1 text-sm rounded-md bg-red-600 text-white hover:bg-red-700")}
@@ -183,7 +225,7 @@ export default function EvaluationDetailPage() {
                 ) : (
                   <button
                     onClick={startReplay}
-                    disabled={task.transactions.length === 0}
+                    disabled={totalTransactions === 0}
                     className={cn(
                       "px-3 py-1 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50",
                     )}
@@ -191,20 +233,34 @@ export default function EvaluationDetailPage() {
                     Replay
                   </button>
                 )}
-                <span className={cn("text-xs text-gray-400")}>
-                  {replayState.playing
-                    ? `${replayState.index} / ${task.transactions.length}`
-                    : "Showing final code"}
+                <span className={cn("text-xs text-gray-400 tabular-nums min-w-[100px]")}>
+                  {replayIndex} / {totalTransactions}
+                  {!playing && replayIndex === totalTransactions && " (final)"}
                 </span>
               </div>
 
+              {/* Progress bar */}
+              {totalTransactions > 0 && (
+                <div className={cn("mb-3")}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={totalTransactions}
+                    value={replayIndex}
+                    onChange={handleSeek}
+                    className={cn("w-full accent-blue-600 h-2 cursor-pointer")}
+                  />
+                </div>
+              )}
+
               {/* Code display */}
               <pre
+                ref={codeRef}
                 className={cn(
                   "bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-auto max-h-96 whitespace-pre-wrap",
                 )}
               >
-                {replayState.doc}
+                {currentDoc}
               </pre>
             </div>
           )}
