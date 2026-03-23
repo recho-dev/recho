@@ -12,11 +12,23 @@ interface StartEvaluationDialogProps {
 export function StartEvaluationDialog({open}: StartEvaluationDialogProps) {
   const [name, setName] = useState("");
   const [participantId, setParticipantId] = useState("");
+  const [errors, setErrors] = useState<{name?: string; id?: string}>({});
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const newErrors: {name?: string; id?: string} = {};
+    if (!name.trim()) {
+      newErrors.name = "Please enter the participant's name.";
+    }
     const id = parseInt(participantId, 10);
-    if (!name.trim() || isNaN(id)) return;
+    if (!participantId.trim() || isNaN(id) || id < 1) {
+      newErrors.id = "Please enter a valid participant ID (positive number).";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
     evaluationStore.startEvaluation(name.trim(), id);
     setName("");
     setParticipantId("");
@@ -37,12 +49,15 @@ export function StartEvaluationDialog({open}: StartEvaluationDialogProps) {
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className={cn("w-full border border-gray-300 rounded-md px-3 py-2 text-sm")}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (errors.name) setErrors((prev) => ({...prev, name: undefined}));
+            }}
+            className={cn("w-full border rounded-md px-3 py-2 text-sm", errors.name ? "border-red-400" : "border-gray-300")}
             placeholder="Enter participant name"
             autoFocus
           />
+          {errors.name && <p className={cn("text-red-500 text-xs mt-1")}>{errors.name}</p>}
         </div>
         <div className={cn("mb-6")}>
           <label className={cn("block text-sm font-medium mb-1")}>Participant ID</label>
@@ -57,13 +72,16 @@ export function StartEvaluationDialog({open}: StartEvaluationDialogProps) {
             <input
               type="number"
               value={participantId}
-              onChange={(e) => setParticipantId(e.target.value)}
-              required
+              onChange={(e) => {
+                setParticipantId(e.target.value);
+                if (errors.id) setErrors((prev) => ({...prev, id: undefined}));
+              }}
               min="1"
-              className={cn("flex-1 border border-gray-300 rounded-r-md px-3 py-2 text-sm")}
+              className={cn("flex-1 border rounded-r-md px-3 py-2 text-sm", errors.id ? "border-red-400" : "border-gray-300")}
               placeholder="Enter participant ID"
             />
           </div>
+          {errors.id && <p className={cn("text-red-500 text-xs mt-1")}>{errors.id}</p>}
         </div>
         <div className={cn("flex justify-end gap-2")}>
           <button

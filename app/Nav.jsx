@@ -22,6 +22,46 @@ const styles = {
   dropdownItemSelected: "bg-gray-100",
 };
 
+const mdnLinks = [
+  {
+    category: "Language Basics",
+    links: [
+      {label: "Grammar & Types", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types"},
+      {label: "Control Flow", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Control_flow_and_error_handling"},
+      {label: "Loops & Iteration", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Loops_and_iteration"},
+      {label: "Functions", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions"},
+      {label: "Expressions & Operators", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators"},
+      {label: "Template Literals", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals"},
+    ],
+  },
+  {
+    category: "Built-in Objects",
+    links: [
+      {label: "Array", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"},
+      {label: "String", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"},
+      {label: "Math", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math"},
+      {label: "Number", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number"},
+      {label: "Object", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object"},
+      {label: "Map", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map"},
+      {label: "Set", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set"},
+      {label: "JSON", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON"},
+      {label: "Date", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date"},
+      {label: "RegExp", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp"},
+    ],
+  },
+  {
+    category: "Advanced",
+    links: [
+      {label: "Destructuring", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment"},
+      {label: "Spread Syntax", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax"},
+      {label: "Arrow Functions", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions"},
+      {label: "Classes", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes"},
+      {label: "Promises", href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise"},
+      {label: "async / await", href: "https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Promises"},
+    ],
+  },
+];
+
 function formatElapsed(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -33,7 +73,9 @@ export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mdnOpen, setMdnOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const mdnRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
 
   const evalState = useSyncExternalStore(
@@ -60,11 +102,14 @@ export function Nav() {
     }
   }, [pathname, evalState.active, evalState.currentTaskId, evalState.paused]);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
+      }
+      if (mdnRef.current && !mdnRef.current.contains(event.target)) {
+        setMdnOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -134,6 +179,45 @@ export function Nav() {
             <SafeLink href="/docs" className={cn(styles.link, isSelected("/docs") && styles.selectedLink, "ml-3")}>
               Docs
             </SafeLink>
+            <div className={cn("relative")} ref={mdnRef}>
+              <button
+                onClick={() => setMdnOpen(!mdnOpen)}
+                className={cn(styles.link, mdnOpen && styles.selectedLink)}
+              >
+                MDN
+                <svg className={cn("w-3 h-3 ml-1")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {mdnOpen && (
+                <div
+                  className={cn(
+                    "absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg py-2 z-50",
+                  )}
+                  style={{width: "280px"}}
+                >
+                  {mdnLinks.map((group) => (
+                    <div key={group.category}>
+                      <div className={cn("px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider")}>
+                        {group.category}
+                      </div>
+                      {group.links.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn("block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100")}
+                          onClick={() => setMdnOpen(false)}
+                        >
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <SafeLink href="/examples" className={cn(styles.link, isSelected("/examples") && styles.selectedLink)}>
               Examples
             </SafeLink>
@@ -148,7 +232,7 @@ export function Nav() {
               <Menu className={cn(styles.linkIcon)} />
             </button>
             {dropdownOpen && (
-              <div className={cn(styles.dropdown)}>
+              <div className={cn(styles.dropdown)} style={{minWidth: "200px"}}>
                 <SafeLink
                   href="/docs"
                   className={cn(styles.dropdownItem, isSelected("/docs") && styles.dropdownItemSelected)}
@@ -163,6 +247,22 @@ export function Nav() {
                 >
                   Examples
                 </SafeLink>
+                <div className={cn("border-t border-gray-100 my-1")} />
+                <div className={cn("px-3 py-1 text-xs font-semibold text-gray-400 uppercase")}>MDN Reference</div>
+                {mdnLinks.flatMap((group) =>
+                  group.links.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(styles.dropdownItem)}
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  )),
+                )}
               </div>
             )}
           </div>

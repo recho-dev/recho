@@ -1,5 +1,4 @@
 import {getTaskById} from "./tasks.ts";
-import {exportEvaluationData} from "./export.ts";
 import type {
   EvaluationState,
   TransactionRecord,
@@ -249,9 +248,6 @@ export const evaluationStore = {
         console.error("Failed to finalize evaluation on server:", e);
       }
     }
-
-    // Client-side backup download
-    exportEvaluationData(session);
 
     // Reset state
     setState({

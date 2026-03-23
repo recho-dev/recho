@@ -69,7 +69,7 @@ export default function EvaluationDetailPage() {
   useEffect(() => {
     stopReplay();
     setReplayIndex(totalTransactions);
-  }, [selectedTask, totalTransactions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedTask, totalTransactions]);
 
   // Auto-scroll to editing position during replay
   useEffect(() => {

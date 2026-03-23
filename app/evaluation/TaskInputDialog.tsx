@@ -63,16 +63,15 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
 
   // Confirmation view
   if (confirming) {
-    const task = confirming === "start" ? getTaskById(pendingTaskId) : null;
     return (
       <Dialog open={open}>
         <h2 className={cn("text-lg font-semibold mb-2")}>
-          {confirming === "start" ? "Confirm Start Task" : "Confirm Exit"}
+          {confirming === "start" ? "Confirm Start Task" : "End Tasks"}
         </h2>
         <p className={cn("text-sm text-gray-600 mb-6")}>
           {confirming === "start"
-            ? `Are you sure you want to start Task ${pendingTaskId}: "${task?.title}"?`
-            : "Are you sure you want to exit the evaluation and proceed to the questionnaire?"}
+            ? `By clicking start, you will see the problem statement and be able to work on it. A timer will start, but you can pause to read Docs or leave for JavaScript tutorials.`
+            : "You are about to finish the tasks section. After this, you will be asked to fill out a short questionnaire about your experience. Ready to continue?"}
         </p>
         <div className={cn("flex justify-end gap-2")}>
           <button
@@ -85,10 +84,10 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
             onClick={handleConfirm}
             className={cn(
               "px-4 py-2 text-sm rounded-md text-white",
-              confirming === "exit" ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700",
+              confirming === "exit" ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700",
             )}
           >
-            {confirming === "start" ? "Start Task" : "Exit Evaluation"}
+            {confirming === "start" ? "Start Task" : "Continue to Questionnaire"}
           </button>
         </div>
       </Dialog>
@@ -99,9 +98,12 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
   return (
     <Dialog open={open}>
       <h2 className={cn("text-lg font-semibold mb-2")}>Enter Task ID</h2>
-      <p className={cn("text-sm text-gray-500 mb-4")}>
+      <p className={cn("text-sm text-gray-500 mb-2")}>
         Task {evalState.currentTaskIndex + 1} of 4
         {evalState.currentTaskIndex > 0 && ` (${evalState.currentTaskIndex} completed)`}
+      </p>
+      <p className={cn("text-sm text-gray-500 mb-4")}>
+        The researcher will tell you the task ID to enter below.
       </p>
       <form onSubmit={handleSubmit}>
         <div className={cn("mb-4")}>
@@ -125,7 +127,7 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
             onClick={handleExitClick}
             className={cn("px-4 py-2 text-sm rounded-md border border-red-300 text-red-600 hover:bg-red-50")}
           >
-            Exit Evaluation
+            End Tasks
           </button>
           <button
             type="submit"
