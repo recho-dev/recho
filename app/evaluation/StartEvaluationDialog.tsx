@@ -46,15 +46,24 @@ export function StartEvaluationDialog({open}: StartEvaluationDialogProps) {
         </div>
         <div className={cn("mb-6")}>
           <label className={cn("block text-sm font-medium mb-1")}>Participant ID</label>
-          <input
-            type="number"
-            value={participantId}
-            onChange={(e) => setParticipantId(e.target.value)}
-            required
-            min="1"
-            className={cn("w-full border border-gray-300 rounded-md px-3 py-2 text-sm")}
-            placeholder="Enter participant ID"
-          />
+          <div className={cn("flex items-center")}>
+            <span
+              className={cn(
+                "border border-r-0 border-gray-300 rounded-l-md px-3 py-2 text-sm bg-gray-50 text-gray-500 select-none",
+              )}
+            >
+              P-
+            </span>
+            <input
+              type="number"
+              value={participantId}
+              onChange={(e) => setParticipantId(e.target.value)}
+              required
+              min="1"
+              className={cn("flex-1 border border-gray-300 rounded-r-md px-3 py-2 text-sm")}
+              placeholder="Enter participant ID"
+            />
+          </div>
         </div>
         <div className={cn("flex justify-end gap-2")}>
           <button
