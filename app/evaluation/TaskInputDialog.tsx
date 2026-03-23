@@ -11,9 +11,13 @@ interface TaskInputDialogProps {
   onExit?: () => void;
 }
 
+type ConfirmAction = null | "start" | "exit";
+
 export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
   const [taskId, setTaskId] = useState("");
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState<ConfirmAction>(null);
+  const [pendingTaskId, setPendingTaskId] = useState("");
   const evalState = useSyncExternalStore(
     evaluationStore.subscribe,
     evaluationStore.getSnapshot,
@@ -29,17 +33,69 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
       return;
     }
     setError("");
-    setTaskId("");
-    evaluationStore.setCurrentTask(trimmed);
+    setPendingTaskId(trimmed);
+    setConfirming("start");
   }
 
-  function handleExit() {
-    setTaskId("");
-    setError("");
-    evaluationStore.closeTaskInputDialog();
-    if (onExit) onExit();
+  function handleExitClick() {
+    setConfirming("exit");
   }
 
+  function handleConfirm() {
+    if (confirming === "start") {
+      setTaskId("");
+      setConfirming(null);
+      evaluationStore.setCurrentTask(pendingTaskId);
+      setPendingTaskId("");
+    } else if (confirming === "exit") {
+      setTaskId("");
+      setError("");
+      setConfirming(null);
+      evaluationStore.closeTaskInputDialog();
+      if (onExit) onExit();
+    }
+  }
+
+  function handleCancelConfirm() {
+    setConfirming(null);
+    setPendingTaskId("");
+  }
+
+  // Confirmation view
+  if (confirming) {
+    const task = confirming === "start" ? getTaskById(pendingTaskId) : null;
+    return (
+      <Dialog open={open}>
+        <h2 className={cn("text-lg font-semibold mb-2")}>
+          {confirming === "start" ? "Confirm Start Task" : "Confirm Exit"}
+        </h2>
+        <p className={cn("text-sm text-gray-600 mb-6")}>
+          {confirming === "start"
+            ? `Are you sure you want to start Task ${pendingTaskId}: "${task?.title}"?`
+            : "Are you sure you want to exit the evaluation and proceed to the questionnaire?"}
+        </p>
+        <div className={cn("flex justify-end gap-2")}>
+          <button
+            onClick={handleCancelConfirm}
+            className={cn("px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-100")}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className={cn(
+              "px-4 py-2 text-sm rounded-md text-white",
+              confirming === "exit" ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700",
+            )}
+          >
+            {confirming === "start" ? "Start Task" : "Exit Evaluation"}
+          </button>
+        </div>
+      </Dialog>
+    );
+  }
+
+  // Normal task input view
   return (
     <Dialog open={open}>
       <h2 className={cn("text-lg font-semibold mb-2")}>Enter Task ID</h2>
@@ -66,7 +122,7 @@ export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
         <div className={cn("flex justify-between")}>
           <button
             type="button"
-            onClick={handleExit}
+            onClick={handleExitClick}
             className={cn("px-4 py-2 text-sm rounded-md border border-red-300 text-red-600 hover:bg-red-50")}
           >
             Exit Evaluation
