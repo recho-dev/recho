@@ -14,7 +14,7 @@ export default function EvaluationDetailPage() {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    fetch(`/notebook/api/evaluations/${params.id}`)
+    fetch(`/api/evaluations/${params.id}`)
       .then((res) => res.json())
       .then((data) => {
         setEvaluation(data);

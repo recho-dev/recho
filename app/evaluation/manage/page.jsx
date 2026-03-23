@@ -11,7 +11,7 @@ export default function ManagePage() {
 
   useEffect(() => {
     document.title = "Evaluation Management | Recho Notebook";
-    fetch("/notebook/api/evaluations")
+    fetch("/api/evaluations")
       .then((res) => res.json())
       .then((data) => {
         setEvaluations(data);

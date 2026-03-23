@@ -41,7 +41,7 @@ export function ExamplesClient({examples}) {
               {example.snap ? (
                 <div
                   className={cn("w-full h-full bg-cover bg-center")}
-                  style={{backgroundImage: `url(/notebook/examples/${example.snap})`}}
+                  style={{backgroundImage: `url(/examples/${example.snap})`}}
                 />
               ) : (
                 <ThumbnailClient code={example.content} outputStartLine={example.outputStartLine} />

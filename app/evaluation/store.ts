@@ -64,7 +64,7 @@ export const evaluationStore = {
     // Create server-side evaluation session
     let evaluationId: string | null = null;
     try {
-      const res = await fetch(`/notebook/api/evaluations`, {
+      const res = await fetch(`/api/evaluations`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({participantName: name, participantId: id}),
@@ -189,7 +189,7 @@ export const evaluationStore = {
     // Persist task to server
     if (state.evaluationId) {
       try {
-        await fetch(`/notebook/api/evaluations/${state.evaluationId}/tasks`, {
+        await fetch(`/api/evaluations/${state.evaluationId}/tasks`, {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify(completedTask),
@@ -237,7 +237,7 @@ export const evaluationStore = {
     // Finalize on server
     if (state.evaluationId) {
       try {
-        await fetch(`/notebook/api/evaluations/${state.evaluationId}`, {
+        await fetch(`/api/evaluations/${state.evaluationId}`, {
           method: "PUT",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({
