@@ -8,9 +8,10 @@ import {getTaskById} from "./tasks.ts";
 
 interface TaskInputDialogProps {
   open: boolean;
+  onExit?: () => void;
 }
 
-export function TaskInputDialog({open}: TaskInputDialogProps) {
+export function TaskInputDialog({open, onExit}: TaskInputDialogProps) {
   const [taskId, setTaskId] = useState("");
   const [error, setError] = useState("");
   const evalState = useSyncExternalStore(
@@ -35,7 +36,8 @@ export function TaskInputDialog({open}: TaskInputDialogProps) {
   function handleExit() {
     setTaskId("");
     setError("");
-    evaluationStore.endEvaluation();
+    evaluationStore.closeTaskInputDialog();
+    if (onExit) onExit();
   }
 
   return (

@@ -7,6 +7,7 @@ import type {
   CompletedTask,
   EvaluationSession,
   PauseEvent,
+  QuestionnaireResponse,
 } from "./types.ts";
 
 const listeners = new Set<() => void>();
@@ -34,6 +35,7 @@ let state: EvaluationState = {
   currentTransactions: [],
   currentMouseEvents: [],
   completedTasks: [],
+  questionnaire: null,
 };
 
 let sessionStartTime: number | null = null;
@@ -50,6 +52,10 @@ export const evaluationStore = {
 
   closeStartDialog() {
     setState({showStartDialog: false});
+  },
+
+  closeTaskInputDialog() {
+    setState({showTaskInputDialog: false});
   },
 
   async startEvaluation(name: string, id: number) {
@@ -193,41 +199,39 @@ export const evaluationStore = {
       }
     }
 
-    if (newIndex >= 4) {
-      // All tasks done
-      await this.endEvaluation(newCompletedTasks);
-    } else {
-      setState({
-        completedTasks: newCompletedTasks,
-        currentTaskIndex: newIndex,
-        currentTaskId: null,
-        currentTaskStartTime: null,
-        pausedElapsed: 0,
-        totalPausedMs: 0,
-        currentPauseStart: null,
-        currentPauseEvents: [],
-        currentTransactions: [],
-        currentMouseEvents: [],
-        showCompleteDialog: false,
-        showTaskInputDialog: true,
-        paused: false,
-      });
-    }
+    setState({
+      completedTasks: newCompletedTasks,
+      currentTaskIndex: newIndex,
+      currentTaskId: null,
+      currentTaskStartTime: null,
+      pausedElapsed: 0,
+      totalPausedMs: 0,
+      currentPauseStart: null,
+      currentPauseEvents: [],
+      currentTransactions: [],
+      currentMouseEvents: [],
+      showCompleteDialog: false,
+      showTaskInputDialog: true,
+      paused: false,
+    });
   },
 
-  async endEvaluation(tasksOverride?: CompletedTask[]) {
-    const tasks = tasksOverride ?? state.completedTasks;
+  async submitQuestionnaire(questionnaire: QuestionnaireResponse) {
+    setState({questionnaire});
+    await this.endEvaluation(undefined, questionnaire);
+  },
 
-    // If there's an in-progress task that hasn't been completed, include partial data
-    // (This happens when clicking Exit mid-task)
-    const allTasks = [...tasks];
+  async endEvaluation(tasksOverride?: CompletedTask[], questionnaireOverride?: QuestionnaireResponse) {
+    const tasks = tasksOverride ?? state.completedTasks;
+    const questionnaire = questionnaireOverride ?? state.questionnaire;
 
     const session: EvaluationSession = {
       participantName: state.participantName,
       participantId: state.participantId!,
       sessionStartTime: sessionStartTime!,
       sessionEndTime: Date.now(),
-      tasks: allTasks,
+      tasks: [...tasks],
+      questionnaire,
     };
 
     // Finalize on server
@@ -236,7 +240,10 @@ export const evaluationStore = {
         await fetch(`/notebook/api/evaluations/${state.evaluationId}`, {
           method: "PUT",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({sessionEndTime: session.sessionEndTime}),
+          body: JSON.stringify({
+            sessionEndTime: session.sessionEndTime,
+            questionnaire,
+          }),
         });
       } catch (e) {
         console.error("Failed to finalize evaluation on server:", e);
@@ -266,6 +273,7 @@ export const evaluationStore = {
       currentTransactions: [],
       currentMouseEvents: [],
       completedTasks: [],
+      questionnaire: null,
     });
     sessionStartTime = null;
   },

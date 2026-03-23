@@ -44,6 +44,26 @@ export interface CompletedTask {
   pauseEvents: PauseEvent[];
 }
 
+export interface SUSResponse {
+  items: number[]; // length 10, values 1-5
+  score: number; // computed SUS score (0-100)
+}
+
+export interface NASATLXResponse {
+  mentalDemand: number; // 0-100, step 5
+  physicalDemand: number;
+  temporalDemand: number;
+  performance: number;
+  effort: number;
+  frustration: number;
+}
+
+export interface QuestionnaireResponse {
+  sus: SUSResponse;
+  nasaTlx: NASATLXResponse;
+  submittedAt: number;
+}
+
 export interface EvaluationState {
   active: boolean;
   evaluationId: string | null;
@@ -56,13 +76,14 @@ export interface EvaluationState {
   currentTaskId: string | null;
   currentTaskIndex: number;
   currentTaskStartTime: number | null;
-  pausedElapsed: number; // accumulated elapsed before pause
-  totalPausedMs: number; // total ms spent paused during current task
-  currentPauseStart: number | null; // when the current pause began
+  pausedElapsed: number;
+  totalPausedMs: number;
+  currentPauseStart: number | null;
   currentPauseEvents: PauseEvent[];
   currentTransactions: TransactionRecord[];
   currentMouseEvents: MouseSample[];
   completedTasks: CompletedTask[];
+  questionnaire: QuestionnaireResponse | null;
 }
 
 export interface EvaluationSession {
@@ -71,6 +92,7 @@ export interface EvaluationSession {
   sessionStartTime: number;
   sessionEndTime: number | null;
   tasks: CompletedTask[];
+  questionnaire: QuestionnaireResponse | null;
 }
 
 export interface TaskDefinition {

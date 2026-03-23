@@ -1,7 +1,7 @@
 "use client";
 
-import {usePathname} from "next/navigation";
-import {useState, useEffect, useRef, useSyncExternalStore} from "react";
+import {usePathname, useRouter} from "next/navigation";
+import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {SafeLink} from "./SafeLink.jsx";
 import {cn} from "./cn.js";
 import {Menu, FolderCode, ClipboardCheck, Check, Play} from "lucide-react";
@@ -31,6 +31,7 @@ function formatElapsed(ms) {
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
@@ -214,7 +215,7 @@ export function Nav() {
 
       {/* Evaluation dialogs */}
       <StartEvaluationDialog open={evalState.showStartDialog} />
-      <TaskInputDialog open={evalState.showTaskInputDialog} />
+      <TaskInputDialog open={evalState.showTaskInputDialog} onExit={() => router.push("/evaluation/questionnaire")} />
     </>
   );
 }

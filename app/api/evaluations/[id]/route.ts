@@ -32,6 +32,9 @@ export async function PUT(request: Request, {params}: {params: Promise<{id: stri
     if (body.sessionEndTime != null) {
       data.sessionEndTime = body.sessionEndTime;
     }
+    if (body.questionnaire != null) {
+      data.questionnaire = body.questionnaire;
+    }
 
     await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     return json({ok: true});
