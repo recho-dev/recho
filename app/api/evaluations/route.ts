@@ -15,6 +15,35 @@ function json(data: unknown, status = 200) {
   });
 }
 
+export async function GET() {
+  try {
+    await ensureDir();
+    const files = await fs.readdir(DATA_DIR);
+    const evaluations = [];
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      const data = JSON.parse(await fs.readFile(path.join(DATA_DIR, file), "utf-8"));
+      // Return summary only (no full transaction/mouse data)
+      evaluations.push({
+        id: data.id,
+        participantName: data.participantName,
+        participantId: data.participantId,
+        sessionStartTime: data.sessionStartTime,
+        sessionEndTime: data.sessionEndTime,
+        taskCount: data.tasks?.length ?? 0,
+        hasQuestionnaire: !!data.questionnaire,
+      });
+    }
+    evaluations.sort((a: {sessionStartTime: number}, b: {sessionStartTime: number}) =>
+      b.sessionStartTime - a.sessionStartTime,
+    );
+    return json(evaluations);
+  } catch (e) {
+    console.error("Failed to list evaluations:", e);
+    return json({error: "Failed to list evaluations"}, 500);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const {participantName, participantId} = await request.json();

@@ -95,13 +95,37 @@ export function Nav() {
     return () => clearInterval(interval);
   }, [evalState.active, evalState.currentTaskStartTime, evalState.paused, evalState.totalPausedMs]);
 
+  // Hidden management page access: 5 rapid clicks or Cmd+Ctrl+Shift+click on brand
+  const brandClicksRef = useRef([]);
+
+  function handleBrandClick(e) {
+    // Cmd+Ctrl+Shift+click → instant access
+    if (e.metaKey && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      router.push("/evaluation/manage");
+      return;
+    }
+
+    // Track rapid clicks (within 2s window)
+    const now = Date.now();
+    const clicks = brandClicksRef.current.filter((t) => now - t < 2000);
+    clicks.push(now);
+    brandClicksRef.current = clicks;
+
+    if (clicks.length >= 5) {
+      brandClicksRef.current = [];
+      e.preventDefault();
+      router.push("/evaluation/manage");
+    }
+  }
+
   return (
     <>
       <header className={cn("flex justify-between items-center p-4 border-b border-gray-200")}>
         <div className={cn("flex md:gap-2 items-center ")}>
-          <a href="https://recho.dev" target="_blank" rel="noopener noreferrer">
+          <button onClick={handleBrandClick} className={cn("text-left")}>
             <h1 className={cn("text-xl font-extrabold")}>Recho</h1>
-          </a>
+          </button>
           <SafeLink href="/">
             <h1 className={cn("text-xl hidden md:inline font-medium")}>Notebook</h1>
           </SafeLink>
