@@ -4,3 +4,4 @@ dist
 .next
 out
 .vercel
+data/evaluations/

@@ -1,11 +1,15 @@
 "use client";
 
 import {usePathname} from "next/navigation";
-import {useState, useEffect, useRef} from "react";
+import {useState, useEffect, useRef, useSyncExternalStore} from "react";
 import {SafeLink} from "./SafeLink.jsx";
 import {cn} from "./cn.js";
-import {Plus, Share, Github, Menu, FolderCode} from "lucide-react";
+import {Menu, FolderCode, ClipboardCheck, Check, Play} from "lucide-react";
 import {Tooltip} from "react-tooltip";
+import {evaluationStore} from "./evaluation/store.ts";
+import {StartEvaluationDialog} from "./evaluation/StartEvaluationDialog.tsx";
+import {TaskInputDialog} from "./evaluation/TaskInputDialog.tsx";
+import {TaskCompleteDialog} from "./evaluation/TaskCompleteDialog.tsx";
 
 const styles = {
   linkIcon: "w-5 h-5",
@@ -18,22 +22,42 @@ const styles = {
   dropdownItemSelected: "bg-gray-100",
 };
 
+function formatElapsed(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function Nav() {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [elapsed, setElapsed] = useState(0);
 
-  function handleUpload(e) {
-    e.preventDefault();
-    const confirm = window.confirm(
-      `Make a Pull Request to share your notebook to Examples!\n- Input the filename\n- Copy the code\n- Click the "Commit changes" button`,
-    );
-    if (confirm) window.open("https://github.com/recho-dev/notebook/new/main/app/examples", "_blank");
-  }
+  const evalState = useSyncExternalStore(
+    evaluationStore.subscribe,
+    evaluationStore.getSnapshot,
+    evaluationStore.getServerSnapshot,
+  );
 
   function isSelected(path) {
     return pathname.startsWith(path);
   }
+
+  // Auto-pause when navigating to docs or examples during active evaluation
+  useEffect(() => {
+    if (!evalState.active || !evalState.currentTaskId) return;
+
+    const isOnDocsOrExamples =
+      pathname.startsWith("/docs") || pathname.startsWith("/examples");
+
+    if (isOnDocsOrExamples && !evalState.paused) {
+      evaluationStore.pauseEvaluation(pathname);
+    } else if (!isOnDocsOrExamples && evalState.paused) {
+      evaluationStore.resumeEvaluation();
+    }
+  }, [pathname, evalState.active, evalState.currentTaskId, evalState.paused]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,113 +72,149 @@ export function Nav() {
     };
   }, []);
 
+  // Elapsed time counter for current task
+  useEffect(() => {
+    if (!evalState.active || !evalState.currentTaskStartTime) {
+      setElapsed(0);
+      return;
+    }
+
+    if (evalState.paused) {
+      // Show frozen elapsed time when paused
+      setElapsed(evalState.pausedElapsed);
+      return;
+    }
+
+    // When running, compute elapsed = time since start minus total paused time
+    const update = () => {
+      setElapsed(Date.now() - evalState.currentTaskStartTime - evalState.totalPausedMs);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [evalState.active, evalState.currentTaskStartTime, evalState.paused, evalState.totalPausedMs]);
+
   return (
-    <header className={cn("flex justify-between items-center p-4 border-b border-gray-200")}>
-      <div className={cn("flex md:gap-2 items-center ")}>
-        <a href="https://recho.dev" target="_blank" rel="noopener noreferrer">
-          <h1 className={cn("text-xl font-extrabold")}>Recho</h1>
-        </a>
-        <SafeLink href="/">
-          <h1 className={cn("text-xl hidden md:inline font-medium")}>Notebook</h1>
-        </SafeLink>
-        {/* Desktop navigation */}
-        <div className={cn("hidden md:flex gap-2 items-center")}>
-          <SafeLink href="/docs" className={cn(styles.link, isSelected("/docs") && styles.selectedLink, "ml-3")}>
-            Docs
-          </SafeLink>
-          <SafeLink href="/examples" className={cn(styles.link, isSelected("/examples") && styles.selectedLink)}>
-            Examples
-          </SafeLink>
-          <a
-            href="https://recho.dev/news"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(styles.link, isSelected("/news") && styles.selectedLink)}
-          >
-            News
+    <>
+      <header className={cn("flex justify-between items-center p-4 border-b border-gray-200")}>
+        <div className={cn("flex md:gap-2 items-center ")}>
+          <a href="https://recho.dev" target="_blank" rel="noopener noreferrer">
+            <h1 className={cn("text-xl font-extrabold")}>Recho</h1>
           </a>
+          <SafeLink href="/">
+            <h1 className={cn("text-xl hidden md:inline font-medium")}>Notebook</h1>
+          </SafeLink>
+          {/* Desktop navigation */}
+          <div className={cn("hidden md:flex gap-2 items-center")}>
+            <SafeLink href="/docs" className={cn(styles.link, isSelected("/docs") && styles.selectedLink, "ml-3")}>
+              Docs
+            </SafeLink>
+            <SafeLink href="/examples" className={cn(styles.link, isSelected("/examples") && styles.selectedLink)}>
+              Examples
+            </SafeLink>
+          </div>
+          {/* Mobile navigation */}
+          <div className={cn("md:hidden relative")} ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className={cn(styles.link)}
+              aria-label="More navigation options"
+            >
+              <Menu className={cn(styles.linkIcon)} />
+            </button>
+            {dropdownOpen && (
+              <div className={cn(styles.dropdown)}>
+                <SafeLink
+                  href="/docs"
+                  className={cn(styles.dropdownItem, isSelected("/docs") && styles.dropdownItemSelected)}
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  Docs
+                </SafeLink>
+                <SafeLink
+                  href="/examples"
+                  className={cn(styles.dropdownItem, isSelected("/examples") && styles.dropdownItemSelected)}
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  Examples
+                </SafeLink>
+              </div>
+            )}
+          </div>
         </div>
-        {/* Mobile navigation */}
-        <div className={cn("md:hidden relative")} ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={cn(styles.link)}
-            aria-label="More navigation options"
-          >
-            <Menu className={cn(styles.linkIcon)} />
-          </button>
-          {dropdownOpen && (
-            <div className={cn(styles.dropdown)}>
-              <SafeLink
-                href="/docs"
-                className={cn(styles.dropdownItem, isSelected("/docs") && styles.dropdownItemSelected)}
-                onClick={() => setDropdownOpen(false)}
-              >
-                Docs
-              </SafeLink>
-              <SafeLink
-                href="/examples"
-                className={cn(styles.dropdownItem, isSelected("/examples") && styles.dropdownItemSelected)}
-                onClick={() => setDropdownOpen(false)}
-              >
-                Examples
-              </SafeLink>
-              <a
-                href="https://recho.dev/news"
-                className={cn(styles.dropdownItem, isSelected("/news") && styles.dropdownItemSelected)}
-                onClick={() => setDropdownOpen(false)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                News
-              </a>
-            </div>
+
+        {/* Center: evaluation status indicators */}
+        {evalState.active && (
+          <div className={cn("flex items-center gap-4 text-sm")}>
+            <span className={cn("bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-medium")}>
+              P#{evalState.participantId}
+            </span>
+            {evalState.currentTaskId && (
+              <>
+                <span className={cn("text-gray-500")}>Task {evalState.currentTaskId}</span>
+                <span
+                  className={cn(
+                    "font-mono px-2 py-1 rounded-md",
+                    evalState.paused ? "bg-yellow-100 text-yellow-800" : "bg-gray-100",
+                  )}
+                >
+                  {formatElapsed(elapsed)}
+                  {evalState.paused && " (paused)"}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className={cn("flex gap-2 items-center")}>
+          {!evalState.active ? (
+            <button
+              onClick={() => evaluationStore.openStartDialog()}
+              className={cn(
+                "bg-blue-600 text-white rounded-md px-3 text-sm h-8 font-medium inline-flex items-center gap-1 hover:bg-blue-700",
+              )}
+            >
+              <ClipboardCheck className={cn("w-4 h-4")} />
+              <span className={cn("hidden md:inline")}>Start Evaluation</span>
+            </button>
+          ) : evalState.paused ? (
+            <SafeLink
+              href="/"
+              className={cn(
+                "bg-yellow-600 text-white rounded-md px-3 text-sm h-8 font-medium inline-flex items-center gap-1 hover:bg-yellow-700",
+              )}
+            >
+              <Play className={cn("w-4 h-4")} />
+              <span className={cn("hidden md:inline")}>Resume Evaluation</span>
+            </SafeLink>
+          ) : (
+            <button
+              onClick={() => evaluationStore.openCompleteDialog()}
+              className={cn(
+                "bg-green-700 text-white rounded-md px-3 text-sm h-8 font-medium inline-flex items-center gap-1 hover:bg-green-800",
+              )}
+              disabled={!evalState.currentTaskId}
+            >
+              <Check className={cn("w-4 h-4")} />
+              <span className={cn("hidden md:inline")}>Complete</span>
+            </button>
           )}
+
+          <SafeLink
+            href="/works"
+            className={cn(styles.link, pathname === "/works" && styles.selectedLink)}
+            data-tooltip-id="nav-tooltip"
+            data-tooltip-content="Open Notebooks"
+          >
+            <FolderCode className={cn(styles.linkIcon)} />
+          </SafeLink>
         </div>
-      </div>
-      <div className={cn("flex gap-2 items-center")}>
-        <SafeLink
-          href="/"
-          className={cn(styles.link, pathname === "/" && styles.selectedLink)}
-          data-tooltip-id="nav-tooltip"
-          data-tooltip-content="Create new notebook"
-        >
-          <Plus className={cn(styles.linkIcon)} />
-        </SafeLink>
+        <Tooltip id="nav-tooltip" className={cn(styles.tooltip)} />
+      </header>
 
-        <SafeLink
-          href="/works"
-          className={cn(styles.link, pathname === "/works" && styles.selectedLink)}
-          data-tooltip-id="nav-tooltip"
-          data-tooltip-content="Open Notebooks"
-        >
-          <FolderCode className={cn(styles.linkIcon)} />
-        </SafeLink>
-
-        <a
-          href="https://github.com/recho-dev/notebook/new/main/app/examples"
-          onClick={handleUpload}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(styles.link)}
-          data-tooltip-id="nav-tooltip"
-          data-tooltip-content="Share to Examples"
-        >
-          <Share className={cn(styles.linkIcon)} />
-        </a>
-        <a
-          href="https://github.com/recho-dev/notebook"
-          target="_blank"
-          rel="noreferrer"
-          className={cn(styles.link)}
-          data-tooltip-id="nav-tooltip"
-          data-tooltip-content="Contribute to Recho"
-          data-tooltip-place="bottom-end"
-        >
-          <Github className={cn(styles.linkIcon)} />
-        </a>
-      </div>
-      <Tooltip id="nav-tooltip" className={cn(styles.tooltip)} />
-    </header>
+      {/* Evaluation dialogs */}
+      <StartEvaluationDialog open={evalState.showStartDialog} />
+      <TaskInputDialog open={evalState.showTaskInputDialog} />
+    </>
   );
 }

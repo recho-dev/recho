@@ -32,6 +32,8 @@ export function Editor({
   pinToolbar = true,
   onDuplicate = null,
   onError = onDefaultError,
+  extensions = [],
+  onContainerReady = null,
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -40,7 +42,8 @@ export function Editor({
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.innerHTML = "";
-      editorRef.current = createEditor(containerRef.current, {code: initialCode, onError});
+      editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, extensions});
+      if (onContainerReady) onContainerReady(containerRef.current);
       if (autoRun) onRun();
     }
     return () => {

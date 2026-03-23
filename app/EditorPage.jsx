@@ -1,13 +1,19 @@
 "use client";
-import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
+import {useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Pencil} from "lucide-react";
+import {ViewPlugin} from "@codemirror/view";
+import {Pencil, Grid2X2} from "lucide-react";
 import {Editor} from "./Editor.jsx";
+import {CharacterPicker} from "./character-picker/CharacterPicker.jsx";
 import {getNotebookById, createNotebook, addNotebook, saveNotebook, getNotebooks, duplicateNotebook} from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
 import {cn} from "./cn.js";
 import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH} from "./shared.js";
+import {evaluationStore} from "./evaluation/store.ts";
+import {getTaskById} from "./evaluation/tasks.ts";
+import {createInstrumentationExtension} from "./evaluation/instrumentation.ts";
+import {TaskCompleteDialog} from "./evaluation/TaskCompleteDialog.tsx";
 
 const UNSET = Symbol("UNSET");
 
@@ -27,9 +33,50 @@ export function EditorPage({id: initialId}) {
     isDirtyStore.getSnapshot,
     isDirtyStore.getServerSnapshot,
   );
+  const evalState = useSyncExternalStore(
+    evaluationStore.subscribe,
+    evaluationStore.getSnapshot,
+    evaluationStore.getServerSnapshot,
+  );
   const prevCount = useRef(id ? count : null); // Last saved count.
   const isAdded = prevCount.current === count; // Whether the notebook is added to the storage.
+  const [showCharPicker, setShowCharPicker] = useState(false);
   const timer = useRef(null);
+  const viewRef = useRef(null);
+  const notebookRef = useRef(notebook);
+  notebookRef.current = notebook;
+
+  // ViewPlugin to capture the EditorView reference for character insertion
+  const viewCapturePlugin = useMemo(
+    () =>
+      ViewPlugin.fromClass(
+        class {
+          constructor(view) {
+            viewRef.current = view;
+          }
+          destroy() {
+            viewRef.current = null;
+          }
+        },
+      ),
+    [],
+  );
+
+  const handleInsertChar = useCallback((char) => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch(view.state.replaceSelection(char));
+    view.focus();
+  }, []);
+
+  // Create instrumentation extension for evaluation recording
+  const instrumentationExt = useMemo(() => {
+    if (!evalState.active) return null;
+    return createInstrumentationExtension((record) => {
+      evaluationStore.recordTransaction(record);
+    });
+  }, [evalState.active, evalState.currentTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const onSave = useCallback(() => {
     isDirtyStore.setDirty(false);
@@ -55,6 +102,24 @@ export function EditorPage({id: initialId}) {
     setTitle(initialNotebook.title);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
+
+  // Handle evaluation task loading
+  useEffect(() => {
+    if (!evalState.active || !evalState.currentTaskId) return;
+    const task = getTaskById(evalState.currentTaskId);
+    if (!task) return;
+
+    const evalNotebook = {
+      ...createNotebook(),
+      title: `Task ${task.id}: ${task.title}`,
+      content: task.code,
+      autoRun: false,
+    };
+    setNotebook(evalNotebook);
+    setInitialCode(task.code);
+    setAutoRun(false);
+    setTitle(evalNotebook.title);
+  }, [evalState.active, evalState.currentTaskId]);
 
   useEffect(() => {
     // Use setTimeout to avoid changing to default title.
@@ -94,7 +159,10 @@ export function EditorPage({id: initialId}) {
 
   function onUserInput(code) {
     const newNotebook = {...notebook, content: code};
-    if (isAdded) {
+    if (evalState.active) {
+      // During evaluation, just update local state without saving to localStorage
+      setNotebook(newNotebook);
+    } else if (isAdded) {
       saveNotebook(newNotebook);
       setNotebook(newNotebook);
     } else {
@@ -151,9 +219,21 @@ export function EditorPage({id: initialId}) {
     router.push(`/works/${duplicated.id}`);
   }
 
+  function handleCompleteConfirm() {
+    const finalCode = notebookRef.current?.content ?? "";
+    evaluationStore.completeCurrentTask(finalCode);
+  }
+
+  function handleCompleteCancel() {
+    evaluationStore.closeCompleteDialog();
+  }
+
+  // Build extensions array for the editor
+  const editorExtensions = [viewCapturePlugin, ...(instrumentationExt ? [instrumentationExt] : [])];
+
   return (
     <div>
-      {!isAdded && notebookList.length > 0 && (
+      {!evalState.active && !isAdded && notebookList.length > 0 && (
         <div className={cn("flex h-[72px] bg-gray-100 p-2 w-full border-b border-gray-200")}>
           <div
             className={cn(
@@ -197,53 +277,87 @@ export function EditorPage({id: initialId}) {
           </div>
         </div>
       )}
-      {!isAdded && notebookList.length === 0 && (
+      {!evalState.active && !isAdded && notebookList.length === 0 && (
         <div className={cn("flex items-center justify-center h-[72px] mt-6 mb-10 lg:mb-0")}>
           <p className={cn("text-3xl text-gray-800 font-light text-center mx-10")}>
             Explore code and art with instant feedback.
           </p>
         </div>
       )}
-      <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4 editor-page")}>
-        <Editor
-          initialCode={initialCode}
-          key={notebook.id}
-          onUserInput={onUserInput}
-          onBeforeEachRun={onBeforeEachRun}
-          autoRun={autoRun}
-          onDuplicate={isAdded ? onDuplicate : null}
-          toolBarStart={
-            <div className={cn("flex items-center gap-2")}>
-              {!isAdded && (
-                <button
-                  onClick={onSave}
-                  className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-                >
-                  Create
-                </button>
-              )}
-              {!showInput && isAdded && (
-                <button onClick={onRename}>
-                  <Pencil className="w-4 h-4" />
-                </button>
-              )}
-              {showInput || !isAdded ? (
-                <input
-                  type="text"
-                  value={title}
-                  onChange={onTitleChange}
-                  onBlur={onTitleBlur}
-                  onKeyDown={onTitleKeyDown}
-                  ref={titleRef}
-                  className={cn("border border-gray-200 rounded-md px-3 py-1 text-sm bg-white")}
-                />
-              ) : (
-                <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
-              )}
+      <div
+        className={cn(
+          "lg:mx-auto mx-4 lg:my-10 my-4 editor-page",
+          showCharPicker ? "max-w-screen-xl" : "max-w-screen-lg",
+        )}
+      >
+        <div className={cn("flex gap-4 items-start")}>
+          <div className="flex-1 min-w-0">
+            <Editor
+              initialCode={initialCode}
+              key={evalState.currentTaskId ?? notebook.id}
+              onUserInput={onUserInput}
+              onBeforeEachRun={onBeforeEachRun}
+              autoRun={autoRun}
+              onDuplicate={!evalState.active && isAdded ? onDuplicate : null}
+              extensions={editorExtensions}
+              toolBarStart={
+                <div className={cn("flex items-center gap-2")}>
+                  {!evalState.active && !isAdded && (
+                    <button
+                      onClick={onSave}
+                      className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
+                    >
+                      Create
+                    </button>
+                  )}
+                  {!evalState.active && !showInput && isAdded && (
+                    <button onClick={onRename}>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  {!evalState.active && (showInput || !isAdded) ? (
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={onTitleChange}
+                      onBlur={onTitleBlur}
+                      onKeyDown={onTitleKeyDown}
+                      ref={titleRef}
+                      className={cn("border border-gray-200 rounded-md px-3 py-1 text-sm bg-white")}
+                    />
+                  ) : !evalState.active ? (
+                    <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
+                  ) : (
+                    <span className={cn("text-sm py-1 font-medium")}>{title}</span>
+                  )}
+                  <button
+                    onClick={() => setShowCharPicker((prev) => !prev)}
+                    className={cn(
+                      "w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 transition-colors",
+                      showCharPicker && "bg-gray-200",
+                    )}
+                    title="Toggle Character Picker"
+                  >
+                    <Grid2X2 className="w-4 h-4" />
+                  </button>
+                </div>
+              }
+            />
+          </div>
+          {showCharPicker && (
+            <div className="w-72 flex-shrink-0 hidden md:block">
+              <CharacterPicker onInsert={handleInsertChar} />
             </div>
-          }
-        />
+          )}
+        </div>
       </div>
+
+      {/* Task completion dialog */}
+      <TaskCompleteDialog
+        open={evalState.showCompleteDialog}
+        onConfirm={handleCompleteConfirm}
+        onCancel={handleCompleteCancel}
+      />
     </div>
   );
 }

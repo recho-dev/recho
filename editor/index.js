@@ -50,8 +50,16 @@ export function createEditor(container, options) {
         ],
       }),
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({
+        "data-gramm": "false",
+        "data-gramm_editor": "false",
+        "data-enable-grammarly": "false",
+        "spellcheck": "false",
+        "autocorrect": "off",
+        "autocapitalize": "off",
+      }),
       EditorView.theme({
-        "&": {fontSize: "14px", fontFamily: "monospace"},
+        "&": {fontSize: "14px", fontFamily: '"Spline Sans Mono Variable", "Box Drawing Fallback", monospace'},
         ".cm-content": {whiteSpace: "pre"},
         ".cm-line": {wordWrap: "normal"},
       }),
