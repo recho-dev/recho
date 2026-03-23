@@ -4,6 +4,7 @@ import {useState, useEffect, useRef, useCallback, useMemo} from "react";
 import {useParams} from "next/navigation";
 import {cn} from "../../../cn.js";
 import {susItems, susScaleLabels, nasaTlxDimensions} from "../../questionnaire-data.ts";
+import {ReplayEditor} from "../ReplayEditor.jsx";
 
 export default function EvaluationDetailPage() {
   const params = useParams();
@@ -13,7 +14,6 @@ export default function EvaluationDetailPage() {
   const [replayIndex, setReplayIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const timerRef = useRef(null);
-  const codeRef = useRef(null);
 
   useEffect(() => {
     fetch(`/api/evaluations/${params.id}`)
@@ -69,18 +69,7 @@ export default function EvaluationDetailPage() {
   useEffect(() => {
     stopReplay();
     setReplayIndex(totalTransactions);
-  }, [selectedTask, totalTransactions]);
-
-  // Auto-scroll to editing position during replay
-  useEffect(() => {
-    if (!codeRef.current || replayIndex <= 0) return;
-    const charPos = changePositions[replayIndex];
-    if (charPos == null) return;
-    const doc = docStates[replayIndex] || "";
-    const lineNum = doc.substring(0, Math.min(charPos, doc.length)).split("\n").length - 1;
-    const lineHeight = 20;
-    codeRef.current.scrollTop = Math.max(0, lineNum * lineHeight - codeRef.current.clientHeight / 2);
-  }, [replayIndex, docStates, changePositions]);
+  }, [selectedTask, totalTransactions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Playback timer
   useEffect(() => {
@@ -159,6 +148,7 @@ export default function EvaluationDetailPage() {
   }
 
   const currentDoc = docStates[replayIndex] ?? "";
+  const scrollToPos = changePositions[replayIndex];
 
   return (
     <div className={cn("max-w-screen-lg mx-auto px-4 py-8")}>
@@ -253,15 +243,12 @@ export default function EvaluationDetailPage() {
                 </div>
               )}
 
-              {/* Code display */}
-              <pre
-                ref={codeRef}
-                className={cn(
-                  "bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-auto max-h-96 whitespace-pre-wrap",
-                )}
-              >
-                {currentDoc}
-              </pre>
+              {/* Code display — real CodeMirror editor (readonly) */}
+              <ReplayEditor
+                doc={currentDoc}
+                scrollToPos={scrollToPos}
+                className={cn("border border-gray-200 rounded-lg overflow-hidden")}
+              />
             </div>
           )}
         </section>

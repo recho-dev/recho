@@ -37,8 +37,10 @@ export function createInstrumentationExtension(
           const userEvent = tr.annotation(Transaction.userEvent);
           const remote = tr.annotation(Transaction.remote);
 
-          // Only record user-initiated transactions
-          if (!userEvent) continue;
+          // Record both user-initiated and runtime-initiated transactions
+          // Skip transactions that have no document changes and no user event
+          if (!userEvent && !remote) continue;
+          if (!tr.docChanged) continue;
 
           const changes: ChangeRecord[] = [];
           tr.changes.iterChanges(
