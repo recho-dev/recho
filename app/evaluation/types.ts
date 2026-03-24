@@ -76,6 +76,7 @@ export interface EvaluationState {
   currentTaskId: string | null;
   currentTaskIndex: number;
   currentTaskStartTime: number | null;
+  currentCode: string | null; // live editor content, survives component unmount
   pausedElapsed: number;
   totalPausedMs: number;
   currentPauseStart: number | null;

@@ -27,6 +27,7 @@ let state: EvaluationState = {
   currentTaskId: null,
   currentTaskIndex: 0,
   currentTaskStartTime: null,
+  currentCode: null,
   pausedElapsed: 0,
   totalPausedMs: 0,
   currentPauseStart: null,
@@ -90,6 +91,7 @@ export const evaluationStore = {
     setState({
       currentTaskId: taskId,
       currentTaskStartTime: Date.now(),
+      currentCode: null, // reset — will be populated once the editor loads
       pausedElapsed: 0,
       totalPausedMs: 0,
       currentPauseStart: null,
@@ -99,6 +101,13 @@ export const evaluationStore = {
       showTaskInputDialog: false,
       paused: false,
     });
+  },
+
+  /** Update the live editor content so it survives component unmount (e.g. docs navigation). */
+  updateCurrentCode(code: string) {
+    // Direct mutation to avoid triggering re-renders on every keystroke.
+    // This is intentional — we only need this for persistence, not reactivity.
+    state = {...state, currentCode: code};
   },
 
   pauseEvaluation(reason: string) {
@@ -203,6 +212,7 @@ export const evaluationStore = {
       currentTaskIndex: newIndex,
       currentTaskId: null,
       currentTaskStartTime: null,
+      currentCode: null,
       pausedElapsed: 0,
       totalPausedMs: 0,
       currentPauseStart: null,
@@ -262,6 +272,7 @@ export const evaluationStore = {
       currentTaskId: null,
       currentTaskIndex: 0,
       currentTaskStartTime: null,
+      currentCode: null,
       pausedElapsed: 0,
       totalPausedMs: 0,
       currentPauseStart: null,

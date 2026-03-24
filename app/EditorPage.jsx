@@ -109,20 +109,26 @@ export function EditorPage({id: initialId}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
-  // Handle evaluation task loading
+  // Handle evaluation task loading.
+  // Use evalState.currentCode (if available) to restore editor content after
+  // navigating away (e.g. to docs) and back. This prevents loss of user edits.
   useEffect(() => {
     if (!evalState.active || !evalState.currentTaskId) return;
     const task = getTaskById(evalState.currentTaskId);
     if (!task) return;
 
+    // If the store has saved code (e.g. user navigated to docs and back),
+    // restore it instead of resetting to the task's starter code.
+    const code = evalState.currentCode ?? task.code;
+
     const evalNotebook = {
       ...createNotebook(),
       title: `Task ${task.id}: ${task.title}`,
-      content: task.code,
+      content: code,
       autoRun: false,
     };
     setNotebook(evalNotebook);
-    setInitialCode(task.code);
+    setInitialCode(code);
     setAutoRun(false);
     setTitle(evalNotebook.title);
   }, [evalState.active, evalState.currentTaskId]);
@@ -166,8 +172,10 @@ export function EditorPage({id: initialId}) {
   function onUserInput(code) {
     const newNotebook = {...notebook, content: code};
     if (evalState.active) {
-      // During evaluation, just update local state without saving to localStorage
+      // During evaluation, just update local state without saving to localStorage.
+      // Also persist to evaluation store so code survives navigation (e.g. to docs).
       setNotebook(newNotebook);
+      evaluationStore.updateCurrentCode(code);
     } else if (isAdded) {
       saveNotebook(newNotebook);
       setNotebook(newNotebook);
