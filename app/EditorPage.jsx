@@ -41,6 +41,12 @@ export function EditorPage({id: initialId}) {
   const prevCount = useRef(id ? count : null); // Last saved count.
   const isAdded = prevCount.current === count; // Whether the notebook is added to the storage.
   const [showCharPicker, setShowCharPicker] = useState(false);
+  const [completionMode, setCompletionMode] = useState(() => {
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem("recho-completion-mode") || "enter";
+    }
+    return "enter";
+  });
   const timer = useRef(null);
   const viewRef = useRef(null);
   const notebookRef = useRef(notebook);
@@ -228,6 +234,14 @@ export function EditorPage({id: initialId}) {
     evaluationStore.closeCompleteDialog();
   }
 
+  function toggleCompletionMode() {
+    const next = completionMode === "enter" ? "tab" : "enter";
+    setCompletionMode(next);
+    try {
+      localStorage.setItem("recho-completion-mode", next);
+    } catch {}
+  }
+
   // Build extensions array for the editor
   const editorExtensions = [viewCapturePlugin, ...(instrumentationExt ? [instrumentationExt] : [])];
 
@@ -300,6 +314,7 @@ export function EditorPage({id: initialId}) {
               autoRun={autoRun}
               onDuplicate={!evalState.active && isAdded ? onDuplicate : null}
               extensions={editorExtensions}
+              completionMode={completionMode}
               toolBarStart={
                 <div className={cn("flex items-center gap-2")}>
                   {!evalState.active && !isAdded && (
@@ -339,6 +354,16 @@ export function EditorPage({id: initialId}) {
                     title="Toggle Character Picker"
                   >
                     <Grid2X2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={toggleCompletionMode}
+                    className={cn(
+                      "h-7 flex items-center gap-1 rounded border border-gray-300 px-1.5 text-xs font-mono hover:bg-gray-200 transition-colors select-none",
+                    )}
+                    title={`Accept completions with ${completionMode === "enter" ? "Enter" : "Tab"}. Click to switch.`}
+                  >
+                    <span className={cn("text-gray-400")}>Accept:</span>
+                    <span className={cn("font-semibold")}>{completionMode === "enter" ? "Enter ↵" : "Tab ⇥"}</span>
                   </button>
                 </div>
               }
