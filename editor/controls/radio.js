@@ -213,7 +213,7 @@ export function radio(runtimeRef) {
       annotations: [Transaction.remote.of("control.radio")],
     });
 
-    runtimeRef.restart();
+    runtimeRef.current.run();
 
     return true;
   }
