@@ -123,7 +123,7 @@ export function toggle(runtimeRef) {
     else if (textAfter.startsWith("true")) change = {from: pos, to: pos + 4, insert: "false"};
     else return false;
     view.dispatch({changes: change, annotations: [Transaction.remote.of("control.toggle")]});
-    runtimeRef.restart();
+    runtimeRef.current.run();
     return true;
   }
 

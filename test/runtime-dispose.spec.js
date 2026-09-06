@@ -57,6 +57,40 @@ echo(n);
     await wait();
     expect(globalThis.__rechoUnrelated.disposes).toBe(0);
   });
+
+  it("does not dispose unrelated cells when another cell's source changes", async () => {
+    globalThis.__rechoUnrelated = {starts: 0, disposes: 0};
+    const before = `const x1 = 10;
+{
+  globalThis.__rechoUnrelated.starts++;
+  echo.dispose(() => {
+    globalThis.__rechoUnrelated.disposes++;
+  });
+}
+echo(x1);
+`;
+    const after = `const x1 = 11;
+{
+  globalThis.__rechoUnrelated.starts++;
+  echo.dispose(() => {
+    globalThis.__rechoUnrelated.disposes++;
+  });
+}
+echo(x1);
+`;
+    runtime = createRuntime(before);
+    runtime.onChanges(() => {});
+    runtime.run();
+    await wait();
+    expect(globalThis.__rechoUnrelated.starts).toBe(1);
+    expect(globalThis.__rechoUnrelated.disposes).toBe(0);
+
+    runtime.setCode(after);
+    runtime.run();
+    await wait();
+    expect(globalThis.__rechoUnrelated.disposes).toBe(0);
+    expect(globalThis.__rechoUnrelated.starts).toBe(1);
+  });
 });
 
 describe("runtime destroy", () => {

@@ -360,7 +360,7 @@ export function number(runtimeRef) {
       annotations: [Transaction.remote.of("control.number")],
     });
 
-    runtimeRef.restart();
+    runtimeRef.current.run();
 
     return true;
   }
