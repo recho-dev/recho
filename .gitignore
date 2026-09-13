@@ -6,3 +6,5 @@ out
 .vercel
 .claude
 *.tsbuildinfo
+.env*.local
+.firebase

@@ -3,8 +3,21 @@ import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "re
 import {notFound, useRouter} from "next/navigation";
 import {Pencil} from "lucide-react";
 import {Editor} from "./Editor.jsx";
-import {getNotebookById, createNotebook, addNotebook, saveNotebook, getNotebooks, duplicateNotebook} from "./api.js";
+import {
+  getNotebookById,
+  createNotebook,
+  addNotebook,
+  saveNotebook,
+  saveNotebookDebounced,
+  flushPendingSave,
+  hasUnsavedChanges,
+  getNotebooks,
+  duplicateNotebook,
+  markRunning,
+  clearRunning,
+} from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
+import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
 import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH} from "./shared.js";
@@ -20,6 +33,8 @@ export function EditorPage({id: initialId}) {
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
   const [title, setTitle] = useState("");
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const titleRef = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
@@ -27,34 +42,79 @@ export function EditorPage({id: initialId}) {
     isDirtyStore.getSnapshot,
     isDirtyStore.getServerSnapshot,
   );
+  const {user, loading: authLoading} = useSyncExternalStore(
+    authStore.subscribe,
+    authStore.getSnapshot,
+    authStore.getServerSnapshot,
+  );
+  const uid = user?.uid ?? null;
   const prevCount = useRef(id ? count : null); // Last saved count.
   const isAdded = prevCount.current === count; // Whether the notebook is added to the storage.
+  const canSave = isAdded && !!user; // Local notebooks are read-only until the user logs in.
   const timer = useRef(null);
 
-  const onSave = useCallback(() => {
-    isDirtyStore.setDirty(false);
-    if (isAdded) {
-      saveNotebook(notebook);
-    } else {
-      addNotebook(notebook);
-      prevCount.current = count;
-      const id = notebook.id;
-      setId(id); // Force re-render.
-      window.history.pushState(null, "", `${BASE_PATH}/works/${id}`); // Just update the url, no need to reload the page.
+  const onSave = useCallback(async () => {
+    // Saving requires logging in.
+    if (!(await ensureUser())) return;
+    try {
+      if (isAdded) {
+        await saveNotebook(notebook);
+      } else {
+        await addNotebook(notebook);
+        prevCount.current = count;
+        const id = notebook.id;
+        setId(id); // Force re-render.
+        window.history.pushState(null, "", `${BASE_PATH}/works/${id}`); // Just update the url, no need to reload the page.
+      }
+      isDirtyStore.setDirty(false);
+    } catch (error) {
+      console.error(error);
+      alert(`Failed to save notebook: ${error.message}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notebook]);
 
-  // This effect is triggered when the count changes,
-  // which happens when user clicks the "New" nav link.
-  useEffect(() => {
-    const initialNotebook = isAdded ? getNotebookById(id) : createNotebook();
-    setNotebook(initialNotebook);
+  function loadNotebook(initialNotebook) {
+    setNotebook(initialNotebook ?? null);
+    if (!initialNotebook) return;
     setInitialCode(initialNotebook.content);
     setAutoRun(initialNotebook.autoRun);
     setTitle(initialNotebook.title);
+  }
+
+  // This effect is triggered when the count changes,
+  // which happens when user clicks the "New" nav link.
+  useEffect(() => {
+    if (!isAdded) loadNotebook(createNotebook());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
+
+  // Load the saved notebook once auth is resolved, and again when the user changes.
+  useEffect(() => {
+    if (!isAdded || authLoading) return;
+    // Keep edits made while logged out on screen instead of reloading the
+    // uploaded copy, and save them once the user is logged in.
+    if (notebook !== UNSET && notebook?.id === id && isDirtyStore.getSnapshot()) {
+      if (user) {
+        saveNotebookDebounced(notebook);
+        isDirtyStore.setDirty(false);
+      }
+      return;
+    }
+    let cancelled = false;
+    setLoadError(null);
+    getNotebookById(id)
+      .then((initialNotebook) => !cancelled && loadNotebook(initialNotebook))
+      .catch((error) => {
+        console.error(error);
+        if (!cancelled) setLoadError(error);
+      });
+    return () => (cancelled = true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, authLoading, uid, reloadKey]);
+
+  // Save pending changes when leaving the page.
+  useEffect(() => () => flushPendingSave(), []);
 
   useEffect(() => {
     // Use setTimeout to avoid changing to default title.
@@ -64,13 +124,18 @@ export function EditorPage({id: initialId}) {
   }, [notebook, isAdded]);
 
   useEffect(() => {
-    const notebooks = getNotebooks();
-    setNotebookList(notebooks.slice(0, 4));
-  }, [isAdded]);
+    if (authLoading) return;
+    let cancelled = false;
+    getNotebooks()
+      .then((notebooks) => !cancelled && setNotebookList(notebooks.slice(0, 4)))
+      .catch((error) => console.error(error));
+    return () => (cancelled = true);
+  }, [isAdded, authLoading, uid]);
 
   useEffect(() => {
     const onBeforeUnload = (e) => {
-      if (isDirty) e.preventDefault();
+      // Also warn when edits haven't been written to the cloud yet.
+      if (isDirty || hasUnsavedChanges()) e.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
@@ -88,19 +153,26 @@ export function EditorPage({id: initialId}) {
     if (showInput) titleRef.current.focus();
   }, [showInput]);
 
+  if (loadError) {
+    return (
+      <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>
+        Failed to load notebook.{" "}
+        <button className={cn("text-blue-500 hover:underline")} onClick={() => setReloadKey((key) => key + 1)}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (notebook === UNSET) return <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>Loading...</div>;
 
   if (!notebook) return notFound();
 
   function onUserInput(code) {
     const newNotebook = {...notebook, content: code};
-    if (isAdded) {
-      saveNotebook(newNotebook);
-      setNotebook(newNotebook);
-    } else {
-      setNotebook(newNotebook);
-      isDirtyStore.setDirty(true);
-    }
+    setNotebook(newNotebook);
+    if (canSave) saveNotebookDebounced(newNotebook);
+    else isDirtyStore.setDirty(true);
   }
 
   function onRename() {
@@ -115,7 +187,7 @@ export function EditorPage({id: initialId}) {
     if (!title) return setTitle(notebook.title);
     const newNotebook = {...notebook, title};
     setNotebook(newNotebook);
-    if (isAdded) saveNotebook(newNotebook);
+    if (canSave) saveNotebookDebounced(newNotebook);
     else isDirtyStore.setDirty(true);
   }
 
@@ -130,25 +202,29 @@ export function EditorPage({id: initialId}) {
     }
   }
 
-  // If long-running code is detected, set autoRun to false
+  // If long-running code is detected, disable auto run next time
   // to prevent the browser from freezing on infinite loops
   // and can't continue to edit the code.
   function onBeforeEachRun() {
     if (!isAdded) return;
     if (timer.current) clearTimeout(timer.current);
-    const newNotebook = {...notebook, autoRun: false};
-    saveNotebook(newNotebook);
+    markRunning(notebook.id);
     timer.current = setTimeout(() => {
-      const newNotebook = {...notebook, autoRun: true};
-      saveNotebook(newNotebook);
+      clearRunning(notebook.id);
       timer.current = null;
     }, 100);
   }
 
-  function onDuplicate() {
+  async function onDuplicate() {
+    if (!(await ensureUser())) return;
     const duplicated = duplicateNotebook(notebook);
-    addNotebook(duplicated);
-    router.push(`/works/${duplicated.id}`);
+    try {
+      await addNotebook(duplicated);
+      router.push(`/works/${duplicated.id}`);
+    } catch (error) {
+      console.error(error);
+      alert(`Failed to duplicate notebook: ${error.message}`);
+    }
   }
 
   return (
