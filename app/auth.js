@@ -34,7 +34,9 @@ function init() {
   initialized = true;
   onAuthStateChanged(getFirebase().auth, async (user) => {
     if (user) {
-      // Move notebooks created before logging in to the cloud.
+      // Move notebooks created before logging in to the cloud. If this fails,
+      // they stay in localStorage, are listed alongside cloud notebooks, and
+      // the upload is retried on the next page load.
       await uploadLocalNotebooks(user).catch((error) => console.error("Failed to upload local notebooks", error));
     }
     setState({user, loading: false});

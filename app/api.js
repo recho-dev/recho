@@ -134,9 +134,15 @@ function writeNotebook(user, notebook) {
 
 export async function getNotebooks() {
   const user = currentUser();
-  if (!user) return getLocalNotebooks().map(normalizeNotebook);
+  const localNotebooks = getLocalNotebooks();
+  if (!user) return localNotebooks.map(normalizeNotebook);
   const snapshot = await getDocs(query(notebooksCollection(user), orderBy("updated", "desc")));
-  return snapshot.docs.map((d) => normalizeNotebook({...d.data(), id: d.id}));
+  const notebooks = snapshot.docs.map((d) => ({...d.data(), id: d.id}));
+  // Local notebooks are left behind if uploading them failed.
+  // Keep listing them until the upload is retried successfully.
+  const ids = new Set(notebooks.map((notebook) => notebook.id));
+  const leftovers = localNotebooks.filter((notebook) => !ids.has(notebook.id));
+  return [...notebooks, ...leftovers].sort((a, b) => new Date(b.updated) - new Date(a.updated)).map(normalizeNotebook);
 }
 
 export async function getNotebookById(id) {
@@ -145,9 +151,9 @@ export async function getNotebookById(id) {
   if (user) {
     const snapshot = await getDoc(notebookDoc(user, id));
     notebook = snapshot.exists() ? {...snapshot.data(), id} : undefined;
-  } else {
-    notebook = getLocalNotebooks().find((f) => f.id === id);
   }
+  // Fall back to local notebooks, including ones that failed to upload.
+  notebook ??= getLocalNotebooks().find((f) => f.id === id);
   if (!notebook) return undefined;
   // Don't auto run if the last run never finished, e.g. an infinite loop froze the page.
   return {...normalizeNotebook(notebook), autoRun: !isRunning(id)};
@@ -156,6 +162,9 @@ export async function getNotebookById(id) {
 export async function deleteNotebook(id) {
   if (!confirm("Are you sure you want to delete this notebook?")) return false;
   await deleteDoc(notebookDoc(requireUser(), id));
+  // Also delete a local copy that failed to upload, so it doesn't reappear.
+  const localNotebooks = getLocalNotebooks();
+  if (localNotebooks.some((f) => f.id === id)) saveLocalNotebooks(localNotebooks.filter((f) => f.id !== id));
   return true;
 }
 
@@ -176,7 +185,11 @@ export async function saveNotebook(notebook) {
 
 const SAVE_DELAY = 800;
 
+const RETRY_DELAY = 5000;
+
 let pendingSave = null;
+
+let savesInFlight = 0;
 
 // Save on typing without writing to the cloud on every keystroke.
 export function saveNotebookDebounced(notebook) {
@@ -190,14 +203,34 @@ export function flushPendingSave() {
   const {notebook, timer} = pendingSave;
   clearTimeout(timer);
   pendingSave = null;
-  saveNotebook(notebook).catch((error) => console.error("Failed to save notebook", error));
+  savesInFlight++;
+  saveNotebook(notebook)
+    .catch((error) => {
+      console.error("Failed to save notebook, retrying", error);
+      // Retry unless a newer change is already queued or the user logged out.
+      if (!pendingSave && currentUser()) {
+        pendingSave = {notebook, timer: setTimeout(flushPendingSave, RETRY_DELAY)};
+      }
+    })
+    .finally(() => savesInFlight--);
+}
+
+// Whether some edits are queued, being written, or waiting for a retry.
+export function hasUnsavedChanges() {
+  return pendingSave !== null || savesInFlight > 0;
 }
 
 // Batched writes are limited to 500 operations.
 const BATCH_SIZE = 500;
 
 export async function uploadLocalNotebooks(user) {
-  const notebooks = getLocalNotebooks().map(normalizeNotebook);
+  const localNotebooks = getLocalNotebooks();
+  if (localNotebooks.length === 0) return 0;
+  // Skip notebooks already in the cloud, so a retried upload never
+  // overwrites newer cloud edits with a stale local copy.
+  const existing = await getDocs(notebooksCollection(user));
+  const ids = new Set(existing.docs.map((d) => d.id));
+  const notebooks = localNotebooks.filter((notebook) => !ids.has(notebook.id)).map(normalizeNotebook);
   for (let i = 0; i < notebooks.length; i += BATCH_SIZE) {
     const batch = writeBatch(getFirebase().db);
     for (const notebook of notebooks.slice(i, i + BATCH_SIZE)) {

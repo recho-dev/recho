@@ -10,6 +10,7 @@ import {
   saveNotebook,
   saveNotebookDebounced,
   flushPendingSave,
+  hasUnsavedChanges,
   getNotebooks,
   duplicateNotebook,
   markRunning,
@@ -32,6 +33,8 @@ export function EditorPage({id: initialId}) {
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
   const [title, setTitle] = useState("");
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const titleRef = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
@@ -89,16 +92,26 @@ export function EditorPage({id: initialId}) {
   // Load the saved notebook once auth is resolved, and again when the user changes.
   useEffect(() => {
     if (!isAdded || authLoading) return;
+    // Keep edits made while logged out on screen instead of reloading the
+    // uploaded copy, and save them once the user is logged in.
+    if (notebook !== UNSET && notebook?.id === id && isDirtyStore.getSnapshot()) {
+      if (user) {
+        saveNotebookDebounced(notebook);
+        isDirtyStore.setDirty(false);
+      }
+      return;
+    }
     let cancelled = false;
+    setLoadError(null);
     getNotebookById(id)
       .then((initialNotebook) => !cancelled && loadNotebook(initialNotebook))
       .catch((error) => {
         console.error(error);
-        if (!cancelled) loadNotebook(null);
+        if (!cancelled) setLoadError(error);
       });
     return () => (cancelled = true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, authLoading, uid]);
+  }, [count, authLoading, uid, reloadKey]);
 
   // Save pending changes when leaving the page.
   useEffect(() => () => flushPendingSave(), []);
@@ -121,7 +134,8 @@ export function EditorPage({id: initialId}) {
 
   useEffect(() => {
     const onBeforeUnload = (e) => {
-      if (isDirty) e.preventDefault();
+      // Also warn when edits haven't been written to the cloud yet.
+      if (isDirty || hasUnsavedChanges()) e.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
@@ -138,6 +152,17 @@ export function EditorPage({id: initialId}) {
   useEffect(() => {
     if (showInput) titleRef.current.focus();
   }, [showInput]);
+
+  if (loadError) {
+    return (
+      <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>
+        Failed to load notebook.{" "}
+        <button className={cn("text-blue-500 hover:underline")} onClick={() => setReloadKey((key) => key + 1)}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (notebook === UNSET) return <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>Loading...</div>;
 

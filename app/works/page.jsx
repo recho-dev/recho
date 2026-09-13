@@ -10,20 +10,23 @@ import {cn} from "../cn.js";
 
 export default function Page() {
   const [notebooks, setNotebooks] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const {user, loading} = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
   const uid = user?.uid ?? null;
 
   useEffect(() => {
     if (loading) return;
     let cancelled = false;
+    setLoadError(null);
     getNotebooks()
       .then((notebooks) => !cancelled && setNotebooks(notebooks))
       .catch((error) => {
         console.error(error);
-        if (!cancelled) setNotebooks([]);
+        if (!cancelled) setLoadError(error);
       });
     return () => (cancelled = true);
-  }, [loading, uid]);
+  }, [loading, uid, reloadKey]);
 
   useEffect(() => {
     document.title = "Notebooks | Recho";
@@ -39,15 +42,24 @@ export default function Page() {
     }
   }
 
+  const buttonClassName = cn("mt-4", "inline-block bg-black text-white rounded-md px-3 py-1 text-sm hover:bg-gray-800");
+
+  if (loadError) {
+    return (
+      <div className={cn("text-center mt-20")}>
+        <p className={cn("mt-4")}>Failed to load notebooks.</p>
+        <button onClick={() => setReloadKey((key) => key + 1)} className={buttonClassName}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (notebooks === null) {
     return <div className={cn("text-center mt-20")}>Loading...</div>;
   }
 
   if (notebooks.length === 0) {
-    const buttonClassName = cn(
-      "mt-4",
-      "inline-block bg-black text-white rounded-md px-3 py-1 text-sm hover:bg-gray-800",
-    );
     return (
       <div className={cn("text-center mt-20")}>
         <p className={cn("mt-4")}>{user ? "No notebooks found." : "Log in to see your notebooks."}</p>
