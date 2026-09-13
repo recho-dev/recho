@@ -57,8 +57,6 @@ We’re also improving:
 - **Visuals** – Dark theme, ANSI codes, more expressive output.
 - **Interactivity** – Mouse, keyboard, and more input support.
 
-Cloud storage is coming, but for now, keep it simple — and keep the ideas coming! 🚀
-
 ## License 📄
 
 ISC © [Recho](https://github.com/recho-dev)
