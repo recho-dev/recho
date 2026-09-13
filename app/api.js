@@ -1,4 +1,6 @@
 import {generate} from "short-uuid";
+import {collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, writeBatch} from "firebase/firestore";
+import {getFirebase} from "./firebase.js";
 import {predicates, objects} from "friendly-words";
 
 const LEGACY_FILE_NAME = "obs-files";
@@ -66,64 +68,169 @@ export function createNotebook() {
   };
 }
 
-function saveNotebooks(notebooks) {
+// Local notebooks are from before cloud storage. They are read-only and
+// uploaded to the cloud once the user logs in.
+
+function saveLocalNotebooks(notebooks) {
   localStorage.setItem(FILE_NAME, JSON.stringify(notebooks));
 }
 
 function renameLegacyNotebooks() {
   const legacyNotebooks = localStorage.getItem(LEGACY_FILE_NAME);
   if (!legacyNotebooks) return;
-  saveNotebooks(JSON.parse(legacyNotebooks));
+  saveLocalNotebooks(JSON.parse(legacyNotebooks));
   localStorage.removeItem(LEGACY_FILE_NAME);
 }
 
-export function getNotebooks() {
+function getLocalNotebooks() {
   renameLegacyNotebooks();
   const files = localStorage.getItem(FILE_NAME);
   if (!files) return [];
-  const notebooks = JSON.parse(files).sort((a, b) => new Date(b.updated) - new Date(a.updated));
-  // Remove fallback runtime when we have breaking changes.
-  return notebooks.map((notebook) => {
-    const newNotebook = {...notebook, runtime: DEFAULT_RUNTIME};
-    // Add fallback created timestamp.
-    if (!newNotebook.created) newNotebook.created = new Date().toISOString();
-    return newNotebook;
-  });
+  return JSON.parse(files).sort((a, b) => new Date(b.updated) - new Date(a.updated));
 }
 
 export function clearNotebooksFromLocalStorage() {
   localStorage.removeItem(FILE_NAME);
 }
 
-export function getNotebookById(id) {
-  const notebooks = getNotebooks();
-  return notebooks.find((f) => f.id === id);
+function normalizeNotebook(notebook) {
+  // Remove fallback runtime when we have breaking changes.
+  const newNotebook = {...notebook, runtime: DEFAULT_RUNTIME};
+  // Add fallback created timestamp.
+  if (!newNotebook.created) newNotebook.created = new Date().toISOString();
+  return newNotebook;
 }
 
-export function deleteNotebook(id) {
-  if (confirm("Are you sure you want to delete this notebook?")) {
-    const notebooks = getNotebooks();
-    const newNotebooks = notebooks.filter((f) => f.id !== id);
-    saveNotebooks(newNotebooks);
+// Cloud notebooks are stored at users/{uid}/notebooks/{id}.
+
+function currentUser() {
+  return getFirebase().auth.currentUser;
+}
+
+function requireUser() {
+  const user = currentUser();
+  if (!user) throw new Error("Log in to save notebooks.");
+  return user;
+}
+
+function notebooksCollection(user) {
+  return collection(getFirebase().db, "users", user.uid, "notebooks");
+}
+
+function notebookDoc(user, id) {
+  return doc(notebooksCollection(user), id);
+}
+
+function writeNotebook(user, notebook) {
+  return setDoc(notebookDoc(user, notebook.id), {
+    title: notebook.title,
+    content: notebook.content,
+    autoRun: notebook.autoRun ?? true,
+    runtime: notebook.runtime ?? DEFAULT_RUNTIME,
+    created: notebook.created,
+    updated: notebook.updated ?? notebook.created,
+  });
+}
+
+export async function getNotebooks() {
+  const user = currentUser();
+  if (!user) return getLocalNotebooks().map(normalizeNotebook);
+  const snapshot = await getDocs(query(notebooksCollection(user), orderBy("updated", "desc")));
+  return snapshot.docs.map((d) => normalizeNotebook({...d.data(), id: d.id}));
+}
+
+export async function getNotebookById(id) {
+  const user = currentUser();
+  let notebook;
+  if (user) {
+    const snapshot = await getDoc(notebookDoc(user, id));
+    notebook = snapshot.exists() ? {...snapshot.data(), id} : undefined;
+  } else {
+    notebook = getLocalNotebooks().find((f) => f.id === id);
   }
+  if (!notebook) return undefined;
+  // Don't auto run if the last run never finished, e.g. an infinite loop froze the page.
+  return {...normalizeNotebook(notebook), autoRun: !isRunning(id)};
 }
 
-export function addNotebook(notebook) {
-  const notebooks = getNotebooks();
+export async function deleteNotebook(id) {
+  if (!confirm("Are you sure you want to delete this notebook?")) return false;
+  await deleteDoc(notebookDoc(requireUser(), id));
+  return true;
+}
+
+export async function addNotebook(notebook) {
   const time = new Date().toISOString();
-  const newNotebook = {...notebook, created: time, updated: time};
-  saveNotebooks([...notebooks, newNotebook]);
+  await writeNotebook(requireUser(), {...notebook, created: time, updated: time});
 }
 
-export function saveNotebook(notebook) {
-  const notebooks = getNotebooks();
-  const updatedNotebook = {...notebook, updated: new Date().toISOString()};
-  // Prevent creating a new notebook if the created timestamp is not set.
-  if (!updatedNotebook.created) {
-    updatedNotebook.created = new Date().toISOString();
+export async function saveNotebook(notebook) {
+  if (pendingSave?.notebook.id === notebook.id) {
+    clearTimeout(pendingSave.timer);
+    pendingSave = null;
   }
-  const newNotebooks = notebooks.map((f) => (f.id === notebook.id ? updatedNotebook : f));
-  saveNotebooks(newNotebooks);
+  const time = new Date().toISOString();
+  // Prevent creating a new notebook if the created timestamp is not set.
+  await writeNotebook(requireUser(), {...notebook, created: notebook.created ?? time, updated: time});
+}
+
+const SAVE_DELAY = 800;
+
+let pendingSave = null;
+
+// Save on typing without writing to the cloud on every keystroke.
+export function saveNotebookDebounced(notebook) {
+  if (pendingSave?.notebook.id === notebook.id) clearTimeout(pendingSave.timer);
+  else flushPendingSave();
+  pendingSave = {notebook, timer: setTimeout(flushPendingSave, SAVE_DELAY)};
+}
+
+export function flushPendingSave() {
+  if (!pendingSave) return;
+  const {notebook, timer} = pendingSave;
+  clearTimeout(timer);
+  pendingSave = null;
+  saveNotebook(notebook).catch((error) => console.error("Failed to save notebook", error));
+}
+
+// Batched writes are limited to 500 operations.
+const BATCH_SIZE = 500;
+
+export async function uploadLocalNotebooks(user) {
+  const notebooks = getLocalNotebooks().map(normalizeNotebook);
+  for (let i = 0; i < notebooks.length; i += BATCH_SIZE) {
+    const batch = writeBatch(getFirebase().db);
+    for (const notebook of notebooks.slice(i, i + BATCH_SIZE)) {
+      batch.set(notebookDoc(user, notebook.id), {
+        title: notebook.title,
+        content: notebook.content,
+        autoRun: notebook.autoRun ?? true,
+        runtime: notebook.runtime,
+        created: notebook.created,
+        updated: notebook.updated ?? notebook.created,
+      });
+    }
+    await batch.commit();
+  }
+  clearNotebooksFromLocalStorage();
+  return notebooks.length;
+}
+
+// A run is marked before it starts and unmarked shortly after. If the mark
+// is still there when the notebook is opened, the last run froze the page.
+
+const RUNNING_KEY = "recho-running";
+
+function isRunning(id) {
+  return localStorage.getItem(`${RUNNING_KEY}-${id}`) !== null;
+}
+
+export function markRunning(id) {
+  localStorage.setItem(`${RUNNING_KEY}-${id}`, "true");
+}
+
+export function clearRunning(id) {
+  localStorage.removeItem(`${RUNNING_KEY}-${id}`);
 }
 
 export function generateDuplicateName(originalName) {

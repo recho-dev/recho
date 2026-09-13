@@ -1,10 +1,11 @@
 "use client";
 
 import {usePathname} from "next/navigation";
-import {useState, useEffect, useRef} from "react";
+import {useState, useEffect, useRef, useSyncExternalStore} from "react";
 import {SafeLink} from "./SafeLink.jsx";
 import {cn} from "./cn.js";
-import {Plus, Share, Github, Menu, FolderCode} from "lucide-react";
+import {authStore} from "./auth.js";
+import {Plus, Share, Github, Menu, FolderCode, LogIn, CircleUser} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 
 const styles = {
@@ -16,12 +17,16 @@ const styles = {
     "absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg py-1 min-w-[120px] z-50",
   dropdownItem: "block px-3 py-2 text-sm hover:bg-gray-100",
   dropdownItemSelected: "bg-gray-100",
+  dropdownButton: "w-full text-left whitespace-nowrap",
+  dropdownLabel: "px-3 py-2 text-xs text-gray-500 whitespace-nowrap",
 };
 
 export function Nav() {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const authMenuRef = useRef(null);
+  const auth = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
 
   function handleUpload(e) {
     e.preventDefault();
@@ -35,11 +40,14 @@ export function Nav() {
     return pathname.startsWith(path);
   }
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
+      }
+      if (authStore.getSnapshot().menuOpen && authMenuRef.current && !authMenuRef.current.contains(event.target)) {
+        authStore.closeMenu();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -143,6 +151,58 @@ export function Nav() {
         >
           <Github className={cn(styles.linkIcon)} />
         </a>
+        <div className={cn("relative")} ref={authMenuRef}>
+          <button
+            onClick={() => (auth.menuOpen ? authStore.closeMenu() : authStore.openMenu())}
+            className={cn(styles.link, auth.menuOpen && styles.selectedLink)}
+            aria-label={auth.user ? "Account" : "Log in"}
+            data-tooltip-id="nav-tooltip"
+            data-tooltip-content={auth.user ? "Account" : "Log in to save notebooks"}
+            data-tooltip-place="bottom-end"
+            data-tooltip-hidden={auth.menuOpen}
+          >
+            {auth.user?.photoURL ? (
+              <img
+                src={auth.user.photoURL}
+                alt=""
+                referrerPolicy="no-referrer"
+                className={cn("w-6 h-6 rounded-full")}
+              />
+            ) : auth.user ? (
+              <CircleUser className={cn(styles.linkIcon)} />
+            ) : (
+              <LogIn className={cn(styles.linkIcon)} />
+            )}
+          </button>
+          {auth.menuOpen && (
+            <div className={cn(styles.dropdown)}>
+              {auth.user ? (
+                <>
+                  <div className={cn(styles.dropdownLabel)}>{auth.user.email ?? auth.user.displayName}</div>
+                  <button className={cn(styles.dropdownItem, styles.dropdownButton)} onClick={authStore.signOut}>
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className={cn(styles.dropdownLabel)}>Log in to save notebooks</div>
+                  <button
+                    className={cn(styles.dropdownItem, styles.dropdownButton)}
+                    onClick={() => authStore.signIn("github")}
+                  >
+                    Continue with GitHub
+                  </button>
+                  <button
+                    className={cn(styles.dropdownItem, styles.dropdownButton)}
+                    onClick={() => authStore.signIn("google")}
+                  >
+                    Continue with Google
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <Tooltip id="nav-tooltip" className={cn(styles.tooltip)} />
     </header>

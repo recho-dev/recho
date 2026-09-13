@@ -1,41 +1,65 @@
 "use client";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
 import {Trash} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
 import {getNotebooks, deleteNotebook} from "../api.js";
+import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange} from "../shared.js";
 import {cn} from "../cn.js";
 
 export default function Page() {
-  const [notebooks, setNotebooks] = useState([]);
-  const isEmpty = notebooks.length === 0;
+  const [notebooks, setNotebooks] = useState(null);
+  const {user, loading} = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
+  const uid = user?.uid ?? null;
 
   useEffect(() => {
-    const notebooks = getNotebooks();
-    setNotebooks(notebooks);
-  }, []);
+    if (loading) return;
+    let cancelled = false;
+    getNotebooks()
+      .then((notebooks) => !cancelled && setNotebooks(notebooks))
+      .catch((error) => {
+        console.error(error);
+        if (!cancelled) setNotebooks([]);
+      });
+    return () => (cancelled = true);
+  }, [loading, uid]);
 
   useEffect(() => {
     document.title = "Notebooks | Recho";
   }, []);
 
-  function onDelete(id) {
-    deleteNotebook(id);
-    const newNotebooks = notebooks.filter((notebook) => notebook.id !== id);
-    setNotebooks(newNotebooks);
+  async function onDelete(id) {
+    try {
+      if (!(await deleteNotebook(id))) return;
+      setNotebooks((notebooks) => notebooks.filter((notebook) => notebook.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert(`Failed to delete notebook: ${error.message}`);
+    }
   }
 
-  if (isEmpty) {
+  if (notebooks === null) {
+    return <div className={cn("text-center mt-20")}>Loading...</div>;
+  }
+
+  if (notebooks.length === 0) {
+    const buttonClassName = cn(
+      "mt-4",
+      "inline-block bg-black text-white rounded-md px-3 py-1 text-sm hover:bg-gray-800",
+    );
     return (
       <div className={cn("text-center mt-20")}>
-        <p className={cn("mt-4")}>No notebooks found.</p>
-        <Link
-          href="/"
-          className={cn("mt-4", "inline-block bg-black text-white rounded-md px-3 py-1 text-sm hover:bg-gray-800")}
-        >
-          New
-        </Link>
+        <p className={cn("mt-4")}>{user ? "No notebooks found." : "Log in to see your notebooks."}</p>
+        {user ? (
+          <Link href="/" className={buttonClassName}>
+            New
+          </Link>
+        ) : (
+          <button onClick={ensureUser} className={buttonClassName}>
+            Log in
+          </button>
+        )}
       </div>
     );
   }
@@ -57,12 +81,14 @@ export default function Page() {
                   Created {new Date(notebook.created).toLocaleDateString()}
                 </div>
               </div>
-              <button
-                onClick={() => onDelete(notebook.id)}
-                className={cn("hover:scale-110 transition-transform duration-100 ml-2 flex-shrink-0")}
-              >
-                <Trash className={cn("w-4 h-4")} />
-              </button>
+              {user && (
+                <button
+                  onClick={() => onDelete(notebook.id)}
+                  className={cn("hover:scale-110 transition-transform duration-100 ml-2 flex-shrink-0")}
+                >
+                  <Trash className={cn("w-4 h-4")} />
+                </button>
+              )}
             </div>
             <div className={cn("w-full pt-[62.5%] relative border border-gray-200 rounded-md overflow-hidden")}>
               <div className={cn("absolute inset-0 px-3")}>

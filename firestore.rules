@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each user can only read and write their own notebooks.
+    match /users/{uid}/notebooks/{notebookId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

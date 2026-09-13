@@ -3,19 +3,26 @@ import {useRouter} from "next/navigation";
 import {Editor} from "../Editor.jsx";
 import {cn} from "../cn.js";
 import {duplicateNotebook, addNotebook} from "../api.js";
+import {ensureUser} from "../auth.js";
 
 export function ExampleEditor({example, initialCode}) {
   const router = useRouter();
 
-  function onDuplicate() {
+  async function onDuplicate() {
+    if (!(await ensureUser())) return;
     const sourceNotebook = {
       title: example.title,
       content: initialCode,
       autoRun: true,
     };
     const duplicated = duplicateNotebook(sourceNotebook);
-    addNotebook(duplicated);
-    router.push(`/works/${duplicated.id}`);
+    try {
+      await addNotebook(duplicated);
+      router.push(`/works/${duplicated.id}`);
+    } catch (error) {
+      console.error(error);
+      alert(`Failed to duplicate notebook: ${error.message}`);
+    }
   }
 
   return (
