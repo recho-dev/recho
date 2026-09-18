@@ -57,7 +57,7 @@ const frame = recho.interval(60);
 //➜ l[+mkG^TB?3,kjU1DI2-sYbP0S+WO -XTdYjzlYS|."$(#i?0AUDDt]R!Vxi!B*|
 {
   let output = "";
-  text(buffer, helloRecho, width / 2, height / 2);
+  text(buffer, helloRecho, ~~(width / 2), ~~(height / 2));
   for (let i = 0; i < height; i++) {
     for (let j = 0; j < width; j++) {
       const update = Math.random() > 0.9;
