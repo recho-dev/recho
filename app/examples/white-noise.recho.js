@@ -2,7 +2,7 @@
  * @title White Noise
  * @author Bairui Su
  * @created 2026-09-18
- * @pull_request 232
+ * @pull_request 233
  * @github pearmini
  * @label ASCII Art
  * @tui true
