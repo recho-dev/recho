@@ -22,39 +22,32 @@
 const width = 64;
 const height = 20;
 const d3 = recho.require("d3-array", "d3-random");
-const helloRecho = String.raw`  _   _      _ _         ____           _            
- | | | | ___| | | ___   |  _ \ ___  ___| |__   ___   
- | |_| |/ _ \ | |/ _ \  | |_) / _ \/ __| '_ \ / _ \  
- |  _  |  __/ | | (_) | |  _ <  __/ (__| | | | (_) | 
- |_| |_|\___|_|_|\___/  |_| \_\___|\___|_| |_|\___/  
-                                                     
-`;
 const n = width * height;
 const random = d3.randomInt(32, 127);
 const char = () => String.fromCharCode(random());
 const buffer = d3.range(n).map(char);
 const frame = recho.interval(60);
 
-//➜ ?~J2g@H<5VyR=bC;Z="seqcHon1nSLP?g\AsvnNEj=9uqU-"Va+d?u|bu>'#vIa"
-//➜ /qV)@+!":}R1Fa \EcPO\Y_Ir$LYUt"yo*ZRUY-"IN]'fr%S7<RE1$mvxi<#MA{K
-//➜ 'f-0}iGtLky 5rs&m_|\q;!Pipq?D,BwP;J)7!e)^<ahCyy5oS>^P*Q6jv',xa<v
-//➜ Hzm5bfO&A^@Jo/d dIR5{o]b%o[1~,j|ZdHo_uIFpj}k8|y?18y)6!/BIP>`2[db
-//➜ PHG!3$L@6^w6r>i@q"4"-DF*.Tk236y'}UNq$eXu6jb%up.tfHb7(|7,E?4-YCAT
-//➜ u3b+~0^(p 4)^<p53^wTiNEy@RK 1G'-1^M/[w}%/Tl73"PWdsw)A71Sn^}FpUZ.
-//➜ Cv{gYIC:Q5&~ 3) dV-]sbz, B8uW-s4h1bjiX0;b-E`*`Wu>'^@p*T8R7;@&!mx
-//➜ u.hrk8  _ $ _      _ R   1     _m__C          _    `    W  !9iW]
-//➜ #7 VP< | | | | ___| | | _Vy   |  _ \ ___  ___| |__   ___   /L}(U
-//➜ q{BpT0 | |_( |+ _ \ | |/ _ \  | |_) / _ \/ __| '_ \ / _ \  Y1:u[
-//➜ _.&'0? |  _ z|  __/ | | (_) | |+ _ <  __/ (I_| | | | (_) | k=&Z@
-//➜ x\Bw,w |_| l_|\__E|_|*#\___/  |_| \p}___|\___|_| |_|\___/  M0a,h
-//➜ UHWBPe  V J.    Nr   ! [  |                                ;5opV
-//➜ >Qc#|1)}4P1 rf"nU?sY^/[V-#![r.Z2)T%^m$[39(.bSeA7W3?yHvmrfOlos61&
-//➜ W&5h?_e5XcQ/9;sb#fnIc{0T$j]QAo-]ic~v#G;g;&hxi+:DQ_YhEL$KE],^'UEP
-//➜ \9c\1$75mz 8(E K@0C-*!m9;r9dL/qW&_baJ[-Y!Q3/4%dSgA/i`dL@|jw!G]X#
-//➜ RK6&y(X%LQr)(q#*.KyB7[0k*^=Se/5!3v0ddL)S1=#odQ &'P@FrK>`Rko G}cx
-//➜ ,":vb{vdD-_5pt:Nt>9y.Ps{8!=KpBE\{H^Ljd\%$-[A,PJ'Ye\ey$JkK"_4(6}+
-//➜ H6xz<k8mQZ(w?7WNX2T%N/PeTb2VbP~?D0!v7H,IRWJ@xynxVjI!!RUEa.(jr7KI
-//➜ l[+mkG^TB?3,kjU1DI2-sYbP0S+WO -XTdYjzlYS|."$(#i?0AUDDt]R!Vxi!B*|
+//➜ ~Z[53#7E%i+/1<kVYC<xidc7x7#"#QOhDJ%QHv&Vc2Q`GDtO'zDM8.ItQOXkwzu5
+//➜ aS'N^kL1i$A93q24_qpPlg)s+7/,6#Y^q<`CdS6(RZ8F"K G'3e<(*DS5AEyeuZa
+//➜ <g!?0vT%pO3H05/QSBbYs`Q4NBAlzm6DC\sA:F-U~SBX{[bqVR5fwJXKU{3/ 5t?
+//➜ U[0TE}#C* $KkzY+sV1v&2l&R)yl!Z55wX5tEA;NyPe=r8N,{TK\I Y1N9LK5?o!
+//➜ 6' ]Qz7O;?|[]R4e*plgTzfD[Z!Y}6V`=~T}CvJiF|p qndsP*diygUto48 $#rQ
+//➜ ^y4^*8d}|Do38PLx#qWX7vp#Z6b9&DR{y!>;B0{.TqU-#]SoL"f@ookzAc,'SvBQ
+//➜ S}N6,T|b|!0]:"/sK!ktS*Cji,eiszi+~(.9 -<]ApI,Wa^-9Z?uC9Z2h{Iyxa~%
+//➜ i,1\5Q  _   _  TC  _ _       % _b__         nl_  $  m      @RE[d
+//➜ (Y2hL/N| | | | ___4 |M| ___   |  _ \ ___/ ___|N|__  6_i_}  K{Nm.
+//➜ IS"^/+ | |_P |/ _~\|| |/ _ \  | |_> / _ 0/ __| '_]\ / _ @  `u#q[
+//➜ PP5#3F | Jg  |  __/ | | (_) | '  _ <  __/  __| | | ? B_) | D:kf]
+//➜ Ie54]Y |_| |_|\___|_|_|\___/  |v| \_\___|\___|_| |_|Q___,  Q-w:"
+//➜ ]okDL4'        c                 @   :          z      ^   U^T<7
+//➜ &|xt;N{?r*d,'3(or1|ZP@1%w)^5\w,W<'6fwFIE~Fq!c5sBgylCGq`gI`^!iL=+
+//➜ wqI$nNX,f--PD,iYRkHA^O>q6'=SwPG(\r,6ufd5ANf<^Y]ws^KC,^F Z)MclBX7
+//➜ }qy8Axz_o3rz`f'~DQIl`[+RhBqcZjJHjf.9i=_a8KI 8c(]SH=e'E@/=W^iesw7
+//➜ EXq<Fyv2,{wO~p-^nL=Ht'gz-I7.v7z|4y0 qxuifNu_t8@bL"|vB0 +V[jIL`/R
+//➜ jU':{7Zg~kd;zd=+ljuy;=/~'$QZ_tmW?7!<}[V5X?z>esf\Y`s";NXG,Dz'bT"J
+//➜ fqpk:W{%+<Lr`aHT'P2<U5$GQ{}][c7EJ^f!-%y#RL(d_0Q`>*a8RZ_$vSeq0']$
+//➜ BQtcORh):.EM!tL<4_;VLT."%"c*lWw1bx/T]mqDw"BXmZ"lJrcw!YBe%b2K![x4
 {
   let output = "";
   text(buffer, helloRecho, ~~(width / 2), ~~(height / 2));
@@ -68,6 +61,14 @@ const frame = recho.interval(60);
   echo(output);
   frame;
 }
+
+const helloRecho = String.raw`  _   _      _ _         ____           _            
+ | | | | ___| | | ___   |  _ \ ___  ___| |__   ___   
+ | |_| |/ _ \ | |/ _ \  | |_) / _ \/ __| '_ \ / _ \  
+ |  _  |  __/ | | (_) | |  _ <  __/ (__| | | | (_) | 
+ |_| |_|\___|_|_|\___/  |_| \_\___|\___|_| |_|\___/  
+                                                     
+`;
 
 function text(buffer, string, x, y) {
   const matrix = string.split("\n").map((l) => l.split(""));
