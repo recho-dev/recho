@@ -60,8 +60,8 @@ const frame = recho.interval(60);
   text(buffer, helloRecho, ~~(width / 2), ~~(height / 2));
   for (let i = 0; i < height; i++) {
     for (let j = 0; j < width; j++) {
-      const update = Math.random() > 0.9;
-      output += update ? char() : buffer[index(j, i)];
+      Math.random() > 0.9 && (buffer[index(j, i)] = char());
+      output += buffer[index(j, i)];
     }
     output += i === height - 1 ? "" : "\n";
   }
