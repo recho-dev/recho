@@ -18,12 +18,5 @@ service cloud.firestore {
       allow update: if isUser(resource.data.ownerId) && isValid();
       allow delete: if isUser(resource.data.ownerId);
     }
-
-    // Legacy location. Owners keep full access so the client can move their
-    // notebooks to /notebooks, and so the site keeps working if these rules
-    // are deployed before the new code. Remove once everyone has migrated.
-    match /users/{uid}/notebooks/{notebookId} {
-      allow read, write: if isUser(uid);
-    }
   }
 }
