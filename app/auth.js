@@ -6,7 +6,7 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import {getFirebase} from "./firebase.js";
-import {flushPendingSave, migrateLegacyNotebooks, uploadLocalNotebooks} from "./api.js";
+import {flushPendingSave, uploadLocalNotebooks} from "./api.js";
 
 const PROVIDERS = {github: GithubAuthProvider, google: GoogleAuthProvider};
 
@@ -34,9 +34,6 @@ function init() {
   initialized = true;
   onAuthStateChanged(getFirebase().auth, async (user) => {
     if (user) {
-      // Move notebooks from the old per-user location. If this fails, it's
-      // retried on the next page load.
-      await migrateLegacyNotebooks(user).catch((error) => console.error("Failed to migrate notebooks", error));
       // Move notebooks created before logging in to the cloud. If this fails,
       // they stay in localStorage, are listed alongside cloud notebooks, and
       // the upload is retried on the next page load.

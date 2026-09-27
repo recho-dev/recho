@@ -260,30 +260,6 @@ export async function uploadLocalNotebooks(user) {
   return notebooks.length;
 }
 
-// Notebooks used to be stored at users/{uid}/notebooks/{id}. Move them to
-// notebooks/{id} as private notebooks, then delete the old copies.
-//
-// A notebook already moved is only overwritten by a newer old copy, e.g. one
-// edited on a site still running the old code, or a retry after a failure.
-// It keeps its visibility.
-export async function migrateLegacyNotebooks(user) {
-  const legacy = await getDocs(collection(getFirebase().db, "users", user.uid, "notebooks"));
-  if (legacy.empty) return 0;
-  const existing = new Map((await getDocs(ownedNotebooks(user))).docs.map((d) => [d.id, d.data()]));
-  const notebooks = legacy.docs
-    .map((d) => ({...d.data(), id: d.id}))
-    .filter((notebook) => {
-      const moved = existing.get(notebook.id);
-      return !moved || new Date(notebook.updated) > new Date(moved.updated);
-    });
-  await commitInBatches(notebooks, (batch, notebook) => {
-    const visibility = existing.get(notebook.id)?.visibility ?? PRIVATE;
-    batch.set(notebookDoc(notebook.id), toDoc(user, {...notebook, visibility}));
-  });
-  await commitInBatches(legacy.docs, (batch, d) => batch.delete(d.ref));
-  return notebooks.length;
-}
-
 // A run is marked before it starts and unmarked shortly after. If the mark
 // is still there when the notebook is opened, the last run froze the page.
 
