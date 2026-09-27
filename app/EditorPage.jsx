@@ -26,6 +26,11 @@ import {BASE_PATH} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
+// Local and new notebooks have no owner yet, so they belong to whoever is editing.
+function isOwnedBy(notebook, uid) {
+  return !notebook?.ownerId || notebook.ownerId === uid;
+}
+
 export function EditorPage({id: initialId}) {
   const router = useRouter();
   const [notebook, setNotebook] = useState(UNSET);
@@ -39,6 +44,7 @@ export function EditorPage({id: initialId}) {
   const [reloadKey, setReloadKey] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
   const titleRef = useRef(null);
+  const linkCopiedTimer = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
     isDirtyStore.subscribe,
@@ -53,8 +59,7 @@ export function EditorPage({id: initialId}) {
   const uid = user?.uid ?? null;
   const prevCount = useRef(id ? count : null); // Last saved count.
   const isAdded = prevCount.current === count; // Whether the notebook is added to the storage.
-  // Someone else's public notebook. Local and new notebooks have no owner yet.
-  const isOthers = notebook !== UNSET && !!notebook?.ownerId && notebook.ownerId !== uid;
+  const isOthers = !isOwnedBy(notebook, uid); // Someone else's public notebook.
   const canSave = isAdded && !!user && !isOthers; // Local notebooks are read-only until the user logs in.
   const timer = useRef(null);
 
@@ -102,7 +107,7 @@ export function EditorPage({id: initialId}) {
     // Keep edits made while logged out on screen instead of reloading the
     // uploaded copy, and save them once the user is logged in.
     if (notebook !== UNSET && notebook?.id === id && isDirtyStore.getSnapshot()) {
-      if (user && (!notebook.ownerId || notebook.ownerId === user.uid)) {
+      if (user && isOwnedBy(notebook, user.uid)) {
         saveNotebookDebounced(notebook);
         isDirtyStore.setDirty(false);
       }
@@ -122,6 +127,8 @@ export function EditorPage({id: initialId}) {
 
   // Save pending changes when leaving the page.
   useEffect(() => () => flushPendingSave(), []);
+
+  useEffect(() => () => clearTimeout(linkCopiedTimer.current), []);
 
   useEffect(() => {
     // Use setTimeout to avoid changing to default title.
@@ -175,6 +182,8 @@ export function EditorPage({id: initialId}) {
 
   if (!notebook) return notFound();
 
+  const isPublic = notebook.visibility === PUBLIC;
+
   function onUserInput(code) {
     const newNotebook = {...notebook, content: code};
     setNotebook(newNotebook);
@@ -223,9 +232,11 @@ export function EditorPage({id: initialId}) {
   }
 
   async function onToggleVisibility() {
-    const visibility = notebook.visibility === PUBLIC ? PRIVATE : PUBLIC;
+    const visibility = isPublic ? PRIVATE : PUBLIC;
     const newNotebook = {...notebook, visibility};
     setNotebook(newNotebook);
+    clearTimeout(linkCopiedTimer.current);
+    setLinkCopied(false);
     try {
       // Save right away so the link works as soon as it's copied.
       await saveNotebook(newNotebook);
@@ -239,7 +250,7 @@ export function EditorPage({id: initialId}) {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
+      linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy link", error);
     }
@@ -350,7 +361,7 @@ export function EditorPage({id: initialId}) {
                 <button
                   onClick={onToggleVisibility}
                   title={
-                    notebook.visibility === PUBLIC
+                    isPublic
                       ? "Anyone with the link can view. Click to make private."
                       : "Only you can view. Click to make public."
                   }
@@ -358,8 +369,8 @@ export function EditorPage({id: initialId}) {
                     "inline-flex items-center gap-1 border border-gray-200 rounded-md px-2 py-1 text-xs hover:bg-gray-100",
                   )}
                 >
-                  {notebook.visibility === PUBLIC ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                  {linkCopied ? "Link copied" : notebook.visibility === PUBLIC ? "Public" : "Private"}
+                  {isPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {linkCopied ? "Link copied" : isPublic ? "Public" : "Private"}
                 </button>
               )}
               {isAdded && isOthers && <span className={cn("text-xs text-gray-500")}>View only</span>}

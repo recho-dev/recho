@@ -163,7 +163,8 @@ export async function getNotebookById(id) {
     const snapshot = await getDoc(notebookDoc(id));
     notebook = snapshot.exists() ? {...snapshot.data(), id} : undefined;
   } catch (error) {
-    // Someone else's private notebook is reported as not found.
+    // The rules deny reading someone else's private notebook, and also a
+    // notebook that doesn't exist. Both are reported as not found.
     if (error.code !== "permission-denied") throw error;
   }
   // Fall back to local notebooks, including ones that failed to upload.
@@ -238,6 +239,14 @@ export function hasUnsavedChanges() {
 // Batched writes are limited to 500 operations.
 const BATCH_SIZE = 500;
 
+async function commitInBatches(items, apply) {
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = writeBatch(getFirebase().db);
+    for (const item of items.slice(i, i + BATCH_SIZE)) apply(batch, item);
+    await batch.commit();
+  }
+}
+
 export async function uploadLocalNotebooks(user) {
   const localNotebooks = getLocalNotebooks();
   if (localNotebooks.length === 0) return 0;
@@ -251,27 +260,26 @@ export async function uploadLocalNotebooks(user) {
   return notebooks.length;
 }
 
-async function commitInBatches(items, apply) {
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const batch = writeBatch(getFirebase().db);
-    for (const item of items.slice(i, i + BATCH_SIZE)) apply(batch, item);
-    await batch.commit();
-  }
-}
-
 // Notebooks used to be stored at users/{uid}/notebooks/{id}. Move them to
-// notebooks/{id} as private notebooks, then delete the old copies. If this
-// fails halfway, it's retried on the next login without overwriting notebooks
-// that were already moved.
+// notebooks/{id} as private notebooks, then delete the old copies.
+//
+// A notebook already moved is only overwritten by a newer old copy, e.g. one
+// edited on a site still running the old code, or a retry after a failure.
+// It keeps its visibility.
 export async function migrateLegacyNotebooks(user) {
   const legacy = await getDocs(collection(getFirebase().db, "users", user.uid, "notebooks"));
   if (legacy.empty) return 0;
-  const existing = await getDocs(ownedNotebooks(user));
-  const ids = new Set(existing.docs.map((d) => d.id));
-  const notebooks = legacy.docs.filter((d) => !ids.has(d.id)).map((d) => ({...d.data(), id: d.id}));
-  await commitInBatches(notebooks, (batch, notebook) =>
-    batch.set(notebookDoc(notebook.id), toDoc(user, {...notebook, visibility: PRIVATE})),
-  );
+  const existing = new Map((await getDocs(ownedNotebooks(user))).docs.map((d) => [d.id, d.data()]));
+  const notebooks = legacy.docs
+    .map((d) => ({...d.data(), id: d.id}))
+    .filter((notebook) => {
+      const moved = existing.get(notebook.id);
+      return !moved || new Date(notebook.updated) > new Date(moved.updated);
+    });
+  await commitInBatches(notebooks, (batch, notebook) => {
+    const visibility = existing.get(notebook.id)?.visibility ?? PRIVATE;
+    batch.set(notebookDoc(notebook.id), toDoc(user, {...notebook, visibility}));
+  });
   await commitInBatches(legacy.docs, (batch, d) => batch.delete(d.ref));
   return notebooks.length;
 }
