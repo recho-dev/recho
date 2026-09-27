@@ -1,9 +1,9 @@
 "use client";
 import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
-import {Trash} from "lucide-react";
+import {Trash, Globe} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
-import {getNotebooks, deleteNotebook} from "../api.js";
+import {getNotebooks, deleteNotebook, PUBLIC} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange} from "../shared.js";
 import {cn} from "../cn.js";
@@ -83,12 +83,17 @@ export default function Page() {
           <div key={notebook.id}>
             <div className={cn("flex items-center justify-between mb-3")}>
               <div className={cn("flex-1 min-w-0")}>
-                <Link
-                  href={`/works/${notebook.id}`}
-                  className={cn("font-semibold hover:underline text-blue-500 block truncate")}
-                >
-                  <span>{notebook.title}</span>
-                </Link>
+                <div className={cn("flex items-center gap-1")}>
+                  <Link
+                    href={`/works/${notebook.id}`}
+                    className={cn("font-semibold hover:underline text-blue-500 block truncate")}
+                  >
+                    <span>{notebook.title}</span>
+                  </Link>
+                  {notebook.visibility === PUBLIC && (
+                    <Globe className={cn("w-3 h-3 text-gray-500 flex-shrink-0")} aria-label="Public" />
+                  )}
+                </div>
                 <div className={cn("text-sm text-gray-500")}>
                   Created {new Date(notebook.created).toLocaleDateString()}
                 </div>

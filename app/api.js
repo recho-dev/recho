@@ -1,5 +1,5 @@
 import {generate} from "short-uuid";
-import {collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, writeBatch} from "firebase/firestore";
+import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, writeBatch} from "firebase/firestore";
 import {getFirebase} from "./firebase.js";
 import {predicates, objects} from "friendly-words";
 
@@ -8,6 +8,10 @@ const LEGACY_FILE_NAME = "obs-files";
 const FILE_NAME = "recho-files";
 
 const DEFAULT_RUNTIME = "javascript@0.1.0";
+
+export const PRIVATE = "private";
+
+export const PUBLIC = "public";
 
 function generateProjectName() {
   const adj = predicates[~~(Math.random() * predicates.length)];
@@ -65,6 +69,7 @@ export function createNotebook() {
     content: DEFAULT_CONTENT.trimStart(),
     autoRun: true,
     runtime: DEFAULT_RUNTIME,
+    visibility: PRIVATE,
   };
 }
 
@@ -95,13 +100,14 @@ export function clearNotebooksFromLocalStorage() {
 
 function normalizeNotebook(notebook) {
   // Remove fallback runtime when we have breaking changes.
-  const newNotebook = {...notebook, runtime: DEFAULT_RUNTIME};
+  const newNotebook = {...notebook, runtime: DEFAULT_RUNTIME, visibility: notebook.visibility ?? PRIVATE};
   // Add fallback created timestamp.
   if (!newNotebook.created) newNotebook.created = new Date().toISOString();
   return newNotebook;
 }
 
-// Cloud notebooks are stored at users/{uid}/notebooks/{id}.
+// Cloud notebooks are stored at notebooks/{id} with an owner and a
+// visibility. Public notebooks can be read by anyone with the link.
 
 function currentUser() {
   return getFirebase().auth.currentUser;
@@ -113,30 +119,36 @@ function requireUser() {
   return user;
 }
 
-function notebooksCollection(user) {
-  return collection(getFirebase().db, "users", user.uid, "notebooks");
+function notebookDoc(id) {
+  return doc(getFirebase().db, "notebooks", id);
 }
 
-function notebookDoc(user, id) {
-  return doc(notebooksCollection(user), id);
+function ownedNotebooks(user) {
+  return query(collection(getFirebase().db, "notebooks"), where("ownerId", "==", user.uid));
 }
 
-function writeNotebook(user, notebook) {
-  return setDoc(notebookDoc(user, notebook.id), {
+function toDoc(user, notebook) {
+  return {
+    ownerId: user.uid,
+    visibility: notebook.visibility ?? PRIVATE,
     title: notebook.title,
     content: notebook.content,
     autoRun: notebook.autoRun ?? true,
     runtime: notebook.runtime ?? DEFAULT_RUNTIME,
     created: notebook.created,
     updated: notebook.updated ?? notebook.created,
-  });
+  };
+}
+
+function writeNotebook(user, notebook) {
+  return setDoc(notebookDoc(notebook.id), toDoc(user, notebook));
 }
 
 export async function getNotebooks() {
   const user = currentUser();
   const localNotebooks = getLocalNotebooks();
   if (!user) return localNotebooks.map(normalizeNotebook);
-  const snapshot = await getDocs(query(notebooksCollection(user), orderBy("updated", "desc")));
+  const snapshot = await getDocs(ownedNotebooks(user));
   const notebooks = snapshot.docs.map((d) => ({...d.data(), id: d.id}));
   // Local notebooks are left behind if uploading them failed.
   // Keep listing them until the upload is retried successfully.
@@ -146,11 +158,13 @@ export async function getNotebooks() {
 }
 
 export async function getNotebookById(id) {
-  const user = currentUser();
   let notebook;
-  if (user) {
-    const snapshot = await getDoc(notebookDoc(user, id));
+  try {
+    const snapshot = await getDoc(notebookDoc(id));
     notebook = snapshot.exists() ? {...snapshot.data(), id} : undefined;
+  } catch (error) {
+    // Someone else's private notebook is reported as not found.
+    if (error.code !== "permission-denied") throw error;
   }
   // Fall back to local notebooks, including ones that failed to upload.
   notebook ??= getLocalNotebooks().find((f) => f.id === id);
@@ -161,7 +175,8 @@ export async function getNotebookById(id) {
 
 export async function deleteNotebook(id) {
   if (!confirm("Are you sure you want to delete this notebook?")) return false;
-  await deleteDoc(notebookDoc(requireUser(), id));
+  requireUser();
+  await deleteDoc(notebookDoc(id));
   // Also delete a local copy that failed to upload, so it doesn't reappear.
   const localNotebooks = getLocalNotebooks();
   if (localNotebooks.some((f) => f.id === id)) saveLocalNotebooks(localNotebooks.filter((f) => f.id !== id));
@@ -228,24 +243,36 @@ export async function uploadLocalNotebooks(user) {
   if (localNotebooks.length === 0) return 0;
   // Skip notebooks already in the cloud, so a retried upload never
   // overwrites newer cloud edits with a stale local copy.
-  const existing = await getDocs(notebooksCollection(user));
+  const existing = await getDocs(ownedNotebooks(user));
   const ids = new Set(existing.docs.map((d) => d.id));
   const notebooks = localNotebooks.filter((notebook) => !ids.has(notebook.id)).map(normalizeNotebook);
-  for (let i = 0; i < notebooks.length; i += BATCH_SIZE) {
+  await commitInBatches(notebooks, (batch, notebook) => batch.set(notebookDoc(notebook.id), toDoc(user, notebook)));
+  clearNotebooksFromLocalStorage();
+  return notebooks.length;
+}
+
+async function commitInBatches(items, apply) {
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const batch = writeBatch(getFirebase().db);
-    for (const notebook of notebooks.slice(i, i + BATCH_SIZE)) {
-      batch.set(notebookDoc(user, notebook.id), {
-        title: notebook.title,
-        content: notebook.content,
-        autoRun: notebook.autoRun ?? true,
-        runtime: notebook.runtime,
-        created: notebook.created,
-        updated: notebook.updated ?? notebook.created,
-      });
-    }
+    for (const item of items.slice(i, i + BATCH_SIZE)) apply(batch, item);
     await batch.commit();
   }
-  clearNotebooksFromLocalStorage();
+}
+
+// Notebooks used to be stored at users/{uid}/notebooks/{id}. Move them to
+// notebooks/{id} as private notebooks, then delete the old copies. If this
+// fails halfway, it's retried on the next login without overwriting notebooks
+// that were already moved.
+export async function migrateLegacyNotebooks(user) {
+  const legacy = await getDocs(collection(getFirebase().db, "users", user.uid, "notebooks"));
+  if (legacy.empty) return 0;
+  const existing = await getDocs(ownedNotebooks(user));
+  const ids = new Set(existing.docs.map((d) => d.id));
+  const notebooks = legacy.docs.filter((d) => !ids.has(d.id)).map((d) => ({...d.data(), id: d.id}));
+  await commitInBatches(notebooks, (batch, notebook) =>
+    batch.set(notebookDoc(notebook.id), toDoc(user, {...notebook, visibility: PRIVATE})),
+  );
+  await commitInBatches(legacy.docs, (batch, d) => batch.delete(d.ref));
   return notebooks.length;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Pencil} from "lucide-react";
+import {Pencil, Lock, Globe} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {
   getNotebookById,
@@ -15,6 +15,8 @@ import {
   duplicateNotebook,
   markRunning,
   clearRunning,
+  PRIVATE,
+  PUBLIC,
 } from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
 import {authStore, ensureUser} from "./auth.js";
@@ -35,6 +37,7 @@ export function EditorPage({id: initialId}) {
   const [title, setTitle] = useState("");
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [linkCopied, setLinkCopied] = useState(false);
   const titleRef = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
@@ -50,10 +53,14 @@ export function EditorPage({id: initialId}) {
   const uid = user?.uid ?? null;
   const prevCount = useRef(id ? count : null); // Last saved count.
   const isAdded = prevCount.current === count; // Whether the notebook is added to the storage.
-  const canSave = isAdded && !!user; // Local notebooks are read-only until the user logs in.
+  // Someone else's public notebook. Local and new notebooks have no owner yet.
+  const isOthers = notebook !== UNSET && !!notebook?.ownerId && notebook.ownerId !== uid;
+  const canSave = isAdded && !!user && !isOthers; // Local notebooks are read-only until the user logs in.
   const timer = useRef(null);
 
   const onSave = useCallback(async () => {
+    // Someone else's notebook can only be duplicated.
+    if (isOthers) return;
     // Saving requires logging in.
     if (!(await ensureUser())) return;
     try {
@@ -72,7 +79,7 @@ export function EditorPage({id: initialId}) {
       alert(`Failed to save notebook: ${error.message}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notebook]);
+  }, [notebook, isOthers]);
 
   function loadNotebook(initialNotebook) {
     setNotebook(initialNotebook ?? null);
@@ -95,7 +102,7 @@ export function EditorPage({id: initialId}) {
     // Keep edits made while logged out on screen instead of reloading the
     // uploaded copy, and save them once the user is logged in.
     if (notebook !== UNSET && notebook?.id === id && isDirtyStore.getSnapshot()) {
-      if (user) {
+      if (user && (!notebook.ownerId || notebook.ownerId === user.uid)) {
         saveNotebookDebounced(notebook);
         isDirtyStore.setDirty(false);
       }
@@ -215,6 +222,29 @@ export function EditorPage({id: initialId}) {
     }, 100);
   }
 
+  async function onToggleVisibility() {
+    const visibility = notebook.visibility === PUBLIC ? PRIVATE : PUBLIC;
+    const newNotebook = {...notebook, visibility};
+    setNotebook(newNotebook);
+    try {
+      // Save right away so the link works as soon as it's copied.
+      await saveNotebook(newNotebook);
+    } catch (error) {
+      console.error(error);
+      setNotebook((current) => ({...current, visibility: notebook.visibility}));
+      alert(`Failed to change visibility: ${error.message}`);
+      return;
+    }
+    if (visibility !== PUBLIC) return;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy link", error);
+    }
+  }
+
   async function onDuplicate() {
     if (!(await ensureUser())) return;
     const duplicated = duplicateNotebook(notebook);
@@ -298,7 +328,7 @@ export function EditorPage({id: initialId}) {
                   Create
                 </button>
               )}
-              {!showInput && isAdded && (
+              {!showInput && isAdded && !isOthers && (
                 <button onClick={onRename}>
                   <Pencil className="w-4 h-4" />
                 </button>
@@ -316,6 +346,23 @@ export function EditorPage({id: initialId}) {
               ) : (
                 <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
               )}
+              {canSave && (
+                <button
+                  onClick={onToggleVisibility}
+                  title={
+                    notebook.visibility === PUBLIC
+                      ? "Anyone with the link can view. Click to make private."
+                      : "Only you can view. Click to make public."
+                  }
+                  className={cn(
+                    "inline-flex items-center gap-1 border border-gray-200 rounded-md px-2 py-1 text-xs hover:bg-gray-100",
+                  )}
+                >
+                  {notebook.visibility === PUBLIC ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {linkCopied ? "Link copied" : notebook.visibility === PUBLIC ? "Public" : "Private"}
+                </button>
+              )}
+              {isAdded && isOthers && <span className={cn("text-xs text-gray-500")}>View only</span>}
             </div>
           }
         />

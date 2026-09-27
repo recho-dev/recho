@@ -1,9 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only read and write their own notebooks.
+    // Notebooks are stored by id. Public notebooks can be read by anyone with
+    // the link. Only the owner can read private notebooks or write any of them.
+    match /notebooks/{notebookId} {
+      allow read: if resource.data.visibility == "public"
+        || (request.auth != null && resource.data.ownerId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Legacy location. Owners can still read and delete their notebooks here
+    // so the client can move them to /notebooks.
     match /users/{uid}/notebooks/{notebookId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
     }
   }
 }
