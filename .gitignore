@@ -1,6 +1,19 @@
 .DS_Store
+.claude/
 node_modules
 dist
 .next
 out
 .vercel
+data/evaluations/
+.venv
+
+# Local credentials, participant exports, and generated study analysis
+.env
+.env.*
+!.env.example
+evaluation-*.json
+docs/timeline_events.json
+docs/timeline*.pdf
+docs/timeline*.png
+*.tsbuildinfo

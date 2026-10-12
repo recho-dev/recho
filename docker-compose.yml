@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: recho
+      POSTGRES_USER: recho
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recho_secret}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recho -d recho"]
+      interval: 5s
+      retries: 10
+      timeout: 5s
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://recho:${POSTGRES_PASSWORD:-recho_secret}@db:5432/recho?schema=public
+      EVALUATION_ADMIN_USERNAME: ${EVALUATION_ADMIN_USERNAME:-researcher}
+      EVALUATION_ADMIN_PASSWORD: ${EVALUATION_ADMIN_PASSWORD:-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

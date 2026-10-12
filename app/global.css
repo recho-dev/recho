@@ -1,12 +1,30 @@
 @import "tailwindcss";
 @import "../editor/index.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/spline-sans-mono";
-@import "@fontsource-variable/spline-sans-mono/wght-italic";
+@import "@fontsource-variable/google-sans-code";
+
+/*
+ * Fallback font for box-drawing (U+2500–U+257F) and block element (U+2580–U+259F)
+ * characters. "Google Sans Code Variable" does not include these glyphs, so
+ * we define a font-face backed by well-known system monospace fonts that render
+ * them at a consistent cell width on every platform.
+ *
+ * Resolution order: DejaVu Sans Mono (Linux), Noto Sans Mono (Linux/ChromeOS),
+ * Consolas (Windows), Menlo / Monaco (macOS), Cascadia Mono (Windows 11+).
+ */
+@font-face {
+  font-family: "Box Drawing Fallback";
+  src:
+    local("DejaVu Sans Mono"), local("Noto Sans Mono"), local("Noto Mono"), local("Consolas"), local("Menlo"),
+    local("Monaco"), local("Cascadia Mono"), local("Liberation Mono");
+  unicode-range:
+    U+2500- U+259F,
+    U+25A0- U+25FF;
+}
 
 @theme {
   --default-font-family: "Inter Variable";
-  --font-mono: "Spline Sans Mono Variable";
+  --font-mono: "Google Sans Code Variable", "Box Drawing Fallback";
 }
 
 button {

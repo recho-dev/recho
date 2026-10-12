@@ -13,6 +13,11 @@
 - [Sharing](/CONTRIBUTING.md#sharing-examples) 🎨 - Follow the instructions to open a [pull request](https://github.com/recho-dev/notebook/new/main/app/examples) to share your sketches!
 - [Contributing](/CONTRIBUTING.md) 🙏 - We have [a bunch of things](https://github.com/recho-dev/notebook/issues) that we would like you to help us build together!
 
+## UIST user-study system
+
+See [STUDY.md](./STUDY.md) for setup, study routes, validation, and data handling.
+This branch uses npm and `package-lock.json`.
+
 ## Core Idea 🧠
 
 Unlike typical notebooks (like Jupyter or Observable), Recho Notebook treats **code and its output as a single, continuous document**. When you write code, **the output appears inline — as a comment right above your code**.

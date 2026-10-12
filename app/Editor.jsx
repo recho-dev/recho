@@ -3,6 +3,7 @@ import {useEffect, useRef, useState} from "react";
 import {Play, Square, RefreshCcw, Copy} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 import {createEditor} from "../editor/index.js";
+import {setCompletionMode} from "../editor/completionMode.js";
 import {cn} from "./cn.js";
 
 const styles = {
@@ -23,6 +24,14 @@ const onDefaultError = debounce(() => {
   }, 100);
 }, 0);
 
+function isPrimarySaveShortcut(event) {
+  return (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s";
+}
+
+function primaryModifierLabel() {
+  return typeof navigator !== "undefined" && navigator.userAgent.includes("Mac") ? "cmd" : "ctrl";
+}
+
 export function Editor({
   initialCode,
   onUserInput = () => {},
@@ -32,24 +41,38 @@ export function Editor({
   pinToolbar = true,
   onDuplicate = null,
   onError = onDefaultError,
+  extensions = [],
+  onContainerReady = null,
+  completionMode = "enter",
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
+  const viewRef = useRef(null);
   const [needRerun, setNeedRerun] = useState(false);
 
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.innerHTML = "";
-      editorRef.current = createEditor(containerRef.current, {code: initialCode, onError});
+      editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, extensions, completionMode});
+      viewRef.current = editorRef.current.view;
+      if (onContainerReady) onContainerReady(containerRef.current);
       if (autoRun) onRun();
     }
     return () => {
       if (editorRef.current) {
         editorRef.current.destroy();
       }
+      viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCode]);
+
+  // Live-reconfigure completion mode when the prop changes
+  useEffect(() => {
+    if (viewRef.current) {
+      setCompletionMode(viewRef.current, completionMode);
+    }
+  }, [completionMode]);
 
   useEffect(() => {
     const onInput = (code) => {
@@ -64,7 +87,8 @@ export function Editor({
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.metaKey && e.key === "s") {
+      if (isPrimarySaveShortcut(e)) {
+        e.preventDefault();
         setNeedRerun(false);
         editorRef.current.run(false);
       }
@@ -90,10 +114,6 @@ export function Editor({
     editorRef.current.run();
   }
 
-  function metaKey() {
-    return typeof navigator !== "undefined" || navigator.userAgent.includes("Mac") ? "cmd" : "ctrl";
-  }
-
   return (
     <div className={cn("w-full border border-gray-200 rounded-md")}>
       <div
@@ -107,7 +127,7 @@ export function Editor({
           <button
             onClick={onRun}
             data-tooltip-id="action-tooltip"
-            data-tooltip-content={`Run Updated Code (${metaKey()}+s)`}
+            data-tooltip-content={`Run Updated Code (${primaryModifierLabel()}+s)`}
             data-tooltip-place="bottom"
           >
             <Play className={cn(styles.iconButton, needRerun && "fill-black")} />

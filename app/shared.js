@@ -1,6 +1,6 @@
 import {OUTPUT_MARK} from "../runtime/constant.js";
 
-export const BASE_PATH = "/notebook";
+export const BASE_PATH = "";
 
 export function findFirstOutputRange(content) {
   const lines = content.split("\n");

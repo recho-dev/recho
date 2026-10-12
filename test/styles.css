@@ -1,11 +1,11 @@
 @import "tailwindcss";
 @import "../editor/index.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/spline-sans-mono";
+@import "@fontsource-variable/google-sans-code";
 
 @theme {
   --default-font-family: "Inter Variable";
-  --font-mono: "Spline Sans Mono Variable";
+  --font-mono: "Google Sans Code Variable";
 }
 
 button {

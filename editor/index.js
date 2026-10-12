@@ -15,6 +15,7 @@ import {rechoCompletion} from "./completion.js";
 import {docStringTag} from "./docStringTag.js";
 import {commentLink, commentLinkClickHandler} from "./commentLink.js";
 import {blockExtensions, blockIndicator} from "./blocks";
+import {getCompletionModeExtension} from "./completionMode.js";
 
 // @see https://github.com/UziTech/eslint-linter-browserify/blob/master/example/script.js
 // @see https://codemirror.net/examples/lint/
@@ -31,7 +32,7 @@ const eslintConfig = {
 };
 
 export function createEditor(container, options) {
-  const {code, onError, extensions = []} = options;
+  const {code, onError, extensions = [], completionMode = "enter"} = options;
   const dispatcher = d3Dispatch("userInput");
   const runtimeRef = {current: null};
 
@@ -50,8 +51,16 @@ export function createEditor(container, options) {
         ],
       }),
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({
+        "data-gramm": "false",
+        "data-gramm_editor": "false",
+        "data-enable-grammarly": "false",
+        spellcheck: "false",
+        autocorrect: "off",
+        autocapitalize: "off",
+      }),
       EditorView.theme({
-        "&": {fontSize: "14px", fontFamily: "monospace"},
+        "&": {fontSize: "14px", fontFamily: '"Google Sans Code Variable", "Box Drawing Fallback", monospace'},
         ".cm-content": {whiteSpace: "pre"},
         ".cm-line": {wordWrap: "normal"},
       }),
@@ -76,6 +85,7 @@ export function createEditor(container, options) {
       commentLink,
       commentLinkClickHandler,
       linter(esLint(new eslint.Linter(), eslintConfig)),
+      getCompletionModeExtension(completionMode),
       ...extensions,
     ],
   });
@@ -168,6 +178,8 @@ export function createEditor(container, options) {
   }
 
   return {
+    /** The underlying CodeMirror EditorView */
+    view,
     /** @param {boolean} force - Whether to force run the code even if it's already running */
     run: (force = false) => {
       if (runtimeRef.current?.isRunning()) {

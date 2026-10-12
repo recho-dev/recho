@@ -47,7 +47,7 @@ export default defineConfig([
     files: ["editor/**/*.{ts,tsx}", "runtime/**/*.ts", "test/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "lib/**/*.ts"],
   })),
   {
-    ignores: ["**/*.recho.js", "test/output/**/*"],
+    ignores: ["**/*.recho.js", "test/output/**/*", ".next/**"],
   },
   eslintConfigPrettier,
 ]);

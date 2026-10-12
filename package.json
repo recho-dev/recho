@@ -30,6 +30,13 @@
     "app:dev": "next dev",
     "app:build": "next build",
     "app:start": "next start",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.mjs",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate",
     "test": "npm run test:lint && npm run test:format && npm run test:js",
     "test:js": "TZ=America/New_York vitest",
     "test:format": "prettier --check editor runtime test app",
@@ -54,6 +61,7 @@
     "lucide-react": "^0.542.0",
     "postcss": "^8.5.6",
     "prettier": "^3.7.4",
+    "prisma": "^6.7.0",
     "react-inspector": "^9.0.0",
     "react-resizable-panels": "^3.0.6",
     "react-tooltip": "^5.30.0",
@@ -74,12 +82,13 @@
     "@codemirror/lint": "^6.9.2",
     "@codemirror/state": "^6.5.3",
     "@codemirror/view": "^6.39.8",
+    "@fontsource-variable/google-sans-code": "^5.2.3",
     "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource-variable/spline-sans-mono": "^5.2.8",
     "@lezer/highlight": "^1.2.3",
     "@lezer/javascript": "^1.5.4",
     "@observablehq/notebook-kit": "^1.5.0",
     "@observablehq/runtime": "^6.0.0",
+    "@prisma/client": "^6.7.0",
     "@uiw/codemirror-theme-github": "^4.25.4",
     "acorn": "^8.15.0",
     "acorn-walk": "^8.3.4",
@@ -101,5 +110,8 @@
     "short-uuid": "^5.2.0",
     "source-map-support": "^0.5.21",
     "table": "^6.9.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
   }
 }

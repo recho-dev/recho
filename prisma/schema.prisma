@@ -1,0 +1,93 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TaskStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model EvaluationSession {
+  id               String          @id @default(uuid())
+  participantName  String
+  participantId    Int
+  sessionStartTime DateTime
+  sessionEndTime   DateTime?
+  questionnaire    Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  tasks            CompletedTask[]
+
+  @@index([sessionStartTime(sort: Desc)])
+}
+
+model CompletedTask {
+  id                 String            @id @default(cuid())
+  sessionId          String
+  session            EvaluationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  clientTaskId       String
+  studyTaskId        String
+  difficulty         String
+  status             TaskStatus        @default(IN_PROGRESS)
+  startTime          DateTime
+  endTime            DateTime?
+  initialCode        String
+  latestCode         String?
+  finalCode          String?
+  lastCheckpointTime DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  transactions       TransactionRecord[]
+  pauseEvents        PauseEvent[]
+
+  @@unique([sessionId, clientTaskId])
+  @@index([sessionId, startTime])
+}
+
+model TransactionRecord {
+  id              String        @id @default(cuid())
+  completedTaskId String
+  completedTask   CompletedTask @relation(fields: [completedTaskId], references: [id], onDelete: Cascade)
+  index           Int
+  timestampMs     Int
+  docChanged      Boolean
+  userEvent       String?
+  remote          Boolean       @default(false)
+  initDoc         String?
+  selection       Json
+  changes         Json
+  createdAt       DateTime      @default(now())
+
+  @@unique([completedTaskId, index])
+  @@index([completedTaskId, index])
+}
+
+model PauseEvent {
+  id              String        @id @default(cuid())
+  completedTaskId String
+  completedTask   CompletedTask @relation(fields: [completedTaskId], references: [id], onDelete: Cascade)
+  pausedAt        DateTime
+  resumedAt       DateTime?
+  reason          String
+  createdAt       DateTime      @default(now())
+
+  @@unique([completedTaskId, pausedAt])
+  @@index([completedTaskId, pausedAt])
+}
+
+model StudyTask {
+  id         String   @id
+  title      String
+  summary    String
+  series     String
+  tags       Json     @default("[]")
+  difficulty String
+  code       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
