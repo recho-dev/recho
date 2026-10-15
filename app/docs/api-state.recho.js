@@ -11,6 +11,9 @@
  * similar to React's useState hook and enables mutable reactive values that
  * automatically trigger re-evaluation of dependent blocks when changed.
  *
+ * For most cases, a top-level `let` is simpler: assign to it from any block
+ * and the blocks reading it re-run. See "Top-level `let`" in Reactive Blocks.
+ *
  * @param {any} value - The initial state value.
  * @returns {[any, Function, Function]} A tuple containing:
  *   - state: The reactive state value that can be read directly

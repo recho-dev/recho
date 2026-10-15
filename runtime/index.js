@@ -8,7 +8,8 @@ import {Inspector} from "./stdlib/inspect.js";
 import {BlockMetadata} from "../editor/blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
 import {IntervalTree} from "../lib/IntervalTree.ts";
-import {transpileRechoJavaScript} from "./transpile.js";
+import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
+import {analyzeMutables, createMutator, mutatorName} from "./mutable.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
 import {addPrefix, makeOutput, OUTPUT_PREFIX, ERROR_PREFIX} from "./output.js";
 
@@ -100,6 +101,24 @@ export function createRuntime(initialCode, options = {}) {
   let __echo__ = null;
   const __getEcho__ = () => __echo__;
   const __setEcho__ = (echo) => (__echo__ = echo);
+
+  // The reactive inputs of the cell running synchronously right now, if any.
+  // A mutator throws when such a cell assigns one of its own inputs, since
+  // that would re-run the cell forever (see ./mutable.js).
+  let runningInputs = null;
+  const isReading = (name) => runningInputs?.has(name) ?? false;
+  const trackInputs = (fn, inputs) => {
+    const reads = new Set(inputs);
+    return function (...args) {
+      const previous = runningInputs;
+      runningInputs = reads;
+      try {
+        return fn.apply(this, args);
+      } finally {
+        runningInputs = previous;
+      }
+    };
+  };
 
   // The button function must be manually associated to the button registry.
   const __stdlib__ = {...stdlib, button: makeButton(buttonRegistry)};
@@ -249,9 +268,9 @@ export function createRuntime(initialCode, options = {}) {
     }
   }
 
-  function transpile(cell) {
+  function transpile(cell, writes) {
     try {
-      return transpileJavaScript(transpileRechoJavaScript(cell));
+      return transpileJavaScript(transpileRechoJavaScript(rewriteMutables(cell, writes)));
     } catch (error) {
       console.error(error);
       return {body: cell, inputs: [], outputs: [], error};
@@ -326,14 +345,15 @@ export function createRuntime(initialCode, options = {}) {
     const nodes = split(code);
     if (!nodes) return;
 
-    for (const node of nodes) {
+    const mutables = analyzeMutables(nodes.map((node) => code.slice(node.start, node.end)));
+    nodes.forEach((node, i) => {
       const cell = code.slice(node.start, node.end);
-      const transpiled = transpile(cell);
       node.id = uid();
-      node.transpiled = transpiled;
-    }
+      node.mutable = mutables[i];
+      node.transpiled = transpile(cell, node.mutable.writes);
+    });
 
-    const groups = group(nodes, (n) => code.slice(n.start, n.end));
+    const groups = group(nodes, (n) => n.mutable.key);
     const enter = [];
     const remove = [];
     const exit = new Set(nodesByKey.keys());
@@ -378,6 +398,7 @@ export function createRuntime(initialCode, options = {}) {
     for (const node of enter) {
       const vid = node.id;
       const {inputs, body, outputs, error = null} = node.transpiled;
+      const {defines, chainInputs, chainOutputs} = node.mutable;
       const state = {
         values: [],
         variables: [],
@@ -429,12 +450,26 @@ export function createRuntime(initialCode, options = {}) {
         return __echo__;
       });
       v._shadow.set("echo", vd);
-      const newInputs = [...inputs, "echo"];
-      state.variables.push(v.define(vid, newInputs, safeEval(body, newInputs, __setEcho__, compileCell)));
+      // Chain inputs aren't referenced by the body; they only order writers.
+      const newInputs = [...inputs, ...chainInputs, "echo"];
+      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), inputs);
+      state.variables.push(v.define(vid, newInputs, definition));
 
-      // Export cell-level variables for external access.
+      // Export cell-level variables for external access. A promoted `let`
+      // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
-        state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
+        if (defines.includes(o)) {
+          const mutator = mutatorName(o);
+          state.variables.push(
+            main.variable().define(mutator, [vid], (exports) => createMutator(o, exports[o], isReading)),
+            main.variable(true).define(o, [mutator], (mutator) => mutator.mutable),
+          );
+        } else {
+          state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
+        }
+      }
+      for (const name of chainOutputs) {
+        state.variables.push(main.variable().define(name, [vid], () => true));
       }
     }
 

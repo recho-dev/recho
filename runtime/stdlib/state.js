@@ -6,11 +6,15 @@ import {observe} from "./observe.js";
 // generated value to be mutated. Therefore, direct mutation is only allowed
 // within the defining cell, but the cell can also export functions that allows
 // other cells to mutate the value as desired.
-function Mutable(value) {
+//
+// By default an undefined initial value isn't emitted, so readers stay pending
+// until the first assignment. Top-level `let x;` wants readers to see
+// `undefined` right away, hence `emitUndefined`.
+export function Mutable(value, {emitUndefined = false} = {}) {
   let change = undefined;
   const mutable = observe((_) => {
     change = _;
-    if (value !== undefined) change(value);
+    if (value !== undefined || emitUndefined) change(value);
   });
   return Object.defineProperty(mutable, "value", {
     get: () => value,

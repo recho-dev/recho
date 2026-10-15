@@ -48,12 +48,9 @@ else echo("Odd");
 }
 
 /**
- * !! NOTE: This can also avoid using `let` to define top-level mutable      !!
- * !! variables, which is not allowed in Recho yet.                          !!
- *
- * If you need to define a non-echoing top-level mutable variable, you can use
- * IIFE (Immediately Invoked Function Expression) to create a block and return
- * the variable.
+ * If you need a non-echoing top-level variable computed this way, you can
+ * also use an IIFE (Immediately Invoked Function Expression) to create a
+ * block and return the variable, or use a top-level `let` (see below).
  */
 
 const alphabet = (() => {
@@ -105,6 +102,54 @@ const constant = echo(1);
 
 //➜ 0.6058679147506848
 const random = echo(Math.random());
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                              Top-level `let`
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A variable declared with a top-level `let` can be changed by other blocks.
+ * Blocks that read it re-run whenever it changes.
+ */
+
+let letters = "";
+
+for (let i = 0; i < 5; i++) letters += String.fromCharCode(97 + i);
+
+//➜ "abcde"
+echo(letters);
+
+/**
+ * Changes can also happen later, for example from a timer or a button. Click
+ * the button to see the count go up.
+ */
+
+let clicks = 0;
+
+recho.button("Click me!", () => clicks++);
+
+//➜ 0
+echo(clicks);
+
+/**
+ * A few rules keep this predictable:
+ *
+ * - Blocks that change a variable run in document order, so the last change
+ *   wins, like in a plain script.
+ * - Editing the `let` or a block that changes the variable re-runs all of
+ *   them, so the variable starts over from its initial value.
+ * - A block that changes a variable doesn't re-run when the variable changes
+ *   (otherwise it would re-run itself forever). Put reads that should stay up
+ *   to date in their own block, like `echo(clicks)` above.
+ * - When a block that changes a variable re-runs because something else it
+ *   reads changed, such as `recho.interval`, it changes the variable again,
+ *   starting from the current value. Use this to accumulate values over time.
+ * - A block can't read a variable and also change it, for example by calling
+ *   a function that changes it: `echo(clicks, addClick())`. Split it into two
+ *   blocks.
+ * - Changing an object in place, like `list.push(1)`, doesn't notify other
+ *   blocks. Assign it again (`list = list`) to notify them.
+ */
 
 /**
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

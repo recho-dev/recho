@@ -12,7 +12,12 @@ describe("snapshots", () => {
       console.error = () => {};
       try {
         const runtime = createRuntime(state.doc.toString());
-        runtime.onChanges((specs) => (state = state.update(specs).state));
+        // Feed the new code back like the editor does, so later changes are
+        // computed against the current document.
+        runtime.onChanges((specs) => {
+          state = state.update(specs).state;
+          runtime.setCode(state.doc.toString());
+        });
         runtime.run();
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {}

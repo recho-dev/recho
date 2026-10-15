@@ -1,6 +1,8 @@
 import {Parser} from "acorn";
 import {recursive, simple} from "acorn-walk";
 import {Sourcemap} from "./sourcemap.js";
+import {findReferences} from "./references.js";
+import {mutatorName} from "./mutable.js";
 
 function parseParams(params) {
   return params.map((p) => (p.type === "AssignmentPattern" ? p.left.name : p.name));
@@ -82,6 +84,41 @@ function rewriteArrowFunction(input) {
     const arrayIndex = input.slice(node.start, node.end).indexOf("=>");
     output.insertLeft(node.start + arrayIndex + 2, "{return ");
     output.insertLeft(node.end, ";}");
+  }
+  return String(output);
+}
+
+/**
+ * Rewrites every free reference to the given promoted top-level `let` names to
+ * go through their mutator, so the cell can assign them (see ./mutable.js).
+ *
+ * ```js
+ * count += 1;          // count += 1  ->  mutator$count.value += 1
+ * const o = {count};   // shorthand   ->  {count: mutator$count.value}
+ * ```
+ */
+export function rewriteMutables(input, names) {
+  if (!names.length) return input;
+  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const promoted = new Set(names);
+  const references = findReferences(body).filter((node) => promoted.has(node.name));
+  if (!references.length) return input;
+
+  // Identifiers written as shorthand properties, `{x}` or `({x} = …)`, need
+  // their key spelled out once the value is no longer a plain identifier.
+  const shorthands = new Set();
+  const collectShorthands = (node) => {
+    for (const p of node.properties) {
+      if (p.type !== "Property" || !p.shorthand) continue;
+      shorthands.add(p.value.type === "AssignmentPattern" ? p.value.left.start : p.value.start);
+    }
+  };
+  simple(body, {ObjectExpression: collectShorthands, ObjectPattern: collectShorthands});
+
+  const output = new Sourcemap(input);
+  for (const node of references) {
+    const value = `${mutatorName(node.name)}.value`;
+    output.replaceLeft(node.start, node.end, shorthands.has(node.start) ? `${node.name}: ${value}` : value);
   }
   return String(output);
 }
