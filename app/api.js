@@ -7,16 +7,23 @@ const LEGACY_FILE_NAME = "obs-files";
 
 const FILE_NAME = "recho-files";
 
-const DEFAULT_RUNTIME = "javascript@0.1.0";
+export const RUNTIMES = {
+  javascript: "javascript@0.1.0",
+  wenyan: "wenyan@0.1.0",
+};
+
+const DEFAULT_RUNTIME = RUNTIMES.javascript;
+
+const isWenyan = (runtime) => runtime.startsWith("wenyan@");
 
 export const PRIVATE = "private";
 
 export const PUBLIC = "public";
 
-function generateProjectName() {
+function generateProjectName(extension = ".js") {
   const adj = predicates[~~(Math.random() * predicates.length)];
   const obj = objects[~~(Math.random() * objects.length)];
-  return `${adj}-${obj}.js`;
+  return `${adj}-${obj}${extension}`;
 }
 
 const DEFAULT_CONTENT = `
@@ -60,15 +67,35 @@ echo("~".repeat(x1) + "(๑•̀ㅂ•́)و✧");
 // - Github: https://github.com/recho-dev/notebook
 `;
 
-export function createNotebook() {
+const WENYAN_CONTENT = `
+注曰。「「歡迎。此乃文言之筆記本。凡書之者。其值見於其上。」」。
+注曰。「「文言之法。詳見 https://wy-lang.org 」」。
+
+吾有一言。曰「「問天地好在。」」。書之。
+
+吾有一數。曰三。名之曰「甲」。
+
+乘「甲」以「甲」。書之。
+
+吾有一數。曰零。名之曰「和」。
+
+為是十遍。
+	加「和」以一。昔之「和」者。今其是矣。
+云云。
+
+夫「和」。書之。
+`;
+
+export function createNotebook(runtime = DEFAULT_RUNTIME) {
+  const wenyan = isWenyan(runtime);
   return {
     id: generate(),
-    title: generateProjectName(),
+    title: generateProjectName(wenyan ? ".wy" : ".js"),
     created: null,
     updated: null,
-    content: DEFAULT_CONTENT.trimStart(),
+    content: (wenyan ? WENYAN_CONTENT : DEFAULT_CONTENT).trimStart(),
     autoRun: true,
-    runtime: DEFAULT_RUNTIME,
+    runtime,
     visibility: PRIVATE,
   };
 }
@@ -100,7 +127,11 @@ export function clearNotebooksFromLocalStorage() {
 
 function normalizeNotebook(notebook) {
   // Remove fallback runtime when we have breaking changes.
-  const newNotebook = {...notebook, runtime: DEFAULT_RUNTIME, visibility: notebook.visibility ?? PRIVATE};
+  const newNotebook = {
+    ...notebook,
+    runtime: notebook.runtime ?? DEFAULT_RUNTIME,
+    visibility: notebook.visibility ?? PRIVATE,
+  };
   // Add fallback created timestamp.
   if (!newNotebook.created) newNotebook.created = new Date().toISOString();
   return newNotebook;
@@ -290,7 +321,7 @@ export function generateDuplicateName(originalName) {
 }
 
 export function duplicateNotebook(sourceNotebook) {
-  const newNotebook = createNotebook();
+  const newNotebook = createNotebook(sourceNotebook.runtime ?? DEFAULT_RUNTIME);
   const duplicatedTitle = generateDuplicateName(sourceNotebook.title);
   return {
     ...newNotebook,

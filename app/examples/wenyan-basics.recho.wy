@@ -1,0 +1,48 @@
+注曰。「「@title 文言之始 Wenyan Basics」」。
+注曰。「「@author Bairui Su」」。
+注曰。「「@github pearmini」」。
+注曰。「「@created 2026-10-15」」。
+注曰。「「@label Wenyan, Beginner」」。
+
+注曰。「「文言者。以文言為程式之語也。凡書之者。其值見於其上。」」。
+注曰。「「Wenyan is a programming language written in classical Chinese.」」。
+注曰。「「Whatever 書之 prints shows up above it, as 批曰 comments.」」。
+
+批曰。「「➜ 問天地好在。」」。
+吾有一言。曰「「問天地好在。」」。書之。
+
+注曰。「「名之曰 names a value. 夫 recalls one.」」。
+
+吾有一數。曰三。名之曰「甲」。
+
+批曰。「「➜ 三」」。
+夫「甲」。書之。
+
+批曰。「「➜ 九」」。
+乘「甲」以「甲」。書之。
+
+注曰。「「昔之…今…是矣 changes a value, even one named in another block.」」。
+
+吾有一數。曰零。名之曰「和」。
+
+為是十遍。
+	加「和」以一。昔之「和」者。今其是矣。
+云云。
+
+批曰。「「➜ 一十」」。
+夫「和」。書之。
+
+注曰。「「吾有一術 defines a function. 施 calls it.」」。
+
+吾有一術。名之曰「階乘」。欲行是術。必先得一數。曰「元」。乃行是術曰。
+	若「元」等於一者。乃得一。云云。
+	減「元」以一。名之曰「乙」。
+	施「階乘」於「乙」。名之曰「丙」。
+	乘「元」以「丙」。乃得矣。
+是謂「階乘」之術也。
+
+批曰。「「➜ 一百二十」」。
+施「階乘」於五。書之。
+
+批曰。「「➜ 三百六十二萬八千八百」」。
+施「階乘」於十。書之。

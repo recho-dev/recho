@@ -1,5 +1,5 @@
 import {notFound} from "next/navigation";
-import {getAllJSExamples, removeJSMeta} from "../../utils.js";
+import {getAllJSExamples, removeMeta} from "../../utils.js";
 import {cn} from "../../cn.js";
 import {Meta} from "../../Meta.js";
 import {ExampleEditor} from "../ExampleEditor.jsx";
@@ -21,7 +21,7 @@ export default async function Page({params}) {
   const {slug} = await params;
   const example = getAllJSExamples().find((example) => example.slug === slug);
   if (!example) notFound();
-  const initialCode = removeJSMeta(example.content);
+  const initialCode = removeMeta(example);
   return (
     <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4")}>
       <div className={cn("mb-6")}>

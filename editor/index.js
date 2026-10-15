@@ -9,6 +9,7 @@ import {indentWithTab} from "@codemirror/commands";
 import {browser} from "globals";
 import * as eslint from "eslint-linter-browserify";
 import {createRuntime} from "../runtime/index.js";
+import {javascript as javascriptRuntime} from "../runtime/languages.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import {controls} from "./controls/index.js";
 import {rechoCompletion} from "./completion.js";
@@ -30,19 +31,49 @@ const eslintConfig = {
   },
 };
 
+/**
+ * @param {HTMLElement} container
+ * @param {object} options
+ * @param {string} options.code
+ * @param {(error: any) => void} [options.onError]
+ * @param {import("@codemirror/state").Extension[]} [options.extensions]
+ * @param {object} [options.language] - The notebook's language (see
+ *   ../runtime/languages.js), JavaScript by default.
+ * @param {import("@codemirror/state").Extension[]} [options.languageSupport] -
+ *   Editor extensions for a language other than JavaScript (see
+ *   ./languages/index.js).
+ */
 export function createEditor(container, options) {
-  const {code, onError, extensions = []} = options;
+  const {code, onError, extensions = [], language = javascriptRuntime, languageSupport = []} = options;
   const dispatcher = d3Dispatch("userInput");
   const runtimeRef = {current: null};
+  const isJavaScript = language.id === "javascript";
 
   const myBasicSetup = Array.from(basicSetup);
-  myBasicSetup.splice(2, 0, blockIndicator);
+  // Block indicators come from the JavaScript syntax tree.
+  if (isJavaScript) myBasicSetup.splice(2, 0, blockIndicator);
+
+  // Completion, controls, doc tags, comment links and linting all read
+  // JavaScript, so other languages bring only their own support.
+  const languageExtensions = isJavaScript
+    ? [
+        javascript(),
+        javascriptLanguage.data.of({autocomplete: rechoCompletion}),
+        blockExtensions,
+        controls(runtimeRef),
+        // Disable this for now, because it prevents copying/pasting the code.
+        // outputProtection(),
+        docStringTag,
+        commentLink,
+        commentLinkClickHandler,
+        linter(esLint(new eslint.Linter(), eslintConfig)),
+      ]
+    : languageSupport;
 
   const state = EditorState.create({
     doc: code,
     extensions: [
       myBasicSetup,
-      javascript(),
       githubLightInit({
         styles: [
           {tag: [t.variableName], color: "#1f2328"},
@@ -67,15 +98,7 @@ export function createEditor(container, options) {
         },
         indentWithTab,
       ]),
-      javascriptLanguage.data.of({autocomplete: rechoCompletion}),
-      blockExtensions,
-      controls(runtimeRef),
-      // Disable this for now, because it prevents copying/pasting the code.
-      // outputProtection(),
-      docStringTag,
-      commentLink,
-      commentLinkClickHandler,
-      linter(esLint(new eslint.Linter(), eslintConfig)),
+      ...languageExtensions,
       ...extensions,
     ],
   });
@@ -85,7 +108,7 @@ export function createEditor(container, options) {
   let isStopByMetaKey = false;
 
   function initRuntime() {
-    const runtime = createRuntime(view.state.doc.toString());
+    const runtime = createRuntime(view.state.doc.toString(), {language});
     runtimeRef.current = runtime;
     runtime.onChanges(dispatch);
 
