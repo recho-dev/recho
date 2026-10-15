@@ -10,7 +10,7 @@ import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
 import {analyzeMutables, createMutator} from "./mutable.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
 import {addPrefix, makeOutput} from "./output.js";
-import {javascript} from "./languages.js";
+import {javascript} from "./languages/javascript.js";
 
 function uid() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

@@ -14,7 +14,7 @@ function isError(value) {
 /**
  * How a language writes output into its code: the output and error prefixes,
  * how one line of output is written, and how a value is displayed. This is
- * JavaScript's; other languages provide their own (see ./languages.js).
+ * JavaScript's; other languages provide their own (see ./languages/index.js).
  */
 export const JAVASCRIPT_OUTPUT = {
   outputPrefix: OUTPUT_PREFIX,

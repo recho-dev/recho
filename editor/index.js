@@ -1,35 +1,14 @@
 import {EditorView, basicSetup} from "codemirror";
 import {EditorState, Transaction} from "@codemirror/state";
 import {keymap} from "@codemirror/view";
-import {javascript, javascriptLanguage, esLint} from "@codemirror/lang-javascript";
-import {linter} from "@codemirror/lint";
 import {githubLightInit} from "@uiw/codemirror-theme-github";
 import {tags as t} from "@lezer/highlight";
 import {indentWithTab} from "@codemirror/commands";
-import {browser} from "globals";
-import * as eslint from "eslint-linter-browserify";
 import {createRuntime} from "../runtime/index.js";
-import {javascript as javascriptRuntime} from "../runtime/languages.js";
+import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
-import {controls} from "./controls/index.js";
-import {rechoCompletion} from "./completion.js";
-import {docStringTag} from "./docStringTag.js";
-import {commentLink, commentLinkClickHandler} from "./commentLink.js";
-import {blockExtensions, blockIndicator} from "./blocks";
-
-// @see https://github.com/UziTech/eslint-linter-browserify/blob/master/example/script.js
-// @see https://codemirror.net/examples/lint/
-const eslintConfig = {
-  languageOptions: {
-    globals: {
-      ...browser,
-    },
-    parserOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-    },
-  },
-};
+import {blockIndicator} from "./blocks";
+import {javascriptSupport} from "./languages/javascript.js";
 
 /**
  * @param {HTMLElement} container
@@ -38,13 +17,13 @@ const eslintConfig = {
  * @param {(error: any) => void} [options.onError]
  * @param {import("@codemirror/state").Extension[]} [options.extensions]
  * @param {object} [options.language] - The notebook's language (see
- *   ../runtime/languages.js), JavaScript by default.
+ *   ../runtime/languages/index.js), JavaScript by default.
  * @param {import("@codemirror/state").Extension[]} [options.languageSupport] -
  *   Editor extensions for a language other than JavaScript (see
  *   ./languages/index.js).
  */
 export function createEditor(container, options) {
-  const {code, onError, extensions = [], language = javascriptRuntime, languageSupport = []} = options;
+  const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
   const dispatcher = d3Dispatch("userInput");
   const runtimeRef = {current: null};
   const isJavaScript = language.id === "javascript";
@@ -53,22 +32,9 @@ export function createEditor(container, options) {
   // Block indicators come from the JavaScript syntax tree.
   if (isJavaScript) myBasicSetup.splice(2, 0, blockIndicator);
 
-  // Completion, controls, doc tags, comment links and linting all read
-  // JavaScript, so other languages bring only their own support.
-  const languageExtensions = isJavaScript
-    ? [
-        javascript(),
-        javascriptLanguage.data.of({autocomplete: rechoCompletion}),
-        blockExtensions,
-        controls(runtimeRef),
-        // Disable this for now, because it prevents copying/pasting the code.
-        // outputProtection(),
-        docStringTag,
-        commentLink,
-        commentLinkClickHandler,
-        linter(esLint(new eslint.Linter(), eslintConfig)),
-      ]
-    : languageSupport;
+  // JavaScript's support needs the runtime (for controls), so it is set up
+  // here; other languages bring theirs (see ./languages/index.js).
+  const languageExtensions = isJavaScript ? javascriptSupport(runtimeRef) : languageSupport;
 
   const state = EditorState.create({
     doc: code,

@@ -7,7 +7,7 @@ import {Inspector} from "../stdlib/inspect.js";
 
 /**
  * wenyan-lang (文言), compiled cell by cell to JavaScript with Recho's fork of
- * its compiler (github:recho-dev/wenyan). See ../languages.js.
+ * its compiler (github:recho-dev/wenyan). See ./index.js.
  *
  * Output is written as wenyan comments, so a notebook still runs in the
  * official wenyan IDE:

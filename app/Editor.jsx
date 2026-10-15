@@ -4,7 +4,7 @@ import {Play, Square, RefreshCcw, Copy} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
-import {loadLanguage} from "../runtime/languages.js";
+import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "./cn.js";
 
 const styles = {

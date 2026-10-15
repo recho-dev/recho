@@ -1,7 +1,7 @@
 import {it, expect, describe, afterEach, beforeAll} from "vitest";
 import {EditorState} from "@codemirror/state";
 import {createRuntime} from "../runtime/index.js";
-import {loadLanguage} from "../runtime/languages.js";
+import {loadLanguage} from "../runtime/languages/index.js";
 import {compile} from "wenyan";
 
 const wait = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms));
