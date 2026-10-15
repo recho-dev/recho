@@ -1,0 +1,26 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 662d22caf374ddf5500ea8b178c60fcfd7c1974c..51c98def9475241f08d64b155df2d6410919fccc 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -1714,7 +1714,7 @@ class TreeFragment {
+                     let cut = nextF;
+                     if (pos >= cut.from || nextPos <= cut.to || off) {
+                         let fFrom = Math.max(cut.from, pos) - off, fTo = Math.min(cut.to, nextPos) - off;
+-                        cut = fFrom >= fTo ? null : new TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0, !!nextC);
++                        cut = fFrom >= fTo ? null : new TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0 || cut.openStart, !!nextC || cut.openEnd);
+                     }
+                     if (cut)
+                         result.push(cut);
+diff --git a/dist/index.js b/dist/index.js
+index 9323f351120ab766d4e17092d38e7dd0b1ea1890..068656d1f4e291b09b358300cbf47335f666ba64 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1712,7 +1712,7 @@ class TreeFragment {
+                     let cut = nextF;
+                     if (pos >= cut.from || nextPos <= cut.to || off) {
+                         let fFrom = Math.max(cut.from, pos) - off, fTo = Math.min(cut.to, nextPos) - off;
+-                        cut = fFrom >= fTo ? null : new TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0, !!nextC);
++                        cut = fFrom >= fTo ? null : new TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0 || cut.openStart, !!nextC || cut.openEnd);
+                     }
+                     if (cut)
+                         result.push(cut);

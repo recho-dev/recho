@@ -87,6 +87,38 @@ describe("updateBlocks with an incomplete syntax tree", () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
+  it("keeps statements whole wherever the initial parse stopped", () => {
+    // CodeMirror's initial parse stops when its time slice runs out, wherever
+    // the parser happens to be: on a slow machine, that can be mid-statement.
+    // Fake the clock so the slice runs out after `checks` clock reads, which
+    // stops the parse at every reachable position in turn.
+    const blocks = detectAll(createState(LARGE_DOC));
+    const realNow = Date.now;
+    const cuts = new Set<number>();
+    for (let checks = 1; ; checks += 3) {
+      let reads = 0;
+      const start = realNow();
+      vi.spyOn(Date, "now").mockImplementation(() => (++reads > checks ? start + 1e6 : start));
+      const state = createState(LARGE_DOC);
+      vi.mocked(Date.now).mockRestore();
+      const cut = syntaxTree(state).length;
+      if (cut >= 3000) break;
+      if (cuts.has(cut)) continue;
+      cuts.add(cut);
+
+      const tr = edit(state, {from: 7, to: 7, insert: "x"});
+      const updated = updateBlocks(blocks, tr);
+
+      // A fresh parse of the edited document never saw a half-parsed statement.
+      const fresh = ranges(detectAll(createState(tr.state.doc.toString())));
+      expect(ranges(detectAll(tr.state)), `cut at ${cut}`).toEqual(fresh);
+      expect(ranges(updated), `cut at ${cut}`).toEqual(fresh);
+      expect(updated.map((b) => b.id)).toEqual(blocks.map((b) => b.id));
+    }
+    expect(cuts.size).toBeGreaterThan(100);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("keeps mapped old blocks when the parse cannot finish, then repairs them once it does", () => {
     const state = createState(LARGE_DOC);
     const blocks = detectAll(createState(LARGE_DOC));
