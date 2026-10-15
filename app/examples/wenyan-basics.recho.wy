@@ -4,22 +4,23 @@
 注曰。「「@created 2026-10-15」」。
 注曰。「「@label Wenyan, Beginner」」。
 
-注曰。「「文言者。以文言為程式之語也。凡書之者。其值見於其上。」」。
+注曰。「「文言者。以文言為程式之語也。凡示之者。其值見於其上。」」。
 注曰。「「Wenyan is a programming language written in classical Chinese.」」。
-注曰。「「Whatever 書之 prints shows up above it, as 批曰 comments.」」。
+注曰。「「示之 (show it) shows values above its line, as 批曰 comments.」」。
+注曰。「「書之 (write it) still prints to the browser console.」」。
 
 批曰。「「➜ 問天地好在。」」。
-吾有一言。曰「「問天地好在。」」。書之。
+吾有一言。曰「「問天地好在。」」。示之。
 
 注曰。「「名之曰 names a value. 夫 recalls one.」」。
 
 吾有一數。曰三。名之曰「甲」。
 
 批曰。「「➜ 三」」。
-夫「甲」。書之。
+夫「甲」。示之。
 
 批曰。「「➜ 九」」。
-乘「甲」以「甲」。書之。
+乘「甲」以「甲」。示之。
 
 注曰。「「昔之…今…是矣 changes a value, even one named in another block.」」。
 
@@ -30,7 +31,7 @@
 云云。
 
 批曰。「「➜ 一十」」。
-夫「和」。書之。
+夫「和」。示之。
 
 注曰。「「吾有一術 defines a function. 施 calls it.」」。
 
@@ -42,7 +43,7 @@
 是謂「階乘」之術也。
 
 批曰。「「➜ 一百二十」」。
-施「階乘」於五。書之。
+施「階乘」於五。示之。
 
 批曰。「「➜ 三百六十二萬八千八百」」。
-施「階乘」於十。書之。
+施「階乘」於十。示之。

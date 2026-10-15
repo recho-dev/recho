@@ -1,19 +1,18 @@
 import {bool2hanzi, compile, num2hanzi, splitCells} from "wenyan";
-import {simple} from "acorn-walk";
 import {ERROR_MARK, OUTPUT_MARK} from "../constant.js";
-import {parseModule} from "../parse.js";
-import {Sourcemap} from "../sourcemap.js";
 import {Inspector} from "../stdlib/inspect.js";
 
 /**
  * wenyan-lang (文言), compiled cell by cell to JavaScript with Recho's fork of
  * its compiler (github:recho-dev/wenyan). See ./index.js.
  *
- * Output is written as wenyan comments, so a notebook still runs in the
- * official wenyan IDE:
+ * 示之 ("show it"), a keyword of the fork used like 書之, compiles to
+ * `echo(…)`, and its values are written above the cell as wenyan comments:
  *
  *   批曰。「「➜ 三」」。
- *   夫「甲」。書之。
+ *   夫「甲」。示之。
+ *
+ * 書之 is left alone: it prints to the console, as in any wenyan program.
  */
 
 const OUTPUT_PREFIX = `批曰。「「${OUTPUT_MARK}`;
@@ -64,29 +63,9 @@ function assert(message, pos, ok) {
   if (!ok) throw Object.assign(new SyntaxError(message), {pos});
 }
 
-/** 書之 compiles to `console.log(…)`, the only way wenyan can reach it. */
-function rewritePrint(js) {
-  const output = new Sourcemap(js);
-  simple(parseModule(js), {
-    CallExpression({callee}) {
-      if (
-        callee.type === "MemberExpression" &&
-        !callee.computed &&
-        callee.object.type === "Identifier" &&
-        callee.object.name === "console" &&
-        callee.property.name === "log"
-      ) {
-        output.replaceLeft(callee.start, callee.end, "echo");
-      }
-    },
-  });
-  return String(output);
-}
-
 function toJavaScript(source) {
-  let js;
   try {
-    js = compile(source, {
+    return compile(source, {
       lang: "js",
       romanizeIdentifiers: "none",
       logCallback: () => {},
@@ -98,7 +77,6 @@ function toJavaScript(source) {
     // Report it from the cell, so the rest of the notebook still runs.
     return `throw new SyntaxError(${JSON.stringify(error.message)});`;
   }
-  return rewritePrint(js);
 }
 
 export const wenyan = {
