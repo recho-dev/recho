@@ -11,9 +11,21 @@ function isError(value) {
   return value instanceof Error;
 }
 
-export function addPrefix(string, prefix) {
+/**
+ * How a language writes output into its code: the output and error prefixes,
+ * how one line of output is written, and how a value is displayed. This is
+ * JavaScript's; other languages provide their own (see ./languages.js).
+ */
+export const JAVASCRIPT_OUTPUT = {
+  outputPrefix: OUTPUT_PREFIX,
+  errorPrefix: ERROR_PREFIX,
+  formatLine: (prefix, line) => `${prefix} ${line}`,
+  inspect: (value, options) => new Inspector(value, options),
+};
+
+export function addPrefix(string, prefix, formatLine = JAVASCRIPT_OUTPUT.formatLine) {
   const lines = string.split("\n");
-  return lines.map((line) => `${prefix} ${line}`).join("\n");
+  return lines.map((line) => formatLine(prefix, line)).join("\n");
 }
 
 function withTable(groups) {
@@ -60,7 +72,7 @@ function merge(...strings) {
   return output;
 }
 
-export function makeOutput(values) {
+export function makeOutput(values, outputFormat = JAVASCRIPT_OUTPUT) {
   // Group values by key. Each group is a row if using table, otherwise a column.
   const groupValues = groups(values, (v) => v.options?.key);
 
@@ -90,7 +102,7 @@ export function makeOutput(values) {
         // Disable string quoting for multi-value outputs to improve readability.
         // Example: echo("a =", 1) produces "a = 1" instead of "a = "1""
         const options = n === 1 ? {} : {quote: false};
-        const inspector = v instanceof Inspector ? v : new Inspector(v, options);
+        const inspector = v instanceof Inspector ? v : outputFormat.inspect(v, options);
         return inspector.format();
       });
 
@@ -106,7 +118,11 @@ export function makeOutput(values) {
     border: getBorderCharacters("ramac"),
     columnDefault: {alignment: "right"},
   });
-  const prefixed = addPrefix(formatted, error ? ERROR_PREFIX : OUTPUT_PREFIX);
+  const prefixed = addPrefix(
+    formatted,
+    error ? outputFormat.errorPrefix : outputFormat.outputPrefix,
+    outputFormat.formatLine,
+  );
 
   return {output: prefixed, error};
 }
