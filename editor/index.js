@@ -15,6 +15,8 @@ import {rechoCompletion} from "./completion.js";
 import {docStringTag} from "./docStringTag.js";
 import {commentLink, commentLinkClickHandler} from "./commentLink.js";
 import {blockExtensions, blockIndicator} from "./blocks";
+// Keeps incremental re-parses from splitting a half-parsed statement.
+import "../lib/lezer-fragments.ts";
 
 // @see https://github.com/UziTech/eslint-linter-browserify/blob/master/example/script.js
 // @see https://codemirror.net/examples/lint/

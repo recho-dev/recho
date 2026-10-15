@@ -3,6 +3,8 @@ import {blockRangeLength, findAffectedBlockRange} from "../../lib/blocks.ts";
 import {blocksMatchTree, detectBlocksWithinRange, isMarkLineText, topLevelCoverage} from "../../lib/blocks/detect.ts";
 import {ensureSyntaxTree, syntaxTree, syntaxTreeAvailable} from "@codemirror/language";
 import {BlockMetadata} from "./BlockMetadata.ts";
+// Keeps incremental re-parses from splitting a half-parsed statement.
+import "../../lib/lezer-fragments.ts";
 
 /**
  * Verbose per-transaction logging is only enabled in the test environment

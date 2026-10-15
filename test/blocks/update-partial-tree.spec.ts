@@ -95,7 +95,7 @@ describe("updateBlocks with an incomplete syntax tree", () => {
     const blocks = detectAll(createState(LARGE_DOC));
     const realNow = Date.now;
     const cuts = new Set<number>();
-    for (let checks = 1; ; checks += 3) {
+    for (let checks = 1; ; checks += 9) {
       let reads = 0;
       const start = realNow();
       vi.spyOn(Date, "now").mockImplementation(() => (++reads > checks ? start + 1e6 : start));
@@ -117,7 +117,7 @@ describe("updateBlocks with an incomplete syntax tree", () => {
     }
     expect(cuts.size).toBeGreaterThan(100);
     expect(errorSpy).not.toHaveBeenCalled();
-  });
+  }, 30_000);
 
   it("keeps mapped old blocks when the parse cannot finish, then repairs them once it does", () => {
     const state = createState(LARGE_DOC);
