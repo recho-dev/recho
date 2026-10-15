@@ -1,6 +1,7 @@
-import {Parser} from "acorn";
 import {recursive, simple} from "acorn-walk";
 import {Sourcemap} from "./sourcemap.js";
+import {parseModule} from "./parse.js";
+import {findReferences} from "./references.js";
 
 function parseParams(params) {
   return params.map((p) => (p.type === "AssignmentPattern" ? p.left.name : p.name));
@@ -31,7 +32,7 @@ function parseParams(params) {
 function rewriteEchoInFunction(input) {
   if (!input.includes("echo")) return input;
 
-  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const body = parseModule(input);
   const output = new Sourcemap(input);
   const echoNodes = [];
   const topLevelEchoNodes = [];
@@ -69,7 +70,7 @@ function rewriteEchoInFunction(input) {
 }
 
 function rewriteArrowFunction(input) {
-  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const body = parseModule(input);
   const output = new Sourcemap(input);
   const arrowExpressions = [];
   simple(body, {
@@ -82,6 +83,41 @@ function rewriteArrowFunction(input) {
     const arrayIndex = input.slice(node.start, node.end).indexOf("=>");
     output.insertLeft(node.start + arrayIndex + 2, "{return ");
     output.insertLeft(node.end, ";}");
+  }
+  return String(output);
+}
+
+/**
+ * Rewrites every free reference to the given promoted top-level `let` names to
+ * go through their mutator, so the cell can assign them (see ./mutable.js).
+ * `mutators` maps each name to its mutator variable, e.g. `{count: "m"}`:
+ *
+ * ```js
+ * count += 1;          // count += 1  ->  m.value += 1
+ * const o = {count};   // shorthand   ->  {count: m.value}
+ * ```
+ */
+export function rewriteMutables(input, mutators) {
+  if (!Object.keys(mutators).length) return input;
+  const body = parseModule(input);
+  const references = findReferences(body).filter((node) => Object.hasOwn(mutators, node.name));
+  if (!references.length) return input;
+
+  // Identifiers written as shorthand properties, `{x}` or `({x} = …)`, need
+  // their key spelled out once the value is no longer a plain identifier.
+  const shorthands = new Set();
+  const collectShorthands = (node) => {
+    for (const p of node.properties) {
+      if (p.type !== "Property" || !p.shorthand) continue;
+      shorthands.add(p.value.type === "AssignmentPattern" ? p.value.left.start : p.value.start);
+    }
+  };
+  simple(body, {ObjectExpression: collectShorthands, ObjectPattern: collectShorthands});
+
+  const output = new Sourcemap(input);
+  for (const node of references) {
+    const value = `${mutators[node.name]}.value`;
+    output.replaceLeft(node.start, node.end, shorthands.has(node.start) ? `${node.name}: ${value}` : value);
   }
   return String(output);
 }

@@ -1,6 +1,5 @@
 import {transpileJavaScript} from "@observablehq/notebook-kit";
 import {Runtime} from "@observablehq/runtime";
-import {parse} from "acorn";
 import {group} from "d3-array";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import * as stdlib from "./stdlib/index.js";
@@ -8,7 +7,9 @@ import {Inspector} from "./stdlib/inspect.js";
 import {BlockMetadata} from "../editor/blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
 import {IntervalTree} from "../lib/IntervalTree.ts";
-import {transpileRechoJavaScript} from "./transpile.js";
+import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
+import {analyzeMutables, createMutator} from "./mutable.js";
+import {parseModule} from "./parse.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
 import {addPrefix, makeOutput, OUTPUT_PREFIX, ERROR_PREFIX} from "./output.js";
 
@@ -100,6 +101,34 @@ export function createRuntime(initialCode, options = {}) {
   let __echo__ = null;
   const __getEcho__ = () => __echo__;
   const __setEcho__ = (echo) => (__echo__ = echo);
+
+  // The promoted `let` names the cell running synchronously right now depends
+  // on, directly or through other cells. A mutator throws when such a cell
+  // assigns one of them, since that would re-run the cell forever (see
+  // ./mutable.js).
+  let runningInputs = null;
+  const isReading = (name) => runningInputs?.has(name) ?? false;
+  // The current mutator of each promoted `let`, so writers can report that
+  // they have run against it (see ./mutable.js).
+  const mutators = new Map();
+
+  // Writers by promoted name. A writer can fail before its variable's mutator
+  // exists (a missing input rejects at once); the new mutator then counts it
+  // as run, so later writers and readers don't wait on it forever.
+  const writers = new Map();
+
+  const trackInputs = (fn, inputs) => {
+    const reads = new Set(inputs);
+    return function (...args) {
+      const previous = runningInputs;
+      runningInputs = reads;
+      try {
+        return fn.apply(this, args);
+      } finally {
+        runningInputs = previous;
+      }
+    };
+  };
 
   // The button function must be manually associated to the button registry.
   const __stdlib__ = {...stdlib, button: makeButton(buttonRegistry)};
@@ -209,8 +238,14 @@ export function createRuntime(initialCode, options = {}) {
 
   function observer(state) {
     return {
-      pending() {},
+      pending() {
+        // A new run started: an earlier failure no longer counts as this
+        // writer having run (see `writers`).
+        state.failed = false;
+      },
       fulfilled() {
+        state.failed = false;
+        state.settle?.();
         // Re-execute code to synchronize block positions after state changes.
         // Note: A more robust solution would involve applying changes from both
         // output generation and user edits, but this approach provides adequate
@@ -218,6 +253,8 @@ export function createRuntime(initialCode, options = {}) {
         if (!disposed && isRunning) rerun(code);
       },
       rejected(error) {
+        state.failed = true;
+        state.settle?.();
         if (disposed) return;
         const e = state.syntaxError || error;
         console.error(e);
@@ -232,7 +269,7 @@ export function createRuntime(initialCode, options = {}) {
       // The `parse` call here is actually unnecessary. Parsing the entire code
       // is quite expensive. If we can perform the splitting operation through
       // the editor's syntax tree, we can save the parsing here.
-      return parse(code, {ecmaVersion: "latest", sourceType: "module"}).body;
+      return parseModule(code).body;
     } catch (error) {
       console.error(error);
       // Calculate error position and display syntax error at the appropriate location.
@@ -249,9 +286,9 @@ export function createRuntime(initialCode, options = {}) {
     }
   }
 
-  function transpile(cell) {
+  function transpile(cell, writes) {
     try {
-      return transpileJavaScript(transpileRechoJavaScript(cell));
+      return transpileJavaScript(transpileRechoJavaScript(rewriteMutables(cell, writes)));
     } catch (error) {
       console.error(error);
       return {body: cell, inputs: [], outputs: [], error};
@@ -326,14 +363,15 @@ export function createRuntime(initialCode, options = {}) {
     const nodes = split(code);
     if (!nodes) return;
 
-    for (const node of nodes) {
+    const mutables = analyzeMutables(nodes.map((node) => code.slice(node.start, node.end)));
+    nodes.forEach((node, i) => {
       const cell = code.slice(node.start, node.end);
-      const transpiled = transpile(cell);
       node.id = uid();
-      node.transpiled = transpiled;
-    }
+      node.mutable = mutables[i];
+      node.transpiled = transpile(cell, node.mutable.writes);
+    });
 
-    const groups = group(nodes, (n) => code.slice(n.start, n.end));
+    const groups = group(nodes, (n) => n.mutable.key);
     const enter = [];
     const remove = [];
     const exit = new Set(nodesByKey.keys());
@@ -369,6 +407,7 @@ export function createRuntime(initialCode, options = {}) {
     }
 
     for (const node of remove) {
+      for (const {name} of node.state.chainOutputs ?? []) writers.get(name)?.delete(node.state);
       const {variables} = node.state;
       for (const variable of variables) variable.delete();
     }
@@ -378,6 +417,7 @@ export function createRuntime(initialCode, options = {}) {
     for (const node of enter) {
       const vid = node.id;
       const {inputs, body, outputs, error = null} = node.transpiled;
+      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node.mutable;
       const state = {
         values: [],
         variables: [],
@@ -387,6 +427,14 @@ export function createRuntime(initialCode, options = {}) {
         attributes: Object.create(null),
       };
       node.state = state;
+      if (chainOutputs.length) {
+        state.chainOutputs = chainOutputs;
+        state.settle = () => chainOutputs.forEach(({name, index}) => mutators.get(name)?.settle(index));
+        for (const {name} of chainOutputs) {
+          if (!writers.has(name)) writers.set(name, new Set());
+          writers.get(name).add(state);
+        }
+      }
       const v = main.variable(observer(state), {shadow: {}});
 
       // Create echo variable for every node to support internal echo calls.
@@ -429,12 +477,40 @@ export function createRuntime(initialCode, options = {}) {
         return __echo__;
       });
       v._shadow.set("echo", vd);
-      const newInputs = [...inputs, "echo"];
-      state.variables.push(v.define(vid, newInputs, safeEval(body, newInputs, __setEcho__, compileCell)));
+      // Extra inputs aren't necessarily referenced by the body: they re-run
+      // the cell when its variable starts over, and order it after the
+      // previous writer.
+      const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
+      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), reads);
+      state.variables.push(v.define(vid, newInputs, definition));
 
-      // Export cell-level variables for external access.
+      // Export cell-level variables for external access. A promoted `let`
+      // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
-        state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
+        if (defines.includes(o)) {
+          const mutator = mutatorNames[o];
+          const create = (exports) => {
+            const m = createMutator(o, exports[o], isReading);
+            mutators.set(o, m);
+            for (const writer of writers.get(o) ?? []) {
+              if (!writer.failed) continue;
+              for (const {name, index} of writer.chainOutputs) if (name === o) m.settle(index);
+            }
+            return m;
+          };
+          // Readers wait until the last writer has run, so they never see
+          // the initial value just before it is overwritten.
+          const inputs = waits[o] ? [mutator, waits[o]] : [mutator];
+          state.variables.push(
+            main.variable().define(mutator, [vid], create),
+            main.variable(true).define(o, inputs, (mutator) => mutator.mutable),
+          );
+        } else {
+          state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
+        }
+      }
+      for (const {name, index, variable} of chainOutputs) {
+        state.variables.push(main.variable().define(variable, [mutatorNames[name]], (m) => m.settled(index)));
       }
     }
 
