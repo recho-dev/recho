@@ -149,7 +149,9 @@ echo(clicks);
  *   starting from the current value. Other blocks that change it don't re-run.
  *   Use this to accumulate values over time.
  * - A block can't read a variable and also change it, for example by calling
- *   a function that changes it: `echo(clicks, addClick())`. Split it into two
+ *   a function that changes it: `echo(clicks, addClick())`. Reading it
+ *   through another block counts too: with `const doubled = clicks * 2`, a
+ *   block using `doubled` can't change `clicks`. Split it into separate
  *   blocks. This is only caught when the change happens right away: a block
  *   that reads `clicks` and changes it later, say in `setTimeout`, re-runs on
  *   every change.

@@ -29,11 +29,11 @@ describe("rewriteMutables", () => {
   ];
   for (const [name, input, expected] of cases) {
     it(`should rewrite ${name}`, () => {
-      expect(rewriteMutables(input, ["a"])).toBe(expected);
+      expect(rewriteMutables(input, {a: "mutator$a"})).toBe(expected);
     });
   }
 
   it("should leave cells without promoted names untouched", () => {
-    expect(rewriteMutables("a = 1;", [])).toBe("a = 1;");
+    expect(rewriteMutables("a = 1;", {})).toBe("a = 1;");
   });
 });

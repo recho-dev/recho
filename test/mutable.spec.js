@@ -89,7 +89,7 @@ describe("top-level let", () => {
   it("rejects a block that reads and changes the same variable", async () => {
     run(`let c = 0;\n\nfunction inc() {\n  c++;\n}\n\necho(c, inc());`);
     await wait();
-    expect(notebook.doc()).toContain("`c` is read and changed in the same block. Split it into two blocks.");
+    expect(notebook.doc()).toContain("`c` is changed by a block that also depends on it");
   });
 
   it("supports destructuring assignment", async () => {
@@ -198,5 +198,49 @@ describe("top-level let", () => {
     // 10 after the first run, then +1 per tick; never multiplied again.
     expect(value).toBeGreaterThan(10);
     expect(value).toBeLessThan(100);
+  });
+
+  it("rejects a writer that depends on its variable through another block", async () => {
+    globalThis.__rechoRuns = 0;
+    run(`let a = 0;\n\nconst b = a;\n\n{\n  globalThis.__rechoRuns++;\n  a = b + 1;\n}\n\necho(a);`);
+    await wait(300);
+    expect(notebook.doc()).toContain("`a` is changed by a block that also depends on it");
+    expect(globalThis.__rechoRuns).toBeLessThan(3);
+    delete globalThis.__rechoRuns;
+  });
+
+  it("rejects calling a writing function from a block that depends on the variable", async () => {
+    run(`let a = 0;\n\nfunction inc() {\n  a++;\n}\n\nconst b = a;\n\necho(b, inc());`);
+    await wait();
+    expect(notebook.doc()).toContain("`a` is changed by a block that also depends on it");
+  });
+
+  it("isn't affected by locals named like internal variables", async () => {
+    run(`let a = 0;\n\n{\n  const mutator$a = {value: 10};\n  const $recho$m$a = {value: 10};\n  a++;\n}\n\necho(a);`);
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 1\necho(a);`);
+  });
+
+  it("isn't affected by top-level names like internal variables", async () => {
+    run(
+      `let a = 0;\n\na = 1;\n\na = a * 10;\n\nconst chain$a$0 = 5;\n\nconst $recho$c0$a = 6;\n\necho(a, chain$a$0, $recho$c0$a);`,
+    );
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 10 5 6\necho(a, chain$a$0, $recho$c0$a);`);
+  });
+
+  it("waits for earlier writers even when a later one fails at once", async () => {
+    run(`let a = 1;\n\nawait new Promise((r) => setTimeout(r, 50)), (a = 2);\n\na = missing;\n\na *= 10;\n\necho(a);`);
+    await wait(300);
+    expect(notebook.doc()).toContain(`//➜ 20\necho(a);`);
+  });
+
+  it("doesn't replay an earlier failure while the writer runs again", async () => {
+    run(
+      `const s = recho.interval(300);\n\nlet a = s >= 0 ? 1 : 0;\n\nconst flaky = s === 0 ? Promise.reject(new Error("flaky")) : s;\n\nawait new Promise((r) => setTimeout(r, 40)), (a = 2 + flaky * 0);\n\na *= 10;\n\necho(a);`,
+    );
+    // After the first retry (tick 1 + 40ms), before tick 2.
+    await wait(420);
+    expect(notebook.doc()).toContain(`//➜ 20\necho(a);`);
   });
 });

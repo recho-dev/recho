@@ -8,7 +8,7 @@ import {BlockMetadata} from "../editor/blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
 import {IntervalTree} from "../lib/IntervalTree.ts";
 import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
-import {analyzeMutables, chainName, createMutator, mutatorName} from "./mutable.js";
+import {analyzeMutables, createMutator} from "./mutable.js";
 import {parseModule} from "./parse.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
 import {addPrefix, makeOutput, OUTPUT_PREFIX, ERROR_PREFIX} from "./output.js";
@@ -102,9 +102,10 @@ export function createRuntime(initialCode, options = {}) {
   const __getEcho__ = () => __echo__;
   const __setEcho__ = (echo) => (__echo__ = echo);
 
-  // The reactive inputs of the cell running synchronously right now, if any.
-  // A mutator throws when such a cell assigns one of its own inputs, since
-  // that would re-run the cell forever (see ./mutable.js).
+  // The promoted `let` names the cell running synchronously right now depends
+  // on, directly or through other cells. A mutator throws when such a cell
+  // assigns one of them, since that would re-run the cell forever (see
+  // ./mutable.js).
   let runningInputs = null;
   const isReading = (name) => runningInputs?.has(name) ?? false;
   // The current mutator of each promoted `let`, so writers can report that
@@ -237,7 +238,11 @@ export function createRuntime(initialCode, options = {}) {
 
   function observer(state) {
     return {
-      pending() {},
+      pending() {
+        // A new run started: an earlier failure no longer counts as this
+        // writer having run (see `writers`).
+        state.failed = false;
+      },
       fulfilled() {
         state.failed = false;
         state.settle?.();
@@ -412,7 +417,7 @@ export function createRuntime(initialCode, options = {}) {
     for (const node of enter) {
       const vid = node.id;
       const {inputs, body, outputs, error = null} = node.transpiled;
-      const {defines, extraInputs, chainOutputs, waits} = node.mutable;
+      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node.mutable;
       const state = {
         values: [],
         variables: [],
@@ -476,14 +481,14 @@ export function createRuntime(initialCode, options = {}) {
       // the cell when its variable starts over, and order it after the
       // previous writer.
       const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
-      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), inputs);
+      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), reads);
       state.variables.push(v.define(vid, newInputs, definition));
 
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
         if (defines.includes(o)) {
-          const mutator = mutatorName(o);
+          const mutator = mutatorNames[o];
           const create = (exports) => {
             const m = createMutator(o, exports[o], isReading);
             mutators.set(o, m);
@@ -504,9 +509,8 @@ export function createRuntime(initialCode, options = {}) {
           state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
         }
       }
-      for (const {name, index} of chainOutputs) {
-        const mutator = mutatorName(name);
-        state.variables.push(main.variable().define(chainName(name, index), [mutator], (m) => m.settled(index)));
+      for (const {name, index, variable} of chainOutputs) {
+        state.variables.push(main.variable().define(variable, [mutatorNames[name]], (m) => m.settled(index)));
       }
     }
 

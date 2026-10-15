@@ -2,7 +2,6 @@ import {recursive, simple} from "acorn-walk";
 import {Sourcemap} from "./sourcemap.js";
 import {parseModule} from "./parse.js";
 import {findReferences} from "./references.js";
-import {mutatorName} from "./mutable.js";
 
 function parseParams(params) {
   return params.map((p) => (p.type === "AssignmentPattern" ? p.left.name : p.name));
@@ -91,17 +90,17 @@ function rewriteArrowFunction(input) {
 /**
  * Rewrites every free reference to the given promoted top-level `let` names to
  * go through their mutator, so the cell can assign them (see ./mutable.js).
+ * `mutators` maps each name to its mutator variable, e.g. `{count: "m"}`:
  *
  * ```js
- * count += 1;          // count += 1  ->  mutator$count.value += 1
- * const o = {count};   // shorthand   ->  {count: mutator$count.value}
+ * count += 1;          // count += 1  ->  m.value += 1
+ * const o = {count};   // shorthand   ->  {count: m.value}
  * ```
  */
-export function rewriteMutables(input, names) {
-  if (!names.length) return input;
+export function rewriteMutables(input, mutators) {
+  if (!Object.keys(mutators).length) return input;
   const body = parseModule(input);
-  const promoted = new Set(names);
-  const references = findReferences(body).filter((node) => promoted.has(node.name));
+  const references = findReferences(body).filter((node) => Object.hasOwn(mutators, node.name));
   if (!references.length) return input;
 
   // Identifiers written as shorthand properties, `{x}` or `({x} = …)`, need
@@ -117,7 +116,7 @@ export function rewriteMutables(input, names) {
 
   const output = new Sourcemap(input);
   for (const node of references) {
-    const value = `${mutatorName(node.name)}.value`;
+    const value = `${mutators[node.name]}.value`;
     output.replaceLeft(node.start, node.end, shorthands.has(node.start) ? `${node.name}: ${value}` : value);
   }
   return String(output);

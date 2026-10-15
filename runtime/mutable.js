@@ -35,9 +35,8 @@ import {Mutable} from "./stdlib/state.js";
  * uses something it defines) is left out of the order instead of deadlocking.
  */
 
-export const mutatorName = (name) => `mutator$${name}`;
-
-export const chainName = (name, index) => `chain$${name}$${index}`;
+// Identifier-like tokens, used to pick internal names no user code can bind.
+const IDENTIFIER = /[\p{ID_Start}$_][\p{ID_Continue}$\u200c\u200d]*/gu;
 
 // analyzeCell is a pure function of the source, and most cells don't change
 // between runs, so its results are cached (and the cache dropped when large).
@@ -57,7 +56,7 @@ function analyzeCell(source) {
   try {
     program = parseModule(source);
   } catch {
-    return {lets: [], declared: [], references: new Set(), writes: new Set()};
+    return {lets: [], declared: [], references: new Set(), writes: new Set(), identifiers: []};
   }
   const lets = [];
   const declared = [];
@@ -80,7 +79,8 @@ function analyzeCell(source) {
   }
   const references = findReferences(program);
   const writes = new Set(findAssignedReferences(program, references).map((node) => node.name));
-  return {lets, declared, references: new Set(references.map((node) => node.name)), writes};
+  const identifiers = [...new Set(source.match(IDENTIFIER))];
+  return {lets, declared, references: new Set(references.map((node) => node.name)), writes, identifiers};
 }
 
 /**
@@ -88,11 +88,18 @@ function analyzeCell(source) {
  * for each cell:
  *
  * - `defines`: promoted names this cell declares
- * - `writes`: promoted names this cell assigns directly (to rewrite)
- * - `extraInputs`: hidden inputs (mutators and `chain$` promises to wait on)
- * - `chainOutputs`: `{name, index}` for each `chain$name$index` it settles
- * - `waits`: for a definer, the `chain$` variable each name waits on
+ * - `writes`: promoted names this cell assigns directly, mapped to the name of
+ *   their mutator (see rewriteMutables)
+ * - `reads`: promoted names this cell depends on, directly or through other
+ *   cells; changing one of them while it runs would re-run it forever
+ * - `mutators`: the mutator variable of each promoted name it touches
+ * - `extraInputs`: hidden inputs (mutators and order markers to wait on)
+ * - `chainOutputs`: `{name, index, variable}` for each order marker it settles
+ * - `waits`: for a definer, the order marker each name waits on
  * - `key`: the cell's identity for re-use between runs
+ *
+ * Internal variable names start with a prefix no identifier in the notebook
+ * starts with, so they can't collide with or be shadowed by user code.
  */
 export function analyzeMutables(sources) {
   const cells = sources.map(analyzeCellCached);
@@ -108,6 +115,11 @@ export function analyzeMutables(sources) {
     }
     for (const name of declared) declarers.set(name, i);
   });
+  let prefix = "$recho";
+  while (cells.some(({identifiers}) => identifiers.some((id) => id.startsWith(prefix)))) prefix = "_" + prefix;
+  const mutatorName = (name) => `${prefix}$m$${name}`;
+  const chainName = (name, index) => `${prefix}$c${index}$${name}`;
+
   const isCandidate = (name, i) => definers.has(name) && !duplicates.has(name) && definers.get(name) !== i;
 
   // Direct writes, then what each cell may change through what it references
@@ -147,17 +159,33 @@ export function analyzeMutables(sources) {
     }
   });
   for (const name of promoted) addEdge(valueNode(name), definers.get(name));
-  const dependsOn = (from, target, seen = new Set()) => {
+  const dependsOn = (from, target, graph = edges, seen = new Set()) => {
     if (from === target) return true;
     if (seen.has(from)) return false;
     seen.add(from);
-    for (const next of edges.get(from) ?? []) if (dependsOn(next, target, seen)) return true;
+    for (const next of graph.get(from) ?? []) if (dependsOn(next, target, graph, seen)) return true;
     return false;
   };
+  const membersOf = (name) => effects.flatMap((names, i) => (names.has(name) ? [i] : []));
+
+  // What re-runs what: a cell re-runs when what it references changes, a
+  // promoted value changes when its definer or any of its writers re-runs,
+  // and writers re-run when the definer does (they take the mutator).
+  const reactive = new Map([...edges].map(([from, to]) => [from, new Set(to)]));
+  const addReactive = (from, to) =>
+    reactive.has(from) ? reactive.get(from).add(to) : reactive.set(from, new Set([to]));
+  for (const name of promoted) {
+    for (const member of membersOf(name)) {
+      addReactive(valueNode(name), member);
+      addReactive(member, definers.get(name));
+    }
+  }
 
   const result = sources.map((source, i) => ({
     defines: [],
-    writes: [...direct[i]].filter((name) => promotedSet.has(name)),
+    writes: Object.fromEntries([...direct[i]].filter((name) => promotedSet.has(name)).map((n) => [n, mutatorName(n)])),
+    reads: promoted.filter((name) => dependsOn(i, valueNode(name), reactive)),
+    mutators: {},
     extraInputs: [],
     chainOutputs: [],
     waits: {},
@@ -167,15 +195,17 @@ export function analyzeMutables(sources) {
 
   for (const name of promoted) {
     const definer = definers.get(name);
-    const members = effects.flatMap((names, i) => (names.has(name) ? [i] : []));
+    const members = membersOf(name);
     const signature = [name, ...[definer, ...members].map((i) => sources[i])].join("\0");
     result[definer].defines.push(name);
     result[definer].groups.push(signature);
+    result[definer].mutators[name] = mutatorName(name);
 
     const chained = [];
     for (const cell of members) {
       const info = result[cell];
       info.groups.push(signature);
+      info.mutators[name] = mutatorName(name);
       info.extraInputs.push(mutatorName(name));
       const previous = chained.at(-1);
       if (dependsOn(cell, valueNode(name)) || (previous !== undefined && dependsOn(previous, cell))) continue;
@@ -183,7 +213,7 @@ export function analyzeMutables(sources) {
         info.extraInputs.push(chainName(name, chained.length - 1));
         addEdge(cell, previous);
       }
-      info.chainOutputs.push({name, index: chained.length});
+      info.chainOutputs.push({name, index: chained.length, variable: chainName(name, chained.length)});
       chained.push(cell);
     }
     if (chained.length) {
@@ -193,8 +223,10 @@ export function analyzeMutables(sources) {
   }
 
   for (const info of result) {
-    const {groups, extraInputs, chainOutputs, waits} = info;
-    if (groups.length) info.key += "\0" + JSON.stringify({groups, extraInputs, chainOutputs, waits});
+    const {groups, reads, mutators, extraInputs, chainOutputs, waits} = info;
+    if (groups.length || reads.length) {
+      info.key += "\0" + JSON.stringify({groups, reads, mutators, extraInputs, chainOutputs, waits});
+    }
     delete info.groups;
   }
 
@@ -203,10 +235,12 @@ export function analyzeMutables(sources) {
 
 /**
  * Create the mutator for a promoted variable. `isReading()` reports whether
- * the cell running synchronously right now reads `name` reactively: such a
- * cell would re-run itself forever by writing to it, so that's an error.
- * `settle(k)` marks writer k as having run against this mutator, and
- * `settled(k)` is the promise later writers and readers wait on.
+ * the cell running synchronously right now depends on `name`: such a cell
+ * would re-run itself forever by writing to it, so that's an error.
+ * `settle(k)` marks writer k as having run against this mutator. `settled(k)`
+ * is the promise later writers and readers wait on: it resolves once writers
+ * 0..k have all settled, even if writer k failed early, before the ones
+ * before it ran.
  */
 export function createMutator(name, value, isReading) {
   const mutable = Mutable(value, {emitUndefined: true});
@@ -219,6 +253,14 @@ export function createMutator(name, value, isReading) {
     }
     return runs.get(index);
   };
+  const markers = new Map();
+  const settled = (index) => {
+    if (!markers.has(index)) {
+      const own = run(index).promise;
+      markers.set(index, index === 0 ? own : Promise.all([settled(index - 1), own]));
+    }
+    return markers.get(index);
+  };
   return {
     mutable,
     get value() {
@@ -226,11 +268,13 @@ export function createMutator(name, value, isReading) {
     },
     set value(v) {
       if (isReading(name)) {
-        throw new Error(`\`${name}\` is read and changed in the same block. Split it into two blocks.`);
+        throw new Error(
+          `\`${name}\` is changed by a block that also depends on it (directly or through other blocks), so the block would re-run forever. Split it into separate blocks.`,
+        );
       }
       mutable.value = v;
     },
     settle: (index) => run(index).resolve(),
-    settled: (index) => run(index).promise,
+    settled,
   };
 }
