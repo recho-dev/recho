@@ -16,8 +16,6 @@
 
 import {javascript} from "./javascript.js";
 
-export {javascript};
-
 /**
  * The language for a notebook's `runtime` ("javascript@0.1.0",
  * "wenyan@0.1.0"). Other languages are loaded on demand, so JavaScript
