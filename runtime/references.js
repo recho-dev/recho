@@ -34,6 +34,31 @@ function findParentScope(parents, from, predicate) {
 }
 
 /**
+ * Returns the names a declaration pattern introduces: `x`, `[x, ...y]`,
+ * `{x, y: z = 1}`, and so on.
+ */
+export function patternNames(node, names = []) {
+  switch (node.type) {
+    case "Identifier":
+      names.push(node.name);
+      break;
+    case "ObjectPattern":
+      for (const p of node.properties) patternNames(p.type === "Property" ? p.value : p, names);
+      break;
+    case "ArrayPattern":
+      for (const e of node.elements) if (e) patternNames(e, names);
+      break;
+    case "RestElement":
+      patternNames(node.argument, names);
+      break;
+    case "AssignmentPattern":
+      patternNames(node.left, names);
+      break;
+  }
+  return names;
+}
+
+/**
  * Returns the Identifier nodes of `node` that refer to variables not declared
  * within it, i.e. references to other cells or globals.
  */
@@ -66,23 +91,7 @@ export function findReferences(node) {
   }
 
   function declarePattern(node, parent) {
-    switch (node.type) {
-      case "Identifier":
-        declareLocal(parent, node);
-        break;
-      case "ObjectPattern":
-        node.properties.forEach((node) => declarePattern(node.type === "Property" ? node.value : node, parent));
-        break;
-      case "ArrayPattern":
-        node.elements.forEach((node) => node && declarePattern(node, parent));
-        break;
-      case "RestElement":
-        declarePattern(node.argument, parent);
-        break;
-      case "AssignmentPattern":
-        declarePattern(node.left, parent);
-        break;
-    }
+    for (const name of patternNames(node)) declareLocal(parent, {name});
   }
 
   ancestor(node, {

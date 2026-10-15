@@ -140,4 +140,63 @@ describe("top-level let", () => {
     await wait();
     expect(notebook.doc()).toContain(`//➜ 1\necho(a);`);
   });
+
+  it("resets when a block that calls a writing function is edited", async () => {
+    run(`let c = 0;\n\nfunction inc() {\n  c++;\n}\n\n{\n  inc();\n}\n\ninc();\n\necho(c);`);
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 2\necho(c);`);
+    notebook.edit("}\n\ninc();", "}\n\ninc(), inc();");
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 3\necho(c);`);
+  });
+
+  it("orders blocks that call writing functions", async () => {
+    run(
+      `let c = 0;\n\nfunction inc() {\n  c++;\n}\n\nfunction reset() {\n  c = 0;\n}\n\ninc();\n\nreset();\n\n{\n  inc();\n}\n\necho(c);`,
+    );
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 1\necho(c);`);
+  });
+
+  it("doesn't create a cycle when a writer uses a later writer", async () => {
+    run(
+      `let count = 0;\n\nrecho.button("+", () => {\n  count++;\n  if (count > 2) reset();\n});\n\nfunction reset() {\n  count = 0;\n}\n\necho(count);`,
+    );
+    await wait();
+    expect(notebook.doc()).not.toContain("circular definition");
+    notebook.runtime.buttonRegistry.executeCallback("+");
+    notebook.runtime.buttonRegistry.executeCallback("+");
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 2\necho(count);`);
+    notebook.runtime.buttonRegistry.executeCallback("+");
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 0\necho(count);`);
+  });
+
+  it("doesn't spread a writer's error to later writers", async () => {
+    run(`let a = 1;\n\na = undefinedThing;\n\na += 5;\n\necho(a);`);
+    await wait();
+    expect(notebook.doc()).toContain(`undefinedThing is not defined`);
+    expect(notebook.doc()).toContain(`;\n\na += 5;\n\n//➜ 6\necho(a);`);
+  });
+
+  it("shows readers only the value after all writers ran", async () => {
+    globalThis.__rechoSeen = [];
+    run(`let url = "a";\n\nurl = "b";\n\nglobalThis.__rechoSeen.push(url);`);
+    await wait();
+    expect(globalThis.__rechoSeen).toEqual(["b"]);
+    notebook.edit(`url = "b";`, `url = "c";`);
+    await wait();
+    expect(globalThis.__rechoSeen).toEqual(["b", "c"]);
+    delete globalThis.__rechoSeen;
+  });
+
+  it("doesn't re-run later writers when a writer's own input changes", async () => {
+    run(`let a = 0;\n\nconst t = recho.interval(20);\n\na += t >= 0 ? 1 : 0;\n\na *= 10;\n\necho(a);`);
+    await wait(200);
+    const value = Number(notebook.doc().match(/\/\/➜ (\d+)\necho\(a\);/)[1]);
+    // 10 after the first run, then +1 per tick; never multiplied again.
+    expect(value).toBeGreaterThan(10);
+    expect(value).toBeLessThan(100);
+  });
 });

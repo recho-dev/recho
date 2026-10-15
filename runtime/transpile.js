@@ -1,6 +1,6 @@
-import {Parser} from "acorn";
 import {recursive, simple} from "acorn-walk";
 import {Sourcemap} from "./sourcemap.js";
+import {parseModule} from "./parse.js";
 import {findReferences} from "./references.js";
 import {mutatorName} from "./mutable.js";
 
@@ -33,7 +33,7 @@ function parseParams(params) {
 function rewriteEchoInFunction(input) {
   if (!input.includes("echo")) return input;
 
-  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const body = parseModule(input);
   const output = new Sourcemap(input);
   const echoNodes = [];
   const topLevelEchoNodes = [];
@@ -71,7 +71,7 @@ function rewriteEchoInFunction(input) {
 }
 
 function rewriteArrowFunction(input) {
-  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const body = parseModule(input);
   const output = new Sourcemap(input);
   const arrowExpressions = [];
   simple(body, {
@@ -99,7 +99,7 @@ function rewriteArrowFunction(input) {
  */
 export function rewriteMutables(input, names) {
   if (!names.length) return input;
-  const body = Parser.parse(input, {ecmaVersion: "latest", sourceType: "module"});
+  const body = parseModule(input);
   const promoted = new Set(names);
   const references = findReferences(body).filter((node) => promoted.has(node.name));
   if (!references.length) return input;

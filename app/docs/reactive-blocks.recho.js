@@ -134,8 +134,11 @@ echo(clicks);
 /**
  * A few rules keep this predictable:
  *
- * - Blocks that change a variable run in document order, so the last change
- *   wins, like in a plain script.
+ * - A block "changes" a variable when it assigns to it, or uses a function
+ *   that does: with `function addClick() { clicks++; }`, a block calling
+ *   `addClick()` changes `clicks` too.
+ * - Blocks that change a variable run in document order, and blocks reading
+ *   it see the value after all of them ran, like in a plain script.
  * - Editing the `let` or a block that changes the variable re-runs all of
  *   them, so the variable starts over from its initial value.
  * - A block that changes a variable doesn't re-run when the variable changes
@@ -143,10 +146,13 @@ echo(clicks);
  *   to date in their own block, like `echo(clicks)` above.
  * - When a block that changes a variable re-runs because something else it
  *   reads changed, such as `recho.interval`, it changes the variable again,
- *   starting from the current value. Use this to accumulate values over time.
+ *   starting from the current value. Other blocks that change it don't re-run.
+ *   Use this to accumulate values over time.
  * - A block can't read a variable and also change it, for example by calling
  *   a function that changes it: `echo(clicks, addClick())`. Split it into two
- *   blocks.
+ *   blocks. This is only caught when the change happens right away: a block
+ *   that reads `clicks` and changes it later, say in `setTimeout`, re-runs on
+ *   every change.
  * - Changing an object in place, like `list.push(1)`, doesn't notify other
  *   blocks. Assign it again (`list = list`) to notify them.
  */
