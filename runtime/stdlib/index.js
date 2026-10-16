@@ -47,7 +47,9 @@ async function importInstalled(spec) {
   const candidates = version && subpath ? [name + subpath, name] : [name + subpath];
   for (const candidate of candidates) {
     try {
-      return await import(candidate);
+      // Only runs outside the browser, on a specifier known at runtime, so
+      // bundlers shouldn't try to resolve it.
+      return await import(/* @vite-ignore */ /* webpackIgnore: true */ candidate);
     } catch (error) {
       if (error?.code !== "ERR_MODULE_NOT_FOUND" && error?.code !== "ERR_PACKAGE_PATH_NOT_EXPORTED") throw error;
     }
