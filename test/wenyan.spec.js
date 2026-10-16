@@ -271,6 +271,12 @@ describe("wenyan", () => {
     expect(notebook.doc()).not.toContain("✗");
     expect(notebook.doc()).toContain(`批曰。「「➜ 一」」。\n施「說」。示之。`);
   });
+
+  it("doesn't make blocks of comments", () => {
+    const code = `注曰。「「多\n行」」。\n\n疏曰。「「疏」」。\n夫三。示之。\n\n批曰。「「批」」。夫四。示之。`;
+    const cells = wenyan.cells(code).map(({start, end}) => code.slice(start, end));
+    expect(cells).toEqual(["夫三。示之。", "批曰。「「批」」。夫四。示之。"]);
+  });
 });
 
 describe("loadLanguage", () => {

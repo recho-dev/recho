@@ -153,12 +153,15 @@ function toJavaScript(source) {
   // Names in 「」 become JavaScript names as they are, so one that isn't
   // valid in JavaScript (「甲-乙」, 「class」) compiles to code that doesn't
   // parse.
+  let program;
   try {
-    parseModule(js);
+    program = parseModule(js);
   } catch (error) {
     return throwing(`${error.message}: a name in 「」 isn't usable here. Names must also be valid JavaScript names.`);
   }
-  return js;
+  // A cell of only comments (注曰, 疏曰, 批曰) runs nothing, so it isn't a
+  // cell, as comments aren't in JavaScript.
+  return program.body.length ? js : null;
 }
 
 // toJavaScript is a pure function of the cell's source, and most cells don't
@@ -180,11 +183,10 @@ export const wenyan = {
   output,
   cells(code) {
     const source = blankOutput(code);
-    return splitCells(source, assert).map(({from, to}) => ({
-      start: from,
-      end: to,
-      js: toJavaScriptCached(source.slice(from, to)),
-    }));
+    return splitCells(source, assert).flatMap(({from, to}) => {
+      const js = toJavaScriptCached(source.slice(from, to));
+      return js === null ? [] : [{start: from, end: to, js}];
+    });
   },
   errorOffset(code, error) {
     const pos = Number.isInteger(error.pos) ? error.pos : 0;
