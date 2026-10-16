@@ -39,13 +39,34 @@ function hanzinize(value) {
 }
 
 /**
+ * 『 and 』 open and close a nested string even inside 「「…」」, so an
+ * unbalanced one would leave the comment open or end it early. Pairs are kept;
+ * a lone 『 or 』 becomes 「 or 」.
+ */
+function balanceQuotes(line) {
+  const chars = [...line];
+  const open = [];
+  chars.forEach((c, i) => {
+    if (c === "『") open.push(i);
+    else if (c === "』") {
+      if (open.length) open.pop();
+      else chars[i] = "」";
+    }
+  });
+  for (const i of open) chars[i] = "「";
+  return chars.join("");
+}
+
+/**
  * Keep a line of output inside the comment's string: `」」` would end it, as
  * would a trailing `」` followed by the closing `」」`, and `「「` would open
  * a nested string. Every bracket followed by another one gets a space, so
  * runs of any length are broken up.
  */
 function escapeLine(line) {
-  const escaped = line.replace(/「(?=「)/g, "「 ").replace(/」(?=」)/g, "」 ");
+  const escaped = balanceQuotes(line)
+    .replace(/「(?=「)/g, "「 ")
+    .replace(/」(?=」)/g, "」 ");
   return escaped.endsWith("」") ? escaped + " " : escaped;
 }
 
@@ -59,11 +80,52 @@ const output = {
       : new Inspector(hanzinize(value), {...options, quote: false}),
 };
 
+const isOutputAt = (code, i) => code.startsWith(OUTPUT_PREFIX, i) || code.startsWith(ERROR_PREFIX, i);
+
+/**
+ * The line numbers of Recho's output lines in `code`. A line inside a
+ * multi-line string can look like output, so string literals are followed
+ * the way the compiler's tokenizer does: 「「 and 『 open a level, 」」 and 』
+ * close one, whichever kind opened it.
+ */
+function outputLines(code) {
+  const lines = new Set();
+  let level = 0;
+  let line = 0;
+  let i = 0;
+  while (i < code.length) {
+    if (level === 0 && (i === 0 || code[i - 1] === "\n") && isOutputAt(code, i)) {
+      lines.add(line);
+      const end = code.indexOf("\n", i);
+      if (end === -1) break;
+      i = end;
+    }
+    const c = code[i];
+    if (c === "\n") {
+      line++;
+      i++;
+    } else if (c === "『" || code.startsWith("「「", i)) {
+      level++;
+      i += c === "『" ? 1 : 2;
+    } else if (level > 0 && c === "』") {
+      level--;
+      i++;
+    } else if (level > 0 && c === "」" && code[i + 1] === "」" && (code[i + 2] !== "」" || code[i + 3] === "」")) {
+      level--;
+      i += 2;
+    } else {
+      i++;
+    }
+  }
+  return lines;
+}
+
 /** Replace Recho's own output lines with spaces, keeping every offset. */
 function blankOutput(code) {
+  const outputs = outputLines(code);
   return code
     .split("\n")
-    .map((line) => (line.startsWith(OUTPUT_PREFIX) || line.startsWith(ERROR_PREFIX) ? " ".repeat(line.length) : line))
+    .map((line, i) => (outputs.has(i) ? " ".repeat(line.length) : line))
     .join("\n");
 }
 
@@ -129,6 +191,7 @@ export const wenyan = {
     return code.lastIndexOf("\n", pos - 1) + 1;
   },
   isHiddenOutput: (name) => TEMPORARY.test(name),
+  outputLines,
   // 刻漏, the classical water clock, is recho.interval: 施「刻漏」於一百。
   // 名之曰「刻」。 ticks 「刻」 every 100 ms.
   builtins: (stdlib) => ({刻漏: stdlib.interval}),

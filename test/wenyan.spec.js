@@ -158,6 +158,11 @@ describe("wenyan", () => {
       "「「「甲",
       "甲」」」乙",
       "」」」」",
+      "『",
+      "』",
+      "甲『乙",
+      "甲』乙",
+      "『甲』』「「",
     ]) {
       const line = formatLine(outputPrefix, text);
       // The line must read back as a single comment, followed by working code.
@@ -244,6 +249,27 @@ describe("wenyan", () => {
     run(`吾有一數。曰七。名之曰「刻漏」。\n\n夫「刻漏」。示之。`);
     await wait();
     expect(notebook.doc()).toContain(`批曰。「「➜ 七」」。\n夫「刻漏」。示之。`);
+  });
+
+  it("keeps a line inside a string that looks like output", async () => {
+    const code = `吾有一言。曰「「甲\n批曰。「「➜ 乙」」。\n丙」」。名之曰「文」。\n\n夫「文」。示之。`;
+    run(code);
+    await wait();
+    // The line is part of the string: kept in the code, and shown with it.
+    expect(notebook.doc()).toContain(`曰「「甲\n批曰。「「➜ 乙」」。\n丙」」。名之曰「文」。`);
+    expect(notebook.doc()).toMatch(
+      /批曰。「「➜ 甲 *」」。\n批曰。「「➜ 批曰。「 「➜ 乙」 」。」」。\n批曰。「「➜ 丙 *」」。\n夫「文」。示之。/,
+    );
+    notebook.runtime.run();
+    await wait();
+    expect(notebook.doc()).toContain(`曰「「甲\n批曰。「「➜ 乙」」。\n丙」」。名之曰「文」。`);
+  });
+
+  it("keeps a function whose body starts on a later line together", async () => {
+    run(`吾有一術。名之曰「說」。\n是術曰。\n乃得一。\n是謂「說」之術也。\n\n施「說」。示之。`);
+    await wait();
+    expect(notebook.doc()).not.toContain("✗");
+    expect(notebook.doc()).toContain(`批曰。「「➜ 一」」。\n施「說」。示之。`);
   });
 });
 

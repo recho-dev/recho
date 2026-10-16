@@ -304,12 +304,16 @@ export function createRuntime(initialCode, options = {}) {
    * @returns {{from: number, to: number, insert: ""}[]} An array of changes.
    */
   function removeChanges(code) {
-    function matchAt(index) {
+    // A language can tell output lines apart from code that merely looks
+    // like them (e.g. inside a multi-line string), by line number.
+    const outputLines = language.outputLines?.(code);
+    function matchAt(index, lineNumber) {
+      if (outputLines) return outputLines.has(lineNumber);
       return code.startsWith(outputFormat.outputPrefix, index) || code.startsWith(outputFormat.errorPrefix, index);
     }
 
     /** Line number ranges (left-closed and right-open) of lines that contain output or error. */
-    const lineNumbers = matchAt(0) ? [{begin: 0, end: 1}] : [];
+    const lineNumbers = matchAt(0, 0) ? [{begin: 0, end: 1}] : [];
     /**
      * The index of the first character of each line.
      * If the code ends with a newline, the last index is the length of the code.
@@ -318,7 +322,7 @@ export function createRuntime(initialCode, options = {}) {
     let nextNewlineIndex = code.indexOf("\n", 0);
     while (0 <= nextNewlineIndex && nextNewlineIndex < code.length) {
       lineStartIndices.push(nextNewlineIndex + 1);
-      if (matchAt(nextNewlineIndex + 1)) {
+      if (matchAt(nextNewlineIndex + 1, lineStartIndices.length - 1)) {
         const lineNumber = lineStartIndices.length - 1;
         if (lineNumbers.length > 0 && lineNumber === lineNumbers[lineNumbers.length - 1].end) {
           // Extend the last line number range.
