@@ -1,5 +1,6 @@
 import {bool2hanzi, compile, num2hanzi, splitCells} from "wenyan";
 import {ERROR_MARK, OUTPUT_MARK} from "../constant.js";
+import {parseModule} from "../parse.js";
 import {Inspector} from "../stdlib/inspect.js";
 
 /**
@@ -23,21 +24,28 @@ const ERROR_PREFIX = `批曰。「「${ERROR_MARK}`;
 // leave the cell they are declared in.
 const TEMPORARY = /^_(ans|rand)\d+$/;
 
-/** Display a value like the wenyan IDE: numbers and booleans in hanzi. */
+const isPrimitive = (value) => ["number", "boolean", "string"].includes(typeof value);
+
+/**
+ * Display a value like the wenyan IDE: numbers and booleans in hanzi, and a
+ * list of them joined with 。. Anything else (objects, empty or nested lists)
+ * is left to the inspector, which the IDE would print as [object Object].
+ */
 function hanzinize(value) {
   if (typeof value === "number") return num2hanzi(value);
   if (typeof value === "boolean") return bool2hanzi(value);
-  if (Array.isArray(value)) return value.map(hanzinize).join("。");
+  if (Array.isArray(value) && value.length && value.every(isPrimitive)) return value.map(hanzinize).join("。");
   return value;
 }
 
 /**
  * Keep a line of output inside the comment's string: `」」` would end it, as
  * would a trailing `」` followed by the closing `」」`, and `「「` would open
- * a nested string.
+ * a nested string. Every bracket followed by another one gets a space, so
+ * runs of any length are broken up.
  */
 function escapeLine(line) {
-  const escaped = line.replaceAll("「「", "「 「").replaceAll("」」", "」 」");
+  const escaped = line.replace(/「(?=「)/g, "「 ").replace(/」(?=」)/g, "」 ");
   return escaped.endsWith("」") ? escaped + " " : escaped;
 }
 
@@ -63,9 +71,13 @@ function assert(message, pos, ok) {
   if (!ok) throw Object.assign(new SyntaxError(message), {pos});
 }
 
+// Report an error from the cell itself, so the rest of the notebook runs.
+const throwing = (message) => `throw new SyntaxError(${JSON.stringify(message)});`;
+
 function toJavaScript(source) {
+  let js;
   try {
-    return compile(source, {
+    js = compile(source, {
       lang: "js",
       romanizeIdentifiers: "none",
       logCallback: () => {},
@@ -74,9 +86,31 @@ function toJavaScript(source) {
       },
     });
   } catch (error) {
-    // Report it from the cell, so the rest of the notebook still runs.
-    return `throw new SyntaxError(${JSON.stringify(error.message)});`;
+    return throwing(error.message);
   }
+  // Names in 「」 become JavaScript names as they are, so one that isn't
+  // valid in JavaScript (「甲-乙」, 「class」) compiles to code that doesn't
+  // parse.
+  try {
+    parseModule(js);
+  } catch (error) {
+    return throwing(`${error.message}: a name in 「」 isn't usable here. Names must also be valid JavaScript names.`);
+  }
+  return js;
+}
+
+// toJavaScript is a pure function of the cell's source, and most cells don't
+// change between runs, so its results are cached (and the cache dropped when
+// large).
+const compiled = new Map();
+
+function toJavaScriptCached(source) {
+  let js = compiled.get(source);
+  if (js === undefined) {
+    if (compiled.size > 2000) compiled.clear();
+    compiled.set(source, (js = toJavaScript(source)));
+  }
+  return js;
 }
 
 export const wenyan = {
@@ -87,7 +121,7 @@ export const wenyan = {
     return splitCells(source, assert).map(({from, to}) => ({
       start: from,
       end: to,
-      js: toJavaScript(source.slice(from, to)),
+      js: toJavaScriptCached(source.slice(from, to)),
     }));
   },
   errorOffset(code, error) {

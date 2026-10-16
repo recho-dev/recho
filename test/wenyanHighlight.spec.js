@@ -41,6 +41,19 @@ describe("wenyan highlighting", () => {
   });
 
   it("highlights comments, including output lines", () => {
+    // Neighbouring spans of the same style are merged into one.
     expect(tokens("批曰。「「➜ 三」」。")).toEqual(["批曰。「「➜ 三」」。=comment"]);
+  });
+
+  it("highlights a comment that spans lines, and the code after it", () => {
+    expect(tokens("注曰。「「多\n行」」。\n夫三。示之。")).toEqual([
+      "注曰。「「多=comment",
+      "行」」。=comment",
+      "夫=keyword",
+      "三=number",
+      "。=punctuation",
+      "示之=keyword",
+      "。=punctuation",
+    ]);
   });
 });

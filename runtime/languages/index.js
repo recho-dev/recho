@@ -19,10 +19,12 @@ import {javascript} from "./javascript.js";
 /**
  * The language for a notebook's `runtime` ("javascript@0.1.0",
  * "wenyan@0.1.0"). Other languages are loaded on demand, so JavaScript
- * notebooks don't download their compilers.
+ * notebooks don't download their compilers. Rejects a language this version
+ * of Recho doesn't know, rather than running the code as something else.
  */
 export async function loadLanguage(runtime = "javascript") {
   const id = runtime.split("@")[0];
+  if (id === "javascript") return javascript;
   if (id === "wenyan") return (await import("./wenyan.js")).wenyan;
-  return javascript;
+  throw new Error(`Unknown language "${runtime}". It may need a newer version of Recho.`);
 }

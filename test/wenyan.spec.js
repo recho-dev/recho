@@ -3,6 +3,7 @@ import {EditorState} from "@codemirror/state";
 import {createRuntime} from "../runtime/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
 import {compile} from "wenyan";
+import {RUNTIMES, highlightLanguage, languageOf} from "../app/shared.js";
 
 const wait = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -144,7 +145,20 @@ describe("wenyan", () => {
 
   it("keeps any output inside its comment", () => {
     const {formatLine, outputPrefix} = wenyan.output;
-    for (const text of ["「「甲」」", "甲」", "「甲", "甲」」乙", "『甲』", "」", "」」", "「", "示之。"]) {
+    for (const text of [
+      "「「甲」」",
+      "甲」",
+      "「甲",
+      "甲」」乙",
+      "『甲』",
+      "」",
+      "」」",
+      "「",
+      "示之。",
+      "「「「甲",
+      "甲」」」乙",
+      "」」」」",
+    ]) {
       const line = formatLine(outputPrefix, text);
       // The line must read back as a single comment, followed by working code.
       const js = compile(`${line}\n夫一。書之。`, {
@@ -155,5 +169,48 @@ describe("wenyan", () => {
       });
       expect(js, text).toMatch(/^\/\*"➜ [^]*"\*\/const _ans1=1;console\.log\(_ans1\);$/);
     }
+  });
+
+  it("reports a name that isn't valid in JavaScript on its cell, and keeps running", async () => {
+    run(`吾有一數。曰三。名之曰「甲-乙」。\n\n吾有一數。曰四。名之曰「class」。\n\n夫五。示之。`);
+    await wait();
+    expect(notebook.doc()).toMatch(
+      /✗ .*Names must also be valid JavaScript names\.\]」」。\n吾有一數。曰三。名之曰「甲-乙」。/,
+    );
+    expect(notebook.doc()).toMatch(
+      /✗ .*Names must also be valid JavaScript names\.\]」」。\n吾有一數。曰四。名之曰「class」。/,
+    );
+    expect(notebook.doc()).toContain(`批曰。「「➜ 五」」。\n夫五。示之。`);
+  });
+
+  it("runs past a comment that spans lines", async () => {
+    run(`注曰。「「多\n行」」。\n\n夫三。示之。`);
+    await wait();
+    expect(notebook.doc()).toBe(`注曰。「「多\n行」」。\n\n批曰。「「➜ 三」」。\n夫三。示之。`);
+  });
+
+  it("inspects lists that aren't plain values, including empty ones", async () => {
+    run(
+      `吾有一物。名之曰「甲」。\n\n吾有一列。名之曰「乙」。\n充「乙」以「甲」。\n\n夫「乙」。示之。\n\n吾有一列。名之曰「丙」。\n\n夫「丙」。示之。`,
+    );
+    await wait();
+    expect(notebook.doc()).toContain(`批曰。「「➜ [ {} ]」」。\n夫「乙」。示之。`);
+    expect(notebook.doc()).toContain(`批曰。「「➜ []」」。\n夫「丙」。示之。`);
+  });
+});
+
+describe("loadLanguage", () => {
+  it("rejects a language it doesn't know instead of running it as JavaScript", async () => {
+    await expect(loadLanguage("python@0.1.0")).rejects.toThrow('Unknown language "python@0.1.0"');
+  });
+});
+
+describe("runtimes", () => {
+  it("names the language of a runtime and how to highlight it", () => {
+    expect(languageOf(RUNTIMES.wenyan)).toBe("wenyan");
+    expect(languageOf(RUNTIMES.javascript)).toBe("javascript");
+    expect(languageOf()).toBe("javascript");
+    expect(highlightLanguage(RUNTIMES.wenyan)).toBe("text");
+    expect(highlightLanguage(undefined)).toBe("javascript");
   });
 });

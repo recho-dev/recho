@@ -151,7 +151,7 @@ importers:
         version: 0.160.1
       wenyan:
         specifier: github:recho-dev/wenyan#master
-        version: wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/50e18130f7fd3544bad05efb3d74fb47f8de0dca
+        version: wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/be08079e311ed326da0506934d009f46c716ce67
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.1.18
@@ -4062,9 +4062,9 @@ packages:
     resolution: {integrity: sha512-ZMjC3ho+KXo0BfJb7JgtQ5IBuvnShdlACNkKkdsqBmYw3bPAaJfPeYUo6tLUaT5tG/Gkh7xkpBhKRQ9e7pyg9Q==}
     engines: {node: '>=6'}
 
-  wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/50e18130f7fd3544bad05efb3d74fb47f8de0dca:
-    resolution: {tarball: https://codeload.github.com/recho-dev/wenyan/tar.gz/50e18130f7fd3544bad05efb3d74fb47f8de0dca}
-    version: 0.4.0-recho.2
+  wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/be08079e311ed326da0506934d009f46c716ce67:
+    resolution: {tarball: https://codeload.github.com/recho-dev/wenyan/tar.gz/be08079e311ed326da0506934d009f46c716ce67}
+    version: 0.4.0-recho.3
 
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
@@ -8498,7 +8498,7 @@ snapshots:
 
   well-known-symbols@2.0.0: {}
 
-  wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/50e18130f7fd3544bad05efb3d74fb47f8de0dca:
+  wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/be08079e311ed326da0506934d009f46c716ce67:
     dependencies:
       sync-request: 6.1.0
 

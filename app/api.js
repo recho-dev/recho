@@ -2,19 +2,13 @@ import {generate} from "short-uuid";
 import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, writeBatch} from "firebase/firestore";
 import {getFirebase} from "./firebase.js";
 import {predicates, objects} from "friendly-words";
+import {RUNTIMES, languageOf} from "./shared.js";
 
 const LEGACY_FILE_NAME = "obs-files";
 
 const FILE_NAME = "recho-files";
 
-export const RUNTIMES = {
-  javascript: "javascript@0.1.0",
-  wenyan: "wenyan@0.1.0",
-};
-
 const DEFAULT_RUNTIME = RUNTIMES.javascript;
-
-const isWenyan = (runtime) => runtime.startsWith("wenyan@");
 
 export const PRIVATE = "private";
 
@@ -87,7 +81,7 @@ const WENYAN_CONTENT = `
 `;
 
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const wenyan = isWenyan(runtime);
+  const wenyan = languageOf(runtime) === "wenyan";
   return {
     id: generate(),
     title: generateProjectName(wenyan ? ".wy" : ".js"),

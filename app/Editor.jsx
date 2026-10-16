@@ -6,6 +6,7 @@ import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "./cn.js";
+import {languageOf} from "./shared.js";
 
 const styles = {
   iconButton: "w-4 h-4 hover:scale-110 transition-transform duration-100",
@@ -39,6 +40,7 @@ export function Editor({
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const [needRerun, setNeedRerun] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   // The editor is created asynchronously, so it calls the latest handler
   // through this ref.
@@ -52,8 +54,8 @@ export function Editor({
     // Languages other than JavaScript load their compiler and editor support
     // on demand, so creating the editor waits for them.
     let cancelled = false;
-    const id = runtime.split("@")[0];
-    Promise.all([loadLanguage(runtime), loadLanguageSupport(id)]).then(
+    setLoadError(null);
+    Promise.all([loadLanguage(runtime), loadLanguageSupport(languageOf(runtime))]).then(
       ([language, languageSupport]) => {
         if (cancelled || !containerRef.current) return;
         containerRef.current.innerHTML = "";
@@ -62,8 +64,9 @@ export function Editor({
         if (autoRun) onRun();
       },
       (error) => {
+        // E.g. the language's code failed to download, or it's unknown.
         console.error(error);
-        onError(error);
+        if (!cancelled) setLoadError(error);
       },
     );
     return () => {
@@ -88,6 +91,8 @@ export function Editor({
   }, []);
 
   function onRun() {
+    // Nothing to run until the editor exists (its language may be loading).
+    if (!editorRef.current) return;
     onBeforeEachRun();
     setNeedRerun(false);
     editorRef.current?.run();
@@ -154,6 +159,11 @@ export function Editor({
           )}
         </div>
       </div>
+      {loadError && (
+        <p className={cn("p-4 text-sm text-red-700")}>
+          Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
+        </p>
+      )}
       <div ref={containerRef}>
         <pre className={cn("text-sm hidden")}>{initialCode}</pre>
       </div>

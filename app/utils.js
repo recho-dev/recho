@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {findFirstOutputRange} from "./shared.js";
+import {findFirstOutputRange, languageOf, RUNTIMES} from "./shared.js";
 
 function parseJSMeta(content) {
   const match = content.match(/^\/\*\*([\s\S]*?)\*\//);
@@ -60,15 +60,12 @@ function removeWenyanMeta(content) {
 
 /** An example's code without its metadata header. */
 export function removeMeta(example) {
-  return example.runtime === WENYAN_RUNTIME ? removeWenyanMeta(example.content) : removeJSMeta(example.content);
+  return languageOf(example.runtime) === "wenyan" ? removeWenyanMeta(example.content) : removeJSMeta(example.content);
 }
 
-const JS_RUNTIME = "javascript@0.1.0";
-const WENYAN_RUNTIME = "wenyan@0.1.0";
-
 const EXAMPLE_FORMATS = [
-  {extension: ".recho.js", runtime: JS_RUNTIME, parseMeta: parseJSMeta},
-  {extension: ".recho.wy", runtime: WENYAN_RUNTIME, parseMeta: parseWenyanMeta},
+  {extension: ".recho.js", runtime: RUNTIMES.javascript, parseMeta: parseJSMeta},
+  {extension: ".recho.wy", runtime: RUNTIMES.wenyan, parseMeta: parseWenyanMeta},
 ];
 
 export function getAllJSDocs() {
