@@ -40,6 +40,20 @@ describe("wenyan highlighting", () => {
     ]);
   });
 
+  it("highlights 獨行此 blocks", () => {
+    expect(tokens("獨行此。\n\t夫三。示之。\n云云。")).toEqual([
+      "獨行此=keyword",
+      "。=punctuation",
+      "夫=keyword",
+      "三=number",
+      "。=punctuation",
+      "示之=keyword",
+      "。=punctuation",
+      "云云=keyword",
+      "。=punctuation",
+    ]);
+  });
+
   it("highlights comments, including output lines", () => {
     // Neighbouring spans of the same style are merged into one.
     expect(tokens("批曰。「「➜ 三」」。")).toEqual(["批曰。「「➜ 三」」。=comment"]);

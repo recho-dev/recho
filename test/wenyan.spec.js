@@ -197,6 +197,29 @@ describe("wenyan", () => {
     expect(notebook.doc()).toContain(`批曰。「「➜ [ {} ]」」。\n夫「乙」。示之。`);
     expect(notebook.doc()).toContain(`批曰。「「➜ []」」。\n夫「丙」。示之。`);
   });
+
+  it("shows output from a 獨行此 block above it, and keeps its names inside", async () => {
+    run(`獨行此。\n\t吾有一數。曰三。名之曰「甲」。\n\t夫「甲」。示之。\n云云。\n\n夫「甲」。示之。`);
+    await wait();
+    expect(notebook.doc()).toContain(`批曰。「「➜ 三」」。\n獨行此。`);
+    expect(notebook.doc()).toContain(
+      `批曰。「「✗ { [RuntimeError: 甲 is not defined] input: "甲" }」」。\n夫「甲」。示之。`,
+    );
+  });
+
+  it("lets a 獨行此 block change a name from another block", async () => {
+    run(
+      `吾有一數。曰零。名之曰「和」。\n\n獨行此。\n\t加「和」以二。昔之「和」者。今其是矣。\n云云。\n\n夫「和」。示之。`,
+    );
+    await wait();
+    expect(notebook.doc()).toContain(`批曰。「「➜ 二」」。\n夫「和」。示之。`);
+  });
+
+  it("names the value a 獨行此 block hands out with 乃得", async () => {
+    run(`獨行此。\n\t乘三以四。名之曰「積」。\n\t乃得「積」。\n云云。名之曰「乙」。\n\n夫「乙」。示之。`);
+    await wait();
+    expect(notebook.doc()).toContain(`批曰。「「➜ 一十二」」。\n夫「乙」。示之。`);
+  });
 });
 
 describe("loadLanguage", () => {
