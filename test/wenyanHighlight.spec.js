@@ -1,5 +1,6 @@
 import {it, expect, describe} from "vitest";
-import {EditorState} from "@codemirror/state";
+import {EditorSelection, EditorState} from "@codemirror/state";
+import {toggleComment} from "@codemirror/commands";
 import {ensureSyntaxTree} from "@codemirror/language";
 import {wenyanSupport} from "../editor/languages/wenyan.js";
 
@@ -67,6 +68,44 @@ describe("wenyan highlighting", () => {
       "三=number",
       "。=punctuation",
       "示之=keyword",
+      "。=punctuation",
+    ]);
+  });
+});
+
+/** Run Cmd+/ (toggleComment) with the given selection and return the code. */
+function toggle(doc, from, to = from) {
+  let state = EditorState.create({doc, selection: EditorSelection.range(from, to), extensions: wenyanSupport()});
+  toggleComment({state, dispatch: (tr) => (state = tr.state)});
+  return state.doc.toString();
+}
+
+describe("wenyan comment toggling (Cmd+/)", () => {
+  it("wraps a line in 注曰。『…』。 and unwraps it", () => {
+    const line = "吾有一言。曰「「問天地好在。」」。示之。";
+    const commented = toggle(line, 3);
+    expect(commented).toBe("注曰。『 吾有一言。曰「「問天地好在。」」。示之。 』。");
+    expect(toggle(commented, 5)).toBe(line);
+  });
+
+  it("wraps several lines in one comment", () => {
+    const code = "為是三遍。\n\t夫「甲」。示之。\n云云。";
+    const commented = toggle(code, 0, code.length);
+    expect(commented).toBe("注曰。『 為是三遍。\n\t夫「甲」。示之。\n云云。 』。");
+    expect(toggle(commented, 0, commented.length)).toBe(code);
+  });
+
+  it("keeps the indentation of an indented line", () => {
+    const code = "為是三遍。\n\t夫「甲」。示之。\n云云。";
+    expect(toggle(code, code.indexOf("夫") + 1)).toBe("為是三遍。\n\t注曰。『 夫「甲」。示之。 』。\n云云。");
+  });
+
+  it("highlights commented-out code as a comment", () => {
+    expect(tokens("注曰。『 夫三。\n示之。 』。\n夫四。")).toEqual([
+      "注曰。『 夫三。=comment",
+      "示之。 』。=comment",
+      "夫=keyword",
+      "四=number",
       "。=punctuation",
     ]);
   });

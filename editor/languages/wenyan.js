@@ -74,6 +74,12 @@ const language = StreamLanguage.define({
   name: "wenyan",
   startState: () => ({string: null, comment: null}),
   token,
+  languageData: {
+    // Wenyan has no line comments: a comment is a statement wrapping a
+    // string. Cmd+/ wraps lines in 注曰。『…』。, since code often holds
+    // 「「…」」 strings but rarely 『…』.
+    commentTokens: {block: {open: "注曰。『", close: "』。"}},
+  },
 });
 
 /** Editor support for wenyan-lang: syntax highlighting. */

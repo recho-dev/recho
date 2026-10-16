@@ -220,6 +220,14 @@ describe("wenyan", () => {
     await wait();
     expect(notebook.doc()).toContain(`批曰。「「➜ 一十二」」。\n夫「乙」。示之。`);
   });
+
+  it("doesn't run code commented out with 注曰。『…』。", async () => {
+    run(`注曰。『 為是三遍。\n\t夫一。示之。\n云云。 』。\n\n夫二。示之。`);
+    await wait();
+    expect(notebook.doc()).toBe(
+      `注曰。『 為是三遍。\n\t夫一。示之。\n云云。 』。\n\n批曰。「「➜ 二」」。\n夫二。示之。`,
+    );
+  });
 });
 
 describe("loadLanguage", () => {
