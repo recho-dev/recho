@@ -1,5 +1,8 @@
 import {StreamLanguage} from "@codemirror/language";
 import {KEYWORDS, NUMBER_KEYWORDS} from "wenyan";
+import {wenyan} from "../../runtime/languages/wenyan.js";
+import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
+import {outputDecoration, outputLineFinder, outputLines} from "../blocks/output.ts";
 
 // Longest first, so 若其不然者 wins over 若.
 const keywords = Object.entries(KEYWORDS).sort(([a], [b]) => b.length - a.length);
@@ -82,5 +85,30 @@ const language = StreamLanguage.define({
   },
 });
 
-/** Editor support for wenyan-lang: syntax highlighting. */
-export const wenyanSupport = () => [language];
+/**
+ * Output lines for the dashed box around output, found the way the runtime
+ * finds them (skipping look-alike lines inside strings).
+ */
+function findOutputLines(state) {
+  const {errorPrefix} = wenyan.output;
+  return [...wenyan.outputLines(state.doc.toString())]
+    .sort((a, b) => a - b)
+    .map((n) => {
+      const line = state.doc.line(n + 1);
+      return {from: line.from, type: line.text.startsWith(errorPrefix) ? "error" : "output"};
+    });
+}
+
+/**
+ * Editor support for wenyan-lang: syntax highlighting, the blocks behind the
+ * gutter's block indicator (moved along with edits until the next run), and
+ * the box around output lines.
+ */
+export const wenyanSupport = () => [
+  language,
+  blockMetadataExtension,
+  blockUpdate.of(mapBlocks),
+  outputLines,
+  outputDecoration,
+  outputLineFinder.of(findOutputLines),
+];

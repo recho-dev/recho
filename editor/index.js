@@ -29,8 +29,9 @@ export function createEditor(container, options) {
   const isJavaScript = language.id === "javascript";
 
   const myBasicSetup = Array.from(basicSetup);
-  // Block indicators come from the JavaScript syntax tree.
-  if (isJavaScript) myBasicSetup.splice(2, 0, blockIndicator);
+  // The block indicator shows the blocks in blockMetadataField, which each
+  // language's extensions set up; without it, it shows nothing.
+  myBasicSetup.splice(2, 0, blockIndicator);
 
   // JavaScript's support needs the runtime (for controls), so it is set up
   // here; other languages bring theirs (see ./languages/index.js).
