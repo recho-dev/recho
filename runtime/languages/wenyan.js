@@ -129,4 +129,7 @@ export const wenyan = {
     return code.lastIndexOf("\n", pos - 1) + 1;
   },
   isHiddenOutput: (name) => TEMPORARY.test(name),
+  // 刻漏, the classical water clock, is recho.interval: 施「刻漏」於一百。
+  // 名之曰「刻」。 ticks 「刻」 every 100 ms.
+  builtins: (stdlib) => ({刻漏: stdlib.interval}),
 };

@@ -12,6 +12,8 @@
  * - `errorOffset(code, error)`: where in `code` to show an error `cells` threw.
  * - `isHiddenOutput(name)`: whether a name a cell declares stays private to it
  *   instead of becoming a variable other cells can use.
+ * - `builtins(stdlib)` (optional): extra names every cell can use, as
+ *   `{name: value}`, on top of `recho` (`stdlib`).
  */
 
 import {javascript} from "./javascript.js";

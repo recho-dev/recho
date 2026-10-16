@@ -134,10 +134,17 @@ export function createRuntime(initialCode, options = {}) {
   // The button function must be manually associated to the button registry.
   const __stdlib__ = {...stdlib, button: makeButton(buttonRegistry)};
 
+  // The language's own names for parts of the stdlib (see ./languages/).
+  const languageBuiltins = Object.entries(language.builtins?.(__stdlib__) ?? {}).map(([name, value]) => [
+    name,
+    () => value,
+  ]);
+
   const runtime = new Runtime({
     recho: () => __stdlib__,
     __getEcho__: () => __getEcho__,
     __setEcho__: () => __setEcho__,
+    ...Object.fromEntries(languageBuiltins),
   });
 
   const main = runtime.module();

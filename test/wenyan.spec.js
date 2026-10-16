@@ -228,6 +228,23 @@ describe("wenyan", () => {
       `注曰。『 為是三遍。\n\t夫一。示之。\n云云。 』。\n\n批曰。「「➜ 二」」。\n夫二。示之。`,
     );
   });
+
+  it("ticks with 刻漏 (recho.interval), re-running the blocks that read it", async () => {
+    run(`施「刻漏」於二十。名之曰「刻」。\n\n夫「刻」。示之。\n\n加「刻」以一。示之。`);
+    const shown = () => notebook.doc().match(/➜ (.*)」」。\n夫「刻」。示之。/)?.[1];
+    await wait(30);
+    const first = shown();
+    expect(first).toBe("零");
+    for (let i = 0; i < 50 && shown() === first; i++) await wait(20);
+    expect(shown()).not.toBe(first);
+    expect(notebook.doc()).toMatch(/➜ .+」」。\n加「刻」以一。示之。/);
+  });
+
+  it("lets a notebook define its own 刻漏", async () => {
+    run(`吾有一數。曰七。名之曰「刻漏」。\n\n夫「刻漏」。示之。`);
+    await wait();
+    expect(notebook.doc()).toContain(`批曰。「「➜ 七」」。\n夫「刻漏」。示之。`);
+  });
 });
 
 describe("loadLanguage", () => {
@@ -243,5 +260,20 @@ describe("runtimes", () => {
     expect(languageOf()).toBe("javascript");
     expect(highlightLanguage(RUNTIMES.wenyan)).toBe("text");
     expect(highlightLanguage(undefined)).toBe("javascript");
+  });
+});
+
+describe("JavaScript notebooks", () => {
+  it("don't get wenyan's names", async () => {
+    let state = EditorState.create({doc: "echo(刻漏);"});
+    const runtime = createRuntime(state.doc.toString());
+    runtime.onChanges((specs) => {
+      state = state.update(specs).state;
+      runtime.setCode(state.doc.toString());
+    });
+    runtime.run();
+    await wait();
+    runtime.destroy();
+    expect(state.doc.toString()).toContain("刻漏 is not defined");
   });
 });
