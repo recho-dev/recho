@@ -3,7 +3,10 @@ import {useEffect, useRef, useState} from "react";
 import {Play, Square, RefreshCcw, Copy} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 import {createEditor} from "../editor/index.js";
+import {loadLanguageSupport} from "../editor/languages/index.js";
+import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "./cn.js";
+import {languageOf} from "./shared.js";
 
 const styles = {
   iconButton: "w-4 h-4 hover:scale-110 transition-transform duration-100",
@@ -25,6 +28,7 @@ const onDefaultError = debounce(() => {
 
 export function Editor({
   initialCode,
+  runtime = "javascript",
   onUserInput = () => {},
   onBeforeEachRun = () => {},
   autoRun = true,
@@ -36,37 +40,50 @@ export function Editor({
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const [needRerun, setNeedRerun] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
+  // The editor is created asynchronously, so it calls the latest handler
+  // through this ref.
+  const onInputRef = useRef(null);
+  onInputRef.current = (code) => {
+    onUserInput(code);
+    setNeedRerun(true);
+  };
 
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
-      editorRef.current = createEditor(containerRef.current, {code: initialCode, onError});
-      if (autoRun) onRun();
-    }
+    // Languages other than JavaScript load their compiler and editor support
+    // on demand, so creating the editor waits for them.
+    let cancelled = false;
+    setLoadError(null);
+    Promise.all([loadLanguage(runtime), loadLanguageSupport(languageOf(runtime))]).then(
+      ([language, languageSupport]) => {
+        if (cancelled || !containerRef.current) return;
+        containerRef.current.innerHTML = "";
+        editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, language, languageSupport});
+        editorRef.current.on("userInput", (code) => onInputRef.current(code));
+        if (autoRun) onRun();
+      },
+      (error) => {
+        // E.g. the language's code failed to download, or it's unknown.
+        console.error(error);
+        if (!cancelled) setLoadError(error);
+      },
+    );
     return () => {
+      cancelled = true;
       if (editorRef.current) {
         editorRef.current.destroy();
+        editorRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialCode]);
-
-  useEffect(() => {
-    const onInput = (code) => {
-      onUserInput(code);
-      setNeedRerun(true);
-    };
-
-    if (editorRef.current) {
-      editorRef.current.on("userInput", onInput);
-    }
-  }, [initialCode, onUserInput]);
+  }, [initialCode, runtime]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.metaKey && e.key === "s") {
         setNeedRerun(false);
-        editorRef.current.run(false);
+        editorRef.current?.run(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -74,20 +91,22 @@ export function Editor({
   }, []);
 
   function onRun() {
+    // Nothing to run until the editor exists (its language may be loading).
+    if (!editorRef.current) return;
     onBeforeEachRun();
     setNeedRerun(false);
-    editorRef.current.run();
+    editorRef.current?.run();
   }
 
   function onStop() {
     setNeedRerun(false);
-    editorRef.current.stop();
+    editorRef.current?.stop();
   }
 
   function onRerun() {
     setNeedRerun(false);
-    editorRef.current.stop();
-    editorRef.current.run();
+    editorRef.current?.stop();
+    editorRef.current?.run();
   }
 
   function metaKey() {
@@ -140,6 +159,11 @@ export function Editor({
           )}
         </div>
       </div>
+      {loadError && (
+        <p className={cn("p-4 text-sm text-red-700")}>
+          Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
+        </p>
+      )}
       <div ref={containerRef}>
         <pre className={cn("text-sm hidden")}>{initialCode}</pre>
       </div>

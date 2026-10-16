@@ -14,6 +14,7 @@ export function ExampleEditor({example, initialCode}) {
       title: example.title,
       content: initialCode,
       autoRun: true,
+      runtime: example.runtime,
     };
     const duplicated = duplicateNotebook(sourceNotebook);
     try {
@@ -28,19 +29,22 @@ export function ExampleEditor({example, initialCode}) {
   return (
     <Editor
       initialCode={initialCode}
+      runtime={example.runtime}
       key={example.title}
       onDuplicate={onDuplicate}
       toolBarStart={
-        <div className={cn("flex items-center")} key={example.slug}>
-          <a
-            href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
-            target="_blank"
-            rel="noreferrer"
-            className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-          >
-            Comment
-          </a>
-        </div>
+        example.pull_request && (
+          <div className={cn("flex items-center")} key={example.slug}>
+            <a
+              href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
+              target="_blank"
+              rel="noreferrer"
+              className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
+            >
+              Comment
+            </a>
+          </div>
+        )
       }
     />
   );

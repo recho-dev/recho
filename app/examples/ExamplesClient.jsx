@@ -5,7 +5,7 @@ import {useSearchParams} from "next/navigation";
 import {Meta} from "../Meta.js";
 import {ThumbnailClient} from "../ThumbnailClient.js";
 import {cn} from "../cn.js";
-import {BASE_PATH} from "../shared.js";
+import {BASE_PATH, highlightLanguage} from "../shared.js";
 
 export function ExamplesClient({examples}) {
   const searchParams = useSearchParams();
@@ -45,7 +45,11 @@ export function ExamplesClient({examples}) {
                   style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}}
                 />
               ) : (
-                <ThumbnailClient code={example.content} outputStartLine={example.outputStartLine} />
+                <ThumbnailClient
+                  code={example.content}
+                  outputStartLine={example.outputStartLine}
+                  lang={highlightLanguage(example.runtime)}
+                />
               )}
             </div>
           </div>

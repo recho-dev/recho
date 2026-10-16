@@ -5,7 +5,7 @@ import {Trash, Globe} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
 import {getNotebooks, deleteNotebook, PUBLIC} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
-import {findFirstOutputRange} from "../shared.js";
+import {findFirstOutputRange, highlightLanguage} from "../shared.js";
 import {cn} from "../cn.js";
 
 export default function Page() {
@@ -111,6 +111,7 @@ export default function Page() {
               <div className={cn("absolute inset-0 px-3")}>
                 <ThumbnailClient
                   code={notebook.content}
+                  lang={highlightLanguage(notebook.runtime)}
                   outputStartLine={findFirstOutputRange(notebook.content).startLine}
                 />
               </div>

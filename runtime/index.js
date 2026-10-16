@@ -3,15 +3,14 @@ import {Runtime} from "@observablehq/runtime";
 import {group} from "d3-array";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import * as stdlib from "./stdlib/index.js";
-import {Inspector} from "./stdlib/inspect.js";
 import {BlockMetadata} from "../editor/blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
 import {IntervalTree} from "../lib/IntervalTree.ts";
 import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
 import {analyzeMutables, createMutator} from "./mutable.js";
-import {parseModule} from "./parse.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
-import {addPrefix, makeOutput, OUTPUT_PREFIX, ERROR_PREFIX} from "./output.js";
+import {addPrefix, makeOutput} from "./output.js";
+import {javascript} from "./languages/javascript.js";
 
 function uid() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -86,6 +85,8 @@ export function createRuntime(initialCode, options = {}) {
   let prevCode = null;
   let isRunning = false;
   const compileCell = options.compileCell ?? defaultCompileCell;
+  const language = options.language ?? javascript;
+  const {output: outputFormat} = language;
   let disposed = false;
 
   // Create button registry for this runtime instance
@@ -133,10 +134,17 @@ export function createRuntime(initialCode, options = {}) {
   // The button function must be manually associated to the button registry.
   const __stdlib__ = {...stdlib, button: makeButton(buttonRegistry)};
 
+  // The language's own names for parts of the stdlib (see ./languages/).
+  const languageBuiltins = Object.entries(language.builtins?.(__stdlib__) ?? {}).map(([name, value]) => [
+    name,
+    () => value,
+  ]);
+
   const runtime = new Runtime({
     recho: () => __stdlib__,
     __getEcho__: () => __getEcho__,
     __setEcho__: () => __setEcho__,
+    ...Object.fromEntries(languageBuiltins),
   });
 
   const main = runtime.module();
@@ -166,7 +174,7 @@ export function createRuntime(initialCode, options = {}) {
         continue;
       }
 
-      const {output, error} = makeOutput(values);
+      const {output, error} = makeOutput(values, outputFormat);
 
       // The range of line numbers of output lines.
       let outputRange = null;
@@ -266,19 +274,14 @@ export function createRuntime(initialCode, options = {}) {
 
   function split(code) {
     try {
-      // The `parse` call here is actually unnecessary. Parsing the entire code
-      // is quite expensive. If we can perform the splitting operation through
-      // the editor's syntax tree, we can save the parsing here.
-      return parseModule(code).body;
+      return language.cells(code);
     } catch (error) {
       console.error(error);
-      // Calculate error position and display syntax error at the appropriate location.
-      const loc = error.loc;
-      const prevLine = code.split("\n").slice(0, loc.line - 1);
-      const offset = loc.line === 1 ? 0 : 1;
-      const from = prevLine.join("\n").length + offset;
+      // Display the syntax error at the appropriate location.
+      const from = language.errorOffset(code, error);
       const changes = removeChanges(code);
-      const errorMsg = addPrefix(new Inspector(error).format(), ERROR_PREFIX) + "\n";
+      const errorMsg =
+        addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
       changes.push({from, insert: errorMsg});
       dispatch(changes);
       dispatcher.call("error", null, {source: "split", error});
@@ -301,12 +304,16 @@ export function createRuntime(initialCode, options = {}) {
    * @returns {{from: number, to: number, insert: ""}[]} An array of changes.
    */
   function removeChanges(code) {
-    function matchAt(index) {
-      return code.startsWith(OUTPUT_PREFIX, index) || code.startsWith(ERROR_PREFIX, index);
+    // A language can tell output lines apart from code that merely looks
+    // like them (e.g. inside a multi-line string), by line number.
+    const outputLines = language.outputLines?.(code);
+    function matchAt(index, lineNumber) {
+      if (outputLines) return outputLines.has(lineNumber);
+      return code.startsWith(outputFormat.outputPrefix, index) || code.startsWith(outputFormat.errorPrefix, index);
     }
 
     /** Line number ranges (left-closed and right-open) of lines that contain output or error. */
-    const lineNumbers = matchAt(0) ? [{begin: 0, end: 1}] : [];
+    const lineNumbers = matchAt(0, 0) ? [{begin: 0, end: 1}] : [];
     /**
      * The index of the first character of each line.
      * If the code ends with a newline, the last index is the length of the code.
@@ -315,7 +322,7 @@ export function createRuntime(initialCode, options = {}) {
     let nextNewlineIndex = code.indexOf("\n", 0);
     while (0 <= nextNewlineIndex && nextNewlineIndex < code.length) {
       lineStartIndices.push(nextNewlineIndex + 1);
-      if (matchAt(nextNewlineIndex + 1)) {
+      if (matchAt(nextNewlineIndex + 1, lineStartIndices.length - 1)) {
         const lineNumber = lineStartIndices.length - 1;
         if (lineNumbers.length > 0 && lineNumber === lineNumbers[lineNumbers.length - 1].end) {
           // Extend the last line number range.
@@ -363,12 +370,11 @@ export function createRuntime(initialCode, options = {}) {
     const nodes = split(code);
     if (!nodes) return;
 
-    const mutables = analyzeMutables(nodes.map((node) => code.slice(node.start, node.end)));
+    const mutables = analyzeMutables(nodes.map((node) => node.js));
     nodes.forEach((node, i) => {
-      const cell = code.slice(node.start, node.end);
       node.id = uid();
       node.mutable = mutables[i];
-      node.transpiled = transpile(cell, node.mutable.writes);
+      node.transpiled = transpile(node.js, node.mutable.writes);
     });
 
     const groups = group(nodes, (n) => n.mutable.key);
@@ -487,6 +493,7 @@ export function createRuntime(initialCode, options = {}) {
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
+        if (language.isHiddenOutput(o)) continue;
         if (defines.includes(o)) {
           const mutator = mutatorNames[o];
           const create = (exports) => {

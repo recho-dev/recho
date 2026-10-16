@@ -22,7 +22,7 @@ import {isDirtyStore, countStore} from "./store.js";
 import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
 import {SafeLink} from "./SafeLink.jsx";
-import {BASE_PATH} from "./shared.js";
+import {BASE_PATH, RUNTIMES} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -184,6 +184,14 @@ export function EditorPage({id: initialId}) {
 
   const isPublic = notebook.visibility === PUBLIC;
 
+  // A new notebook starts over in the chosen language.
+  function onChangeRuntime(runtime) {
+    if (isDirtyStore.getSnapshot() && !confirm("Discard your changes and start a new notebook in this language?"))
+      return;
+    isDirtyStore.setDirty(false);
+    loadNotebook(createNotebook(runtime));
+  }
+
   function onUserInput(code) {
     const newNotebook = {...notebook, content: code};
     setNotebook(newNotebook);
@@ -324,6 +332,7 @@ export function EditorPage({id: initialId}) {
       <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4 editor-page")}>
         <Editor
           initialCode={initialCode}
+          runtime={notebook.runtime}
           key={notebook.id}
           onUserInput={onUserInput}
           onBeforeEachRun={onBeforeEachRun}
@@ -331,6 +340,17 @@ export function EditorPage({id: initialId}) {
           onDuplicate={isAdded ? onDuplicate : null}
           toolBarStart={
             <div className={cn("flex items-center gap-2")}>
+              {!isAdded && (
+                <select
+                  aria-label="Language"
+                  value={notebook.runtime}
+                  onChange={(e) => onChangeRuntime(e.target.value)}
+                  className={cn("border border-gray-300 rounded-md px-2 py-1 text-sm bg-white")}
+                >
+                  <option value={RUNTIMES.javascript}>JavaScript</option>
+                  <option value={RUNTIMES.wenyan}>文言 wenyan</option>
+                </select>
+              )}
               {!isAdded && (
                 <button
                   onClick={onSave}
