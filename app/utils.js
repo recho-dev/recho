@@ -31,7 +31,7 @@ export function removeJSMeta(content) {
 }
 
 // Wenyan examples (*.recho.wy) start with metadata comments like
-// 注曰。「「@title 文言之始」」。
+// 注曰。「「@title 方圓」」。
 const WENYAN_META = /^注曰。「「@(\w+)\s+(.*?)」」。$/;
 
 function parseWenyanMeta(content) {
