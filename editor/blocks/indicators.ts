@@ -36,6 +36,10 @@ const indicatorMarkers = {
 
 export const blockIndicator = gutter({
   class: "cm-blockIndicators",
+  // Repaint when the blocks change, even if the text didn't (e.g. a re-run
+  // that only flips a block's error state).
+  lineMarkerChange: (update) =>
+    update.startState.field(blockMetadataField, false) !== update.state.field(blockMetadataField, false),
   /**
    * Create a gutter marker for the given line.
    *

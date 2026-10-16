@@ -1,4 +1,4 @@
-import {bool2hanzi, compile, num2hanzi, splitCells} from "wenyan";
+import {bool2hanzi, compile, num2hanzi, splitCells, tokens2asc, wy2tokens} from "wenyan";
 import {ERROR_MARK, OUTPUT_MARK} from "../constant.js";
 import {parseModule} from "../parse.js";
 import {Inspector} from "../stdlib/inspect.js";
@@ -83,19 +83,20 @@ const output = {
 const isOutputAt = (code, i) => code.startsWith(OUTPUT_PREFIX, i) || code.startsWith(ERROR_PREFIX, i);
 
 /**
- * The line numbers of Recho's output lines in `code`. A line inside a
+ * Recho's output lines in `code`: their line numbers, each mapped to "output"
+ * or "error". A line inside a
  * multi-line string can look like output, so string literals are followed
  * the way the compiler's tokenizer does: 「「 and 『 open a level, 」」 and 』
  * close one, whichever kind opened it.
  */
 function outputLines(code) {
-  const lines = new Set();
+  const lines = new Map();
   let level = 0;
   let line = 0;
   let i = 0;
   while (i < code.length) {
     if (level === 0 && (i === 0 || code[i - 1] === "\n") && isOutputAt(code, i)) {
-      lines.add(line);
+      lines.set(line, code.startsWith(ERROR_PREFIX, i) ? "error" : "output");
       const end = code.indexOf("\n", i);
       if (end === -1) break;
       i = end;
@@ -153,12 +154,18 @@ function toJavaScript(source) {
   // Names in 「」 become JavaScript names as they are, so one that isn't
   // valid in JavaScript (「甲-乙」, 「class」) compiles to code that doesn't
   // parse.
+  let program;
   try {
-    parseModule(js);
+    program = parseModule(js);
   } catch (error) {
     return throwing(`${error.message}: a name in 「」 isn't usable here. Names must also be valid JavaScript names.`);
   }
-  return js;
+  // A cell of only comments (注曰, 疏曰, 批曰) isn't a cell, as comments
+  // aren't in JavaScript. Anything else stays a cell, even if it compiles
+  // to nothing.
+  if (program.body.length) return js;
+  const ops = tokens2asc(wy2tokens(source, assert), assert);
+  return ops.length && ops.every((a) => a.op === "comment") ? null : js;
 }
 
 // toJavaScript is a pure function of the cell's source, and most cells don't
@@ -180,11 +187,10 @@ export const wenyan = {
   output,
   cells(code) {
     const source = blankOutput(code);
-    return splitCells(source, assert).map(({from, to}) => ({
-      start: from,
-      end: to,
-      js: toJavaScriptCached(source.slice(from, to)),
-    }));
+    return splitCells(source, assert).flatMap(({from, to}) => {
+      const js = toJavaScriptCached(source.slice(from, to));
+      return js === null ? [] : [{start: from, end: to, js}];
+    });
   },
   errorOffset(code, error) {
     const pos = Number.isInteger(error.pos) ? error.pos : 0;

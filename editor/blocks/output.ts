@@ -1,9 +1,9 @@
 import {Decoration, ViewPlugin, ViewUpdate, EditorView, type DecorationSet} from "@codemirror/view";
 import {syntaxTree} from "@codemirror/language";
-import {StateField, RangeSetBuilder, type EditorState} from "@codemirror/state";
+import {Facet, StateField, RangeSetBuilder, type EditorState} from "@codemirror/state";
 import {markLineType} from "../../lib/blocks/detect.ts";
 
-type OutputLine = {
+export type OutputLine = {
   from: number;
   type: "output" | "error";
 };
@@ -31,12 +31,22 @@ function computeLineNumbers(state: EditorState): OutputLine[] {
   return lineNumbers;
 }
 
+export type OutputLineFinder = (state: EditorState) => OutputLine[];
+
+/**
+ * How output lines are found. By default, as top-level `//➜` and `//✗`
+ * comments in the JavaScript syntax tree; other languages provide their own.
+ */
+export const outputLineFinder = Facet.define<OutputLineFinder, OutputLineFinder>({
+  combine: (values) => values[0] ?? computeLineNumbers,
+});
+
 export const outputLinesField = StateField.define<OutputLine[]>({
   create(state) {
-    return computeLineNumbers(state);
+    return state.facet(outputLineFinder)(state);
   },
   update(value, tr) {
-    return tr.docChanged ? computeLineNumbers(tr.state) : value;
+    return tr.docChanged ? tr.state.facet(outputLineFinder)(tr.state) : value;
   },
 });
 
