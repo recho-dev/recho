@@ -12,10 +12,7 @@
 A circle (圓) that grows and shrinks inside a square (方), drawn in wenyan,
 a programming language written in classical Chinese.
 
-刻漏, the water clock, ticks every 100 ms. Each tick sets the radius, which
-rises from 零 to 十 and falls back, and 示之 shows every row above the block.
-
-Feel free to change 「半」 to resize it, or 一百 to change the speed!
+- https://wy-lang.org/
 」」。
 
 批曰。「「➜ 方方方方方方方方方方方方方方方方方方方方方」」。
