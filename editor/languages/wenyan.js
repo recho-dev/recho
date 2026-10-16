@@ -90,13 +90,8 @@ const language = StreamLanguage.define({
  * finds them (skipping look-alike lines inside strings).
  */
 function findOutputLines(state) {
-  const {errorPrefix} = wenyan.output;
-  return [...wenyan.outputLines(state.doc.toString())]
-    .sort((a, b) => a - b)
-    .map((n) => {
-      const line = state.doc.line(n + 1);
-      return {from: line.from, type: line.text.startsWith(errorPrefix) ? "error" : "output"};
-    });
+  // outputLines lists lines in document order.
+  return [...wenyan.outputLines(state.doc.toString())].map(([n, type]) => ({from: state.doc.line(n + 1).from, type}));
 }
 
 /**

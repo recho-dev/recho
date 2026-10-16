@@ -14,9 +14,10 @@
  *   instead of becoming a variable other cells can use.
  * - `builtins(stdlib)` (optional): extra names every cell can use, as
  *   `{name: value}`, on top of `recho` (`stdlib`).
- * - `outputLines(code)` (optional): the line numbers of the output lines in
- *   `code`, for a language where code can look like output (by default, any
- *   line starting with an output or error prefix is output).
+ * - `outputLines(code)` (optional): the output lines in `code`, as a Map from
+ *   line number to "output" or "error", for a language where code can look
+ *   like output (by default, any line starting with an output or error prefix
+ *   is output).
  */
 
 import {javascript} from "./javascript.js";

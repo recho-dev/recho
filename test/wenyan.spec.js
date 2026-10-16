@@ -277,6 +277,20 @@ describe("wenyan", () => {
     const cells = wenyan.cells(code).map(({start, end}) => code.slice(start, end));
     expect(cells).toEqual(["夫三。示之。", "批曰。「「批」」。夫四。示之。"]);
   });
+
+  it("keeps a block that runs nothing but isn't a comment", () => {
+    const code = `夫三。噫。\n\n噫。`;
+    const cells = wenyan.cells(code).map(({start, end}) => code.slice(start, end));
+    expect(cells).toEqual(["夫三。噫。", "噫。"]);
+  });
+
+  it("tells output lines from error lines", () => {
+    const code = `批曰。「「➜ 三」」。\n夫三。示之。\n批曰。「「✗ 錯」」。\n夫「丁」。示之。`;
+    expect([...wenyan.outputLines(code)]).toEqual([
+      [0, "output"],
+      [2, "error"],
+    ]);
+  });
 });
 
 describe("loadLanguage", () => {

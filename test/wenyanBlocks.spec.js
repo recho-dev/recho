@@ -1,5 +1,7 @@
 import {it, expect, describe} from "vitest";
 import {EditorState} from "@codemirror/state";
+import {EditorView} from "@codemirror/view";
+import {blockIndicator} from "../editor/blocks/indicators.ts";
 import {wenyanSupport} from "../editor/languages/wenyan.js";
 import {outputLinesField} from "../editor/blocks/output.ts";
 import {blockMetadataField} from "../editor/blocks/state.ts";
@@ -62,5 +64,25 @@ describe("wenyan blocks", () => {
     const state = withBlocks();
     const tr = state.update({changes: {from: secondFrom, to: secondFrom + 6, insert: ""}});
     expect(tr.state.field(blockMetadataField).map((b) => b.id)).toEqual(["a"]);
+  });
+});
+
+describe("block indicator", () => {
+  it("repaints when blocks change without a text change", () => {
+    const doc = "夫三。示之。";
+    const view = new EditorView({
+      state: EditorState.create({doc, extensions: [blockIndicator, wenyanSupport()]}),
+      parent: document.body,
+    });
+    const block = (error) => new BlockMetadata("a", "", null, {from: 0, to: doc.length}, {}, error);
+    // The line's marker; the gutter's first element is a hidden spacer.
+    const marker = () => [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator")].at(-1)?.className;
+
+    view.dispatch({effects: blockMetadataEffect.of([block(false)])});
+    expect(marker()).toContain("source");
+    // Same text, but the block now has an error, as after a failing re-run.
+    view.dispatch({effects: blockMetadataEffect.of([block(true)])});
+    expect(marker()).toContain("error");
+    view.destroy();
   });
 });
