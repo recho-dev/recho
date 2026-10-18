@@ -153,6 +153,84 @@ describe("mlscript", () => {
     expect(notebook.doc()).toContain(`//➜ 11\necho(x)`);
     expect(notebook.doc()).toContain(`//➜ Some(11)\necho(Option.Some(x))`);
   });
+
+  describe("recho", () => {
+    // The value shown above `before` (a regular expression), once it
+    // differs from `previous`.
+    const shownAbove = (before) => notebook.doc().match(new RegExp(`//➜ (.*)\\n${before}`))?.[1];
+    async function nextShown(before, previous) {
+      for (let i = 0; i < 100; i++) {
+        const shown = shownAbove(before);
+        if (shown !== undefined && shown !== previous) return shown;
+        await wait(10);
+      }
+      return shownAbove(before);
+    }
+
+    it("is an input of the nodes that use it, and only of those", () => {
+      const nodes = mlscript.nodes(`val t = recho.interval(10)\n\necho(t)\n`);
+      expect(nodes.map((n) => n.inputs)).toEqual([
+        ["echo", "recho", "__mlscript__"],
+        ["echo", "t", "__mlscript__"],
+      ]);
+    });
+
+    it("ticks with recho.interval, re-running the nodes that read it", async () => {
+      run(`val t = recho.interval(20)\n\necho(t)\n\necho(t * 10)\n`);
+      expect(await nextShown("echo\\(t\\)")).toBe("0");
+      expect(await nextShown("echo\\(t\\)", "0")).toBe("1");
+      expect(await nextShown("echo\\(t\\)", "1")).toBe("2");
+      expect(await nextShown("echo\\(t \\* 10\\)", "0")).not.toBe("0");
+      expect(notebook.doc()).not.toContain("//✗");
+    });
+
+    it("gives the current time with recho.now", async () => {
+      run(`val now = recho.now()\n\necho(now > 0)\n`);
+      expect(await nextShown("echo\\(now > 0\\)")).toBe("true");
+    });
+
+    it("keeps state with recho.state, set from another node", async () => {
+      run(
+        `val st = recho.state(0)\nval count = st.0\nval setCount = st.1\n\necho(count)\n\n` +
+          `val t = recho.interval(10)\n\nif t < 3 do setCount(c => c + 10)\n`,
+      );
+      let shown = "0";
+      while (shown !== "30") {
+        const next = await nextShown("echo\\(count\\)", shown);
+        expect(next).not.toBe(shown);
+        shown = next;
+      }
+      await wait(100);
+      expect(shownAbove("echo\\(count\\)")).toBe("30");
+    });
+
+    it("formats with recho.inspect, and controls give their current value", async () => {
+      run(
+        `echo(recho.inspect("a"))\n\necho(recho.number(12, {min: 0, max: 10}))\n\n` +
+          `echo(recho.toggle(true))\n\necho(recho.radio(1, ["a", "b"]))\n`,
+      );
+      await wait();
+      expect(notebook.doc()).toBe(
+        `//➜ "a"\necho(recho.inspect("a"))\n\n//➜ 10\necho(recho.number(12, {min: 0, max: 10}))\n\n` +
+          `//➜ true\necho(recho.toggle(true))\n\n//➜ "b"\necho(recho.radio(1, ["a", "b"]))\n`,
+      );
+    });
+
+    it("lets a notebook define its own recho", async () => {
+      run(`val recho = 1\n\necho(recho + 1)\n`);
+      await wait();
+      expect(notebook.doc()).toContain(`//➜ 2\necho(recho + 1)`);
+    });
+
+    it("runs the clock example", async () => {
+      run(fs.readFileSync("app/examples/mlscript-clock.recho.mls", "utf8"));
+      expect(await nextShown('echo\\("Seconds since opening:", tick\\)')).toBe("Seconds since opening: 0");
+      expect(await nextShown('echo\\("Time:", clock\\(now\\)\\)', "Time: 12:00:00")).toMatch(/^Time: \d\d:\d\d:\d\d$/);
+      const frame = await nextShown("echo\\(spinner", "| [                   ]");
+      expect(frame).toMatch(/^[|/\\-] \[#+ *\]$/);
+      expect(notebook.doc()).not.toContain("//✗");
+    });
+  });
 });
 
 const SAMPLE = `class Point(val x: Int, val y: Int) with

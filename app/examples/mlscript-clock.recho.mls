@@ -1,0 +1,37 @@
+/**
+ * @title MLscript Clock
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label Beginner, MLscript, Animation
+ */
+
+// Recho's standard library is `recho` in MLscript too. A definition whose
+// value is a generator, such as `recho.interval(ms)`, takes each value the
+// generator yields in turn, and the definitions that read it run again.
+
+// 0, 1, 2, ... once a second.
+val tick = recho.interval(1000)
+
+//➜ Seconds since opening: 0
+echo("Seconds since opening:", tick)
+
+// The current time, once per animation frame.
+val now = recho.now()
+
+fun pad(n) = globalThis.String(n).padStart(2, "0")
+
+fun clock(ms) =
+  let date = new! globalThis.Date(ms)
+  pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds())
+
+//➜ Time: 12:00:00
+echo("Time:", clock(now))
+
+// A spinner and a progress bar, ten frames a second.
+val frame = recho.interval(100)
+
+val spinner = ["|", "/", "-", "\\"]
+
+//➜ | [                   ]
+echo(spinner.(frame % 4), "[" + "#".repeat(frame % 20) + " ".repeat(19 - frame % 20) + "]")
