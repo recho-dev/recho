@@ -50,6 +50,9 @@ importers:
       '@mlscript/recho':
         specifier: 0.1.2
         version: 0.1.2
+      '@mlscript/tree-sitter-mlscript':
+        specifier: 0.1.0
+        version: 0.1.0
       '@observablehq/notebook-kit':
         specifier: ^1.5.0
         version: 1.5.0(@types/markdown-it@14.1.2)(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)
@@ -1147,6 +1150,14 @@ packages:
   '@mlscript/recho@0.1.2':
     resolution: {integrity: sha512-jCP8TDTsG/abhBHPS4YkwNrReCY/GLXazk3Ozwxr0oFb/g016jRNDl0J8LPXYBFnnD4pzBy4V+BMXnrAe3r6+w==}
     engines: {node: '>=18'}
+
+  '@mlscript/tree-sitter-mlscript@0.1.0':
+    resolution: {integrity: sha512-7M9Y4lbE8k0cIHD6FINIJ7Z0xvwIAMSKS29hISR+SFyMqBT+wu0E3spYcDZrqnRCvoa76K5LGk72jIV7Uma/XA==}
+    peerDependencies:
+      tree-sitter: ^0.25.0
+    peerDependenciesMeta:
+      tree-sitter:
+        optional: true
 
   '@next/env@15.5.9':
     resolution: {integrity: sha512-4GlTZ+EJM7WaW2HEZcyU317tIQDjkQIyENDLxYJfSWlfqguN+dHkZgyQTV/7ykvobU7yEH5gKvreNrH4B6QgIg==}
@@ -3193,6 +3204,14 @@ packages:
         optional: true
       sass:
         optional: true
+
+  node-addon-api@8.9.2:
+    resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
+    engines: {node: ^18 || ^20 || >= 21}
+
+  node-gyp-build@4.8.4:
+    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
+    hasBin: true
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
@@ -5280,6 +5299,11 @@ snapshots:
   '@marijn/find-cluster-break@1.0.2': {}
 
   '@mlscript/recho@0.1.2': {}
+
+  '@mlscript/tree-sitter-mlscript@0.1.0':
+    dependencies:
+      node-addon-api: 8.9.2
+      node-gyp-build: 4.8.4
 
   '@next/env@15.5.9': {}
 
@@ -7516,6 +7540,10 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  node-addon-api@8.9.2: {}
+
+  node-gyp-build@4.8.4: {}
 
   node-releases@2.0.27: {}
 

@@ -7,11 +7,11 @@ import {markLineType} from "../../lib/blocks/detect.ts";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
 import {outputDecoration, outputLineFinder, outputLines} from "../blocks/output.ts";
 
-// The tree-sitter grammar and its highlights query, vendored from
-// tree-sitter-mlscript (see ./mlscript/README.md). This module is only loaded
-// for MLscript notebooks, and they are only fetched from here.
-const GRAMMAR_URL = new URL("./mlscript/tree-sitter-mlscript.wasm", import.meta.url);
-const QUERY_URL = new URL("./mlscript/highlights.scm", import.meta.url);
+// The tree-sitter grammar and its highlights query, from the
+// @mlscript/tree-sitter-mlscript package. This module is only loaded for
+// MLscript notebooks, and they are only fetched from here.
+const GRAMMAR_URL = new URL("@mlscript/tree-sitter-mlscript/tree-sitter-mlscript.wasm", import.meta.url);
+const QUERY_URL = new URL("@mlscript/tree-sitter-mlscript/queries/highlights.scm", import.meta.url);
 
 /**
  * The highlight tag for a capture of the highlights query, so MLscript gets

@@ -1,3 +1,5 @@
+import {createRequire} from "node:module";
+import {pathToFileURL} from "node:url";
 // @vitest-environment node
 import {it, expect, describe, beforeAll} from "vitest";
 import {readFile} from "node:fs/promises";
@@ -8,13 +10,15 @@ import {Parser, Language, Query} from "web-tree-sitter";
 import {captureTag, highlightSpans, mlscriptExtensions} from "../editor/languages/mlscript.js";
 import {outputLinesField} from "../editor/blocks/output.ts";
 
-const dir = new URL("../editor/languages/mlscript/", import.meta.url);
+const grammarUrl = pathToFileURL(
+  createRequire(import.meta.url).resolve("@mlscript/tree-sitter-mlscript/tree-sitter-mlscript.wasm"),
+);
 let language, querySource, query, parser;
 
 beforeAll(async () => {
   await Parser.init();
-  language = await Language.load(new Uint8Array(await readFile(new URL("tree-sitter-mlscript.wasm", dir))));
-  querySource = await readFile(new URL("highlights.scm", dir), "utf8");
+  language = await Language.load(new Uint8Array(await readFile(grammarUrl)));
+  querySource = await readFile(new URL("queries/highlights.scm", grammarUrl), "utf8");
   query = new Query(language, querySource);
   parser = new Parser();
   parser.setLanguage(language);
