@@ -1,0 +1,238 @@
+/**
+ * @title Data and Pattern Matching
+ */
+
+/**
+ * ============================================================================
+ * =                         Data and Pattern Matching                        =
+ * ============================================================================
+ *
+ * MLscript has classes, objects and tuples, and `if ... is ...` to look
+ * inside them. Edit the code and press Cmd+S to run it again.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                  Classes
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A class lists its parameters after its name. `val` makes a parameter a
+ * field you can read from outside. Methods go after `with`. You create an
+ * instance by calling the class like a function, without `new`.
+ */
+
+class Rect(val w: Int, val h: Int) with
+  fun area = w * h
+  fun scale(k) = Rect(w * k, h * k)
+
+let r = Rect(3, 2)
+
+//➜ 3 6 600
+echo(r.w, r.area, r.scale(10).area)
+
+/**
+ * A `data class` makes all its parameters fields, and `echo` shows what is
+ * inside it.
+ */
+
+data class Point(x, y)
+
+let p = Point(1, 2)
+
+//➜ Point(1, 2) 3
+echo(p, p.x + p.y)
+
+/**
+ * `object` defines a single value with its own name, often used for cases
+ * that carry no data.
+ */
+
+object Origin
+
+//➜ Origin
+echo(Origin)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                   Tuples
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Square brackets make a tuple, which is a JavaScript array. Index it with
+ * `.0`, `.1`, ... or take it apart with a pattern.
+ */
+
+let pair = [10, "ten"]
+
+//➜ 10 ten 2
+echo(pair.0, pair.1, pair.length)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                              Pattern Matching
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Pattern matching is part of `if`. `x is P` checks whether `x` matches the
+ * pattern `P` and binds the names in it, `and` adds more conditions, and the
+ * first case that holds wins. Matches and ordinary conditions mix freely,
+ * and when cases start the same way, the shared start is written once.
+ * (This design is described in "The Ultimate Conditional Syntax" by Luyu
+ * Cheng and Lionel Parreaux, OOPSLA 2024: https://doi.org/10.1145/3689746)
+ */
+
+fun show(shape) = if shape is
+  Origin then "the origin"
+  Point(0, y) then "on the y axis at " + y
+  Point(x, y) and x == y then "on the diagonal at " + x
+  Point(x, y) then "at (" + x + ", " + y + ")"
+  [a, b] then "a pair of " + a + " and " + b
+  else "something else"
+
+//➜ "the origin"
+echo(show(Origin))
+
+//➜ "on the y axis at 5"
+echo(show(Point(0, 5)))
+
+//➜ "on the diagonal at 3"
+echo(show(Point(3, 3)))
+
+//➜ "at (1, 2)"
+echo(show(p))
+
+//➜ "a pair of 10 and ten"
+echo(show(pair))
+
+//➜ "something else"
+echo(show(r))
+
+/**
+ * The next examples use an optional value: `Some(value)` or `None`.
+ */
+
+data class Some(value)
+object None
+
+/**
+ * A case can continue on indented lines, each with its own `then`. Here
+ * `Some(v) and` is shared by three cases.
+ */
+
+fun describe(o) = if o is
+  Some(v) and
+    v < 0 then "negative"
+    v > 0 then "positive"
+    else "zero"
+  None then "nothing"
+
+//➜ negative zero nothing
+echo(describe(Some(-2)), describe(Some(0)), describe(None))
+
+/**
+ * Each case can test any value, so matching two values needs no nesting and
+ * no tuple:
+ */
+
+fun add(x, y) = if
+  x is Some(a) and y is Some(b) then Some(a + b)
+  x is Some(_) then x
+  y is Some(_) then y
+  else None
+
+//➜ Some(3) Some(5) None
+echo(add(Some(1), Some(2)), add(None, Some(5)), add(None, None))
+
+/**
+ * Or match one value inside a case of another:
+ */
+
+fun combine(x, y) = if x is
+  Some(a) and y is
+    Some(b) then a + b
+    None then a
+  None then 0
+
+//➜ 3 1 0
+echo(combine(Some(1), Some(2)), combine(Some(1), None), combine(None, Some(9)))
+
+/**
+ * A tuple pattern can end with `...rest` to match the remaining elements.
+ */
+
+fun firstTwo(xs) = if xs is
+  [] then "empty"
+  [x] then "one: " + x
+  [x, y, ...rest] and rest is
+    [] then "two: " + x + ", " + y
+    else "starts with " + x + ", " + y
+
+//➜ empty one: 1 two: 1, 2 starts with 1, 2
+echo(firstTwo([]), firstTwo([1]), firstTwo([1, 2]), firstTwo([1, 2, 3]))
+
+/**
+ * Comparisons share their start the same way: write the left operand once,
+ * and each line gives the rest.
+ */
+
+fun grade(score) = if score
+  >= 90 then "A"
+  >= 80 then "B"
+  >= 70 then "C"
+  else "F"
+
+//➜ A B F
+echo(grade(95), grade(81), grade(42))
+
+/**
+ * Shared parts can be nested. Here `x |> Math.sign` and `x |> Math.abs` are
+ * each written once and compared in several ways (`|>` passes a value to a
+ * function).
+ */
+
+fun magnitude(x) =
+  if x
+    |> Math.sign
+      < 0 then "invalid"
+      == 0 then "null"
+    |> Math.abs
+      > 100 then "large"
+      < 10 then "small"
+      else "medium"
+
+//➜ invalid null large small medium
+echo(magnitude(-3), magnitude(0), magnitude(500), magnitude(5), magnitude(50))
+
+/**
+ * A `let` line between cases computes a value that the cases below it can
+ * use.
+ */
+
+fun parse(s) = if
+  let n = globalThis.parseInt(s)
+  globalThis.isNaN(n) then "not a number"
+  n < 0 then "minus " + (0 - n)
+  else "number " + n
+
+//➜ number 42 minus 7 not a number
+echo(parse("42"), parse("-7"), parse("hi"))
+
+/**
+ * Data classes can be recursive. Here is a small tree and a function that
+ * adds up its leaves. Try adding another `Leaf` and pressing Cmd+S.
+ */
+
+data class Leaf(value)
+data class Node(left, right)
+
+fun sum(t) = if t is
+  Leaf(v) then v
+  Node(l, r) then sum(l) + sum(r)
+
+let tree = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+
+//➜ Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+echo(tree)
+
+//➜ 6
+echo(sum(tree))
+
+/**
+ * Next: Patterns (https://recho.dev/docs/mlscript-patterns).
+ */

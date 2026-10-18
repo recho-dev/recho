@@ -137,7 +137,7 @@ describe("mlscript", () => {
     expect(created.runtime).toBe(RUNTIMES.mlscript);
     run(created.content);
     await wait();
-    expect(notebook.doc()).toContain("//➜ Point(3, 4) 7 Point(0, 0)\necho(");
+    expect(notebook.doc()).toContain('//➜ "first quadrant"\necho(quadrant(');
     expect(notebook.doc()).not.toContain("//✗");
   });
 

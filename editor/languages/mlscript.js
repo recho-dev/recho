@@ -6,6 +6,7 @@ import {Parser, Language, Query} from "web-tree-sitter";
 import {loadGrammar} from "./mlscript/grammar.js";
 import {captureSpans, captureValue} from "./mlscript/highlight.js";
 import {mlscriptControls} from "./mlscript/controls.js";
+import {commentLinksFor, commentLinkClickHandler} from "../commentLink.js";
 import {markLineType} from "../../lib/blocks/detect.ts";
 import {OUTPUT_MARK, WARNING_LABEL} from "../../runtime/constant.js";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
@@ -156,6 +157,16 @@ function highlighter(field, query) {
   );
 }
 
+/** Links in comments, which open with Cmd+Click as in JavaScript. */
+function commentLinks(field, query) {
+  const comments = (state, from, to) =>
+    highlightSpans(query, state.field(field), from, to).filter((span) => span.capture === "comment");
+  return [
+    commentLinksFor(comments, (update) => update.startState.field(field) !== update.state.field(field)),
+    commentLinkClickHandler,
+  ];
+}
+
 // The compiler's warnings about a block (see ../../runtime/languages/mlscript.js).
 const WARNING_START = `//${OUTPUT_MARK} ${WARNING_LABEL} `;
 
@@ -201,6 +212,7 @@ export function mlscriptExtensions(language, querySource, runtimeRef) {
     field,
     treeCleanup(field),
     highlighter(field, query),
+    commentLinks(field, query),
     blockMetadataExtension,
     blockUpdate.of(mapBlocks),
     outputLines,
@@ -215,7 +227,8 @@ export function mlscriptExtensions(language, querySource, runtimeRef) {
 /**
  * Editor support for MLscript: syntax highlighting with the tree-sitter
  * grammar, the blocks behind the gutter's block indicator (moved along with
- * edits until the next run), the box around output lines, and controls.
+ * edits until the next run), the box around output lines, links in comments
+ * and controls.
  * Controls need the editor's runtime, so this gives a function of it (see
  * ../index.js).
  */

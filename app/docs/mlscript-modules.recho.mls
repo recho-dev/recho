@@ -1,0 +1,112 @@
+/**
+ * @title Modules and Imports
+ */
+
+/**
+ * ============================================================================
+ * =                            Modules and Imports                           =
+ * ============================================================================
+ *
+ * Modules group definitions under a name. Edit the code and press Cmd+S to
+ * run it again.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                  Modules
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A `module` holds functions and values. Use them with a dot.
+ */
+
+module Temperature with
+  fun toFahrenheit(c) = c * 9 / 5 + 32
+  fun toCelsius(f) = (f - 32) * 5 / 9
+  val boiling = 100
+
+//➜ 212 100
+echo(Temperature.toFahrenheit(Temperature.boiling), Temperature.toCelsius(212))
+
+/**
+ * `open` brings a module's names into scope, so you can leave out the
+ * module name.
+ */
+
+open Temperature
+
+//➜ 68
+echo(toFahrenheit(20))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                             Companion Modules
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A module with the same name as a class is its companion: a good place for
+ * constructors and helpers. A class and its companion must be in the same
+ * block, so don't put a blank line between them. The annotation `that: Vec`
+ * tells MLscript that `that` has the fields `x` and `y`.
+ */
+
+class Vec(val x: Int, val y: Int) with
+  fun plus(that: Vec) = Vec(x + that.x, y + that.y)
+  fun show = "<" + x + ", " + y + ">"
+module Vec with
+  val zero = Vec(0, 0)
+  fun unit(dx, dy) = Vec(dx, dy)
+
+//➜ "<3, 3>"
+echo(Vec.zero.plus(Vec.unit(1, 0)).plus(Vec(2, 3)).show)
+
+/**
+ * The same goes for functions that call each other: define them together.
+ * A block can only use names defined in the blocks above it.
+ */
+
+fun isEven(n) = if n == 0 then true else isOdd(n - 1)
+fun isOdd(n) = if n == 0 then false else isEven(n - 1)
+
+//➜ true true
+echo(isEven(10), isOdd(7))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                         The MLscript Standard Library
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * MLscript's standard library is imported from `std/`. `Option` is a value
+ * that may be missing: `Some(value)` or `None`. After `open Option`, its
+ * constructors and helpers such as `getOrElse` can be used directly.
+ */
+
+import "std/Option.mls"
+
+open Option
+
+fun find(xs, p) = if xs is
+  [] then None
+  [x, ...rest] and
+    p(x) then Some(x)
+    else find(rest, p)
+
+//➜ Some(9)
+echo(find([1, 4, 9, 16], x => x > 5))
+
+//➜ None
+echo(find([1, 4], x => x > 5))
+
+//➜ 0 true
+echo(getOrElse(find([1, 4], x => x > 5), 0), isDefined(find([9], x => x > 5)))
+
+/**
+ * Classes from the standard library work in patterns like your own:
+ */
+
+fun describe(o) = if o is
+  Some(x) then "found " + x
+  None then "nothing"
+
+//➜ found 9 nothing
+echo(describe(find([1, 4, 9], x => x > 5)), describe(find([1], x => x > 5)))
+
+/**
+ * Next: Interactive Notebooks (https://recho.dev/docs/mlscript-interactive).
+ */

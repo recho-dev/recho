@@ -22,7 +22,7 @@ export default async function Page({params}) {
   if (!doc) notFound();
   return (
     <div className={cn("mx-4 my-4")}>
-      <Editor initialCode={removeJSMeta(doc.content)} pinToolbar={true} />
+      <Editor initialCode={removeJSMeta(doc.content)} runtime={doc.runtime} pinToolbar={true} />
     </div>
   );
 }
