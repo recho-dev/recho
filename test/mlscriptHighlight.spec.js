@@ -2,6 +2,7 @@
 import {it, expect, describe, beforeAll} from "vitest";
 import {readFile} from "node:fs/promises";
 import {EditorState} from "@codemirror/state";
+import {toggleComment} from "@codemirror/commands";
 import {classHighlighter} from "@lezer/highlight";
 import {Parser, Language, Query} from "web-tree-sitter";
 import {captureTag, highlightSpans, mlscriptExtensions} from "../editor/languages/mlscript.js";
@@ -117,5 +118,14 @@ describe("MLscript highlighting", () => {
       [3, "output"],
       [4, "error"],
     ]);
+  });
+
+  it("toggles `//` line comments", () => {
+    let state = EditorState.create({doc: "let x = 1", extensions: mlscriptExtensions(language, querySource)});
+    const run = () => toggleComment({state, dispatch: (tr) => (state = tr.state)});
+    run();
+    expect(state.doc.toString()).toBe("// let x = 1");
+    run();
+    expect(state.doc.toString()).toBe("let x = 1");
   });
 });

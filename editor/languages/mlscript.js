@@ -1,4 +1,4 @@
-import {StateField} from "@codemirror/state";
+import {EditorState, StateField} from "@codemirror/state";
 import {Decoration, ViewPlugin} from "@codemirror/view";
 import {highlightingFor} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
@@ -218,6 +218,8 @@ export function mlscriptExtensions(language, querySource) {
     outputLines,
     outputDecoration,
     outputLineFinder.of(outputLineFinderFor(field)),
+    // Cmd+/ toggles `//` line comments (Shift+Alt+A uses `/* */`).
+    EditorState.languageData.of(() => [{commentTokens: {line: "//", block: {open: "/*", close: "*/"}}}]),
   ];
 }
 
