@@ -39,8 +39,10 @@
  *   val count = st.0
  *   val setCount = st.1
  *
- * Controls such as `recho.number`, `recho.toggle` and `recho.radio` return
- * their value, but don't show inline widgets in MLscript notebooks yet.
+ * Controls work as in JavaScript: `recho.toggle(true)`, `recho.radio(0, ["a",
+ * "b"])` and `recho.number(5, {min: 0, max: 10, step: 1})` show inline widgets
+ * that edit the literal and run the notebook again. `recho.button` has no
+ * widget in MLscript notebooks yet.
  *
  * MLscript's own standard library is imported from `std/`:
  *
