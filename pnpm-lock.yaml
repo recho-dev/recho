@@ -152,6 +152,9 @@ importers:
       three:
         specifier: ^0.160.1
         version: 0.160.1
+      web-tree-sitter:
+        specifier: 0.26.9
+        version: 0.26.9
       wenyan:
         specifier: github:recho-dev/wenyan#master
         version: wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/81e5c68f0b92ffb27343843f06f38fae8a984aa5
@@ -4049,6 +4052,9 @@ packages:
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
+
+  web-tree-sitter@0.26.9:
+    resolution: {integrity: sha512-YJwSHANl6XFgeEjB8nitgj0qZYt5gkIesJ4w2srS2wcLB4GUa4xcOkM0YaMsU6WNR53YVIkDSY7Ej4pf3IXtCA==}
 
   web-vitals@4.2.4:
     resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
@@ -8492,6 +8498,8 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  web-tree-sitter@0.26.9: {}
 
   web-vitals@4.2.4: {}
 

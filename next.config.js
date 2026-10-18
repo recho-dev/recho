@@ -25,8 +25,10 @@ class KeepMLscriptCompiler {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config, {dev}) {
+  webpack(config, {dev, isServer}) {
     if (!dev) config.plugins.push(new KeepMLscriptCompiler());
+    // web-tree-sitter (MLscript highlighting) imports these only under Node.
+    if (!isServer) config.resolve.fallback = {...config.resolve.fallback, "fs/promises": false, module: false};
     return config;
   },
   async redirects() {
