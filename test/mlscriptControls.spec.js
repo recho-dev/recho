@@ -165,3 +165,16 @@ describe("MLscript control widgets", () => {
     expect(view.dom.querySelector(".cm-boolean-toggle")).toBeNull();
   });
 });
+
+describe("MLscript comment links", () => {
+  it("marks URLs in comments, not in strings", () => {
+    const doc = '// See https://recho.dev/docs/mlscript-basics.\nlet s = "https://example.com"';
+    const view = new EditorView({
+      state: EditorState.create({doc, extensions: mlscriptExtensions(language, querySource)}),
+      parent: document.body,
+    });
+    const links = [...view.dom.querySelectorAll(".cm-comment-link")];
+    expect(links.map((link) => link.dataset.url)).toEqual(["https://recho.dev/docs/mlscript-basics"]);
+    view.destroy();
+  });
+});
