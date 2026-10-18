@@ -1,12 +1,15 @@
 "use client";
 import {useEffect, useRef, useState} from "react";
-import {Play, Square, RefreshCcw, Copy} from "lucide-react";
+import {Play, Square, RefreshCcw, Copy, LoaderCircle} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "./cn.js";
 import {languageOf} from "./shared.js";
+
+// How the loading indicator names the languages that load on demand.
+const LANGUAGE_NAMES = {mlscript: "MLscript", wenyan: "wenyan"};
 
 const styles = {
   iconButton: "w-4 h-4 hover:scale-110 transition-transform duration-100",
@@ -41,6 +44,9 @@ export function Editor({
   const editorRef = useRef(null);
   const [needRerun, setNeedRerun] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  // What is still loading for a language that loads on demand, e.g.
+  // ["compiler", "syntax highlighting"]; empty once the editor is created.
+  const [loading, setLoading] = useState([]);
 
   // The editor is created asynchronously, so it calls the latest handler
   // through this ref.
@@ -55,7 +61,19 @@ export function Editor({
     // on demand, so creating the editor waits for them.
     let cancelled = false;
     setLoadError(null);
-    Promise.all([loadLanguage(runtime), loadLanguageSupport(languageOf(runtime))]).then(
+    const onDemand = languageOf(runtime) !== "javascript";
+    const track = (part, promise) => {
+      if (!onDemand) return promise;
+      setLoading((parts) => [...parts, part]);
+      const done = () => !cancelled && setLoading((parts) => parts.filter((p) => p !== part));
+      promise.then(done, done);
+      return promise;
+    };
+    setLoading([]);
+    Promise.all([
+      track("compiler", loadLanguage(runtime)),
+      track("syntax highlighting", loadLanguageSupport(languageOf(runtime))),
+    ]).then(
       ([language, languageSupport]) => {
         if (cancelled || !containerRef.current) return;
         containerRef.current.innerHTML = "";
@@ -159,6 +177,12 @@ export function Editor({
           )}
         </div>
       </div>
+      {loading.length > 0 && !loadError && (
+        <p className={cn("flex items-center gap-2 p-4 text-sm text-gray-500")} role="status">
+          <LoaderCircle className={cn("w-4 h-4 animate-spin")} aria-hidden="true" />
+          Loading {LANGUAGE_NAMES[languageOf(runtime)] ?? languageOf(runtime)} {loading.join(" and ")}…
+        </p>
+      )}
       {loadError && (
         <p className={cn("p-4 text-sm text-red-700")}>
           Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
