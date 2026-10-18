@@ -1,0 +1,127 @@
+/**
+ * @title Dice Histograms in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label Algorithm, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                       Dice Histograms in MLscript                        =
+ * ============================================================================
+ *
+ * Roll one die many times and every face comes up about equally often. Add
+ * up two dice and 7 becomes the most common sum. Add up five and the
+ * histogram turns into a bell curve: the central limit theorem[1], drawn
+ * with block characters.
+ *
+ * The random numbers come from a seeded generator, so the histograms are the
+ * same every time. Change `seed` to roll again. The data flows through small
+ * functions joined with MLscript's pipe operator `|>`.
+ */
+
+val seed = 42
+val count = 3000
+
+// The Park–Miller generator: the next state is a pure function of the last.
+fun next(state) = state * 48271 % 2147483647
+
+// `count` rolls of `dice` six-sided dice, summed. The loop mutates only its
+// own local variables; the result is an ordinary array.
+fun rolls(dice): Array =
+  let
+    result = mut []
+    state = seed + dice
+  while result.length < count do
+    let sum = 0
+    let i = 0
+    while i < dice do
+      set state = next(state)
+      set sum += state % 6 + 1
+      set i += 1
+    result.push(sum)
+  result
+
+//➜ [2, 4, 6, 6, 3, 4, 2, 1, 1, 5, 5, 6]
+echo(rolls(1).slice(0, 12))
+
+// A histogram is the list of (value, how many times it appears).
+data class Bin(value, count)
+
+fun bins(xs: Array) =
+  let lo = Math.min(...xs)
+  let hi = Math.max(...xs)
+  Array.from((length: hi - lo + 1), (_, i) =>
+    Bin(lo + i, xs.filter((x, _, _) => x == lo + i).length))
+
+//➜ [Bin(1, 503), Bin(2, 467), Bin(3, 526), Bin(4, 502), Bin(5, 501), Bin(6, 501)]
+echo(rolls(1) |> bins)
+
+val width = 48
+val eighths = " ▏▎▍▌▋▊▉"
+
+// A bar of `x` characters, in eighths of a character.
+fun bar(x) =
+  let full = Math.floor(x)
+  let rest = Math.floor((x - full) * 8)
+  "█".repeat(full) + (if rest == 0 then "" else eighths.at(rest))
+
+fun pad(s: Str, n) = " ".repeat(n - s.length) + s
+
+fun draw(hist: Array) =
+  let most = Math.max(...hist.map((b, _, _) => if b is Bin(_, c) then c))
+  hist.map((b, _, _) => if b is Bin(v, c) then
+    pad(String(v), 2) + " " + bar(c / most * width) + " " + c
+  ).join("\n")
+
+//➜  1 █████████████████████████████████████████████▉ 503
+//➜  2 ██████████████████████████████████████████▌ 467
+//➜  3 ████████████████████████████████████████████████ 526
+//➜  4 █████████████████████████████████████████████▊ 502
+//➜  5 █████████████████████████████████████████████▋ 501
+//➜  6 █████████████████████████████████████████████▋ 501
+echo(rolls(1) |> bins |> draw)
+
+//➜  2 ██████▎ 66
+//➜  3 ███████████████▏ 160
+//➜  4 ████████████████████████▌ 259
+//➜  5 ████████████████████████████████▊ 345
+//➜  6 ██████████████████████████████████████ 400
+//➜  7 ████████████████████████████████████████████████ 505
+//➜  8 ██████████████████████████████████████▍ 405
+//➜  9 ██████████████████████████████▌ 322
+//➜ 10 ████████████████████████▉ 262
+//➜ 11 ██████████████████▏ 191
+//➜ 12 ████████ 85
+echo(rolls(2) |> bins |> draw)
+
+//➜  6 ▎ 2
+//➜  7 █▎ 9
+//➜  8 ███ 21
+//➜  9 ████▍ 30
+//➜ 10 █████▎ 36
+//➜ 11 █████████▋ 66
+//➜ 12 █████████████████▋ 120
+//➜ 13 █████████████████████████▍ 172
+//➜ 14 ███████████████████████████▉ 189
+//➜ 15 █████████████████████████████████████████▌ 281
+//➜ 16 ███████████████████████████████████████████▌ 295
+//➜ 17 ████████████████████████████████████████████████ 325
+//➜ 18 ██████████████████████████████████████████▏ 286
+//➜ 19 ███████████████████████████████████████▍ 267
+//➜ 20 ██████████████████████████████████▌ 234
+//➜ 21 █████████████████████████████▏ 198
+//➜ 22 ███████████████████████▋ 160
+//➜ 23 ██████████████████▎ 124
+//➜ 24 ███████████▋ 79
+//➜ 25 ███████ 48
+//➜ 26 █████▍ 37
+//➜ 27 █▌ 11
+//➜ 28 █ 7
+//➜ 29 ▍ 3
+echo(rolls(5) |> bins |> draw)
+
+/**
+ * [1] https://en.wikipedia.org/wiki/Central_limit_theorem
+ */

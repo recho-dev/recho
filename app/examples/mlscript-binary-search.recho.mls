@@ -1,0 +1,137 @@
+/**
+ * @title Binary Search in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label Algorithm, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                        Binary Search in MLscript                         =
+ * ============================================================================
+ *
+ * Binary search finds a value in a sorted array by halving the interval
+ * [lo, hi] at each step. Here it is written as a recursive function that
+ * returns its answer as data: `Found(index)` or `Missing(insertAt)`, plus
+ * the list of probes it made, which we draw as a trace.
+ *
+ * Then we turn the same idea into a tree: the binary search tree of all
+ * possible searches, printed sideways with box-drawing characters.
+ */
+
+val numbers = [2, 5, 8, 11, 17, 19, 23, 29, 31, 37]
+
+// The outcome of a search and the steps that led to it, as plain data.
+data class Found(index)
+data class Missing(insertAt)
+data class Probe(lo, hi, mid)
+data class Search(result, probes)
+
+// Each call either stops or recurses on one half; the probes are collected
+// on the way back, so nothing is mutated.
+fun search(target, arr: Array) =
+  fun go(lo, hi) = if
+    lo > hi then Search(Missing(lo), [])
+    let mid = Math.floor((lo + hi) / 2)
+    let probe = Probe(lo, hi, mid)
+    arr.at(mid) == target then Search(Found(mid), [probe])
+    go(...if arr.at(mid) < target then [mid + 1, hi] else [lo, mid - 1]) is
+      Search(result, probes) then Search(result, [probe, ...probes])
+  go(0, arr.length - 1)
+
+//➜ Search(Found(5), [Probe(0, 9, 4), Probe(5, 9, 7), Probe(5, 6, 5)])
+echo(search(19, numbers))
+
+fun pad(s: Str, n) = " ".repeat(n - s.length) + s
+
+fun trimEnd(s: Str) = if s.endsWith(" ") then trimEnd(s.slice(0, -1)) else s
+
+// Numbers outside [lo, hi] fade to dots; the middle one is in brackets.
+fun showProbe(probe, arr: Array) = if probe is Probe(lo, hi, mid) then trimEnd of
+  arr.map((x, i, _) => if
+    i == mid then "[" + pad(String(x), 2) + "]"
+    i < lo then "  · "
+    i > hi then "  · "
+    else " " + pad(String(x), 2) + " "
+  ).join("")
+
+fun showResult(result) = if result is
+  Found(i) then "found at index " + i
+  Missing(i) then "missing, would go at index " + i
+
+fun trace(target) = if search(target, numbers) is Search(result, probes) then
+  [
+    "search " + target + ":",
+    ...probes.map((p, _, _) => showProbe(p, numbers)),
+    "→ " + showResult(result)
+  ].join("\n")
+
+//➜ search 19:
+//➜   2   5   8  11 [17] 19  23  29  31  37
+//➜   ·   ·   ·   ·   ·  19  23 [29] 31  37
+//➜   ·   ·   ·   ·   · [19] 23   ·   ·   ·
+//➜ → found at index 5
+echo(trace(19))
+
+//➜ search 20:
+//➜   2   5   8  11 [17] 19  23  29  31  37
+//➜   ·   ·   ·   ·   ·  19  23 [29] 31  37
+//➜   ·   ·   ·   ·   · [19] 23   ·   ·   ·
+//➜   ·   ·   ·   ·   ·   · [23]  ·   ·   ·
+//➜ → missing, would go at index 6
+echo(trace(20))
+
+/**
+ * Every search starts at the same middle element and goes left or right.
+ * Drawing all the choices gives a balanced binary search tree.
+ */
+
+data class Node(left, value, right)
+object Leaf
+
+fun build(arr: Array, lo, hi) = if lo > hi then Leaf else
+  let mid = Math.floor((lo + hi) / 2)
+  Node(build(arr, lo, mid - 1), arr.at(mid), build(arr, mid + 1, hi))
+
+let tree = build(numbers, 0, numbers.length - 1)
+
+// Searching the tree is the same three-way split as searching the array.
+fun contains(t, x) = if t is
+  Leaf then false
+  Node(l, v, r) and
+    x < v then contains(l, x)
+    x > v then contains(r, x)
+    else true
+
+//➜ true false
+echo(contains(tree, 23), contains(tree, 24))
+
+// The right subtree goes above its parent and the left one below, so the
+// tree reads from the largest value at the top to the smallest at the bottom.
+// `up`, `here` and `down` are the prefixes for the lines above, at and below
+// the node.
+fun draw(t, up, here, down) = if t is
+  Leaf then []
+  Node(l, v, r) then [
+    ...draw(r, up + "    ", up + "┌── ", up + "│   "),
+    here + v,
+    ...draw(l, down + "│   ", down + "└── ", down + "    ")
+  ]
+
+//➜         ┌── 37
+//➜     ┌── 31
+//➜ ┌── 29
+//➜ │   │   ┌── 23
+//➜ │   └── 19
+//➜ 17
+//➜ │       ┌── 11
+//➜ │   ┌── 8
+//➜ └── 5
+//➜     └── 2
+echo(draw(tree, "", "", "").join("\n"))
+
+/**
+ * The tree has depth 4, which is why no search above needed more than four
+ * probes: ⌈log₂(10 + 1)⌉ = 4.
+ */
