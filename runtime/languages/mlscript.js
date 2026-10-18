@@ -137,6 +137,42 @@ function workerCompiler() {
   };
 }
 
+/** The error of a compile request that a newer one replaced before it started. */
+export class OutdatedCompile extends Error {
+  name = "OutdatedCompile";
+}
+
+/**
+ * `compiler`, compiling one source at a time and, of the requests waiting for
+ * the current compile, only the latest: an earlier one is rejected with
+ * OutdatedCompile without being compiled. Recho only uses the latest run's
+ * result (see ./index.js), so nothing waits for it.
+ */
+export function latestOnly(compiler) {
+  let busy = false;
+  let waiting = null; // {source, resolve, reject}
+  function start(source) {
+    busy = true;
+    return compiler.update(source).finally(() => {
+      busy = false;
+      if (!waiting) return;
+      const {source, resolve, reject} = waiting;
+      waiting = null;
+      start(source).then(resolve, reject);
+    });
+  }
+  return {
+    ...compiler,
+    update(source) {
+      if (!busy) return start(source);
+      waiting?.reject(new OutdatedCompile("A newer version of the code is compiled instead."));
+      return new Promise((resolve, reject) => {
+        waiting = {source, resolve, reject};
+      });
+    },
+  };
+}
+
 /** The compiler in this thread, where there are no workers (e.g. in tests). */
 async function sameThreadCompiler() {
   // Ignored by webpack, so that the browser bundle doesn't include the
@@ -160,7 +196,7 @@ export function loadMLscript() {
 }
 
 async function load() {
-  const compiler = typeof Worker === "function" ? workerCompiler() : await sameThreadCompiler();
+  const compiler = latestOnly(typeof Worker === "function" ? workerCompiler() : await sameThreadCompiler());
   try {
     return await createMLscript(compiler);
   } catch (error) {
