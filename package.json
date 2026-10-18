@@ -95,7 +95,7 @@
     "@fontsource-variable/spline-sans-mono": "^5.2.8",
     "@lezer/highlight": "^1.2.3",
     "@lezer/javascript": "^1.5.4",
-    "@mlscript/recho": "0.1.1",
+    "@mlscript/recho": "0.1.2",
     "@observablehq/notebook-kit": "^1.5.0",
     "@observablehq/runtime": "^6.0.0",
     "@uiw/codemirror-theme-github": "^4.25.4",
