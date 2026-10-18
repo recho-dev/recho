@@ -179,19 +179,29 @@ export function Editor({
           )}
         </div>
       </div>
-      {loading.parts.length > 0 && !loadError && (
-        <LoadingBar
-          loading={loading.remaining.length > 0}
-          label={`Loading ${LANGUAGE_NAMES[languageOf(runtime)] ?? languageOf(runtime)} ${(loading.remaining.length ? loading.remaining : loading.parts).join(" and ")}…`}
-        />
-      )}
-      {loadError && (
-        <p className={cn("p-4 text-sm text-red-700")}>
-          Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
-        </p>
-      )}
-      <div ref={containerRef}>
-        <pre className={cn("text-sm hidden")}>{initialCode}</pre>
+      <div className={cn("relative")}>
+        {loading.parts.length > 0 && !loadError && (
+          <LoadingBar
+            loading={loading.remaining.length > 0}
+            label={`Loading ${LANGUAGE_NAMES[languageOf(runtime)] ?? languageOf(runtime)} ${(loading.remaining.length ? loading.remaining : loading.parts).join(" and ")}…`}
+          />
+        )}
+        {loadError && (
+          <p className={cn("p-4 text-sm text-red-700")}>
+            Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
+          </p>
+        )}
+        <div
+          ref={containerRef}
+          // While loading, the area keeps room for the indicator; then it eases to
+          // the editor's height as the indicator fades into the editor.
+          className={cn(
+            "transition-[min-height] duration-500 ease-out",
+            loading.remaining.length > 0 ? "min-h-80" : "min-h-0",
+          )}
+        >
+          <pre className={cn("text-sm hidden")}>{initialCode}</pre>
+        </div>
       </div>
       <Tooltip id="action-tooltip" className={cn("z-999")} />
     </div>
