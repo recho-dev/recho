@@ -69,9 +69,12 @@ echo(pair.0, pair.1, pair.length)
  *                              Pattern Matching
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * `if x is P then ... else ...` checks whether `x` matches the pattern `P`
- * and binds the names in it. With one case per line, the first case that
- * matches wins. `and` adds a condition to a case.
+ * Pattern matching is part of `if`. `x is P` checks whether `x` matches the
+ * pattern `P` and binds the names in it, `and` adds more conditions, and the
+ * first case that holds wins. Matches and ordinary conditions mix freely,
+ * and when cases start the same way, the shared start is written once.
+ * (This design is described in "The Ultimate Conditional Syntax" by Luyu
+ * Cheng and Lionel Parreaux, OOPSLA 2024: https://doi.org/10.1145/3689746)
  */
 
 fun show(shape) = if shape is
@@ -101,6 +104,55 @@ echo(show(pair))
 echo(show(r))
 
 /**
+ * The next examples use an optional value: `Some(value)` or `None`.
+ */
+
+data class Some(value)
+object None
+
+/**
+ * A case can continue on indented lines, each with its own `then`. Here
+ * `Some(v) and` is shared by three cases.
+ */
+
+fun describe(o) = if o is
+  Some(v) and
+    v < 0 then "negative"
+    v > 0 then "positive"
+    else "zero"
+  None then "nothing"
+
+//➜ negative zero nothing
+echo(describe(Some(-2)), describe(Some(0)), describe(None))
+
+/**
+ * Each case can test any value, so matching two values needs no nesting and
+ * no tuple:
+ */
+
+fun add(x, y) = if
+  x is Some(a) and y is Some(b) then Some(a + b)
+  x is Some(_) then x
+  y is Some(_) then y
+  else None
+
+//➜ Some(3) Some(5) None
+echo(add(Some(1), Some(2)), add(None, Some(5)), add(None, None))
+
+/**
+ * Or match one value inside a case of another:
+ */
+
+fun combine(x, y) = if x is
+  Some(a) and y is
+    Some(b) then a + b
+    None then a
+  None then 0
+
+//➜ 3 1 0
+echo(combine(Some(1), Some(2)), combine(Some(1), None), combine(None, Some(9)))
+
+/**
  * A tuple pattern can end with `...rest` to match the remaining elements.
  */
 
@@ -115,67 +167,8 @@ fun firstTwo(xs) = if xs is
 echo(firstTwo([]), firstTwo([1]), firstTwo([1, 2]), firstTwo([1, 2, 3]))
 
 /**
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *                      The Ultimate Conditional Syntax
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * In MLscript, `if`, `is` and `and` are one syntax, so plain conditions,
- * pattern matches and guards mix freely, and a condition shared by several
- * cases is written once. It is described in "The Ultimate Conditional
- * Syntax" by Luyu Cheng and Lionel Parreaux (OOPSLA 2024):
- * https://doi.org/10.1145/3689746
- *
- * The examples use an optional value: `Some(value)` or `None`.
- */
-
-data class Some(value)
-object None
-
-/**
- * Splitting a condition: after `Some(v) and`, the indented lines continue
- * the condition, each with its own `then`. The match on `o` is written once.
- */
-
-fun describe(o) = if o is
-  Some(v) and
-    v < 0 then "negative"
-    v > 0 then "positive"
-    else "zero"
-  None then "nothing"
-
-//➜ negative zero nothing
-echo(describe(Some(-2)), describe(Some(0)), describe(None))
-
-/**
- * Matching several values: each case can test any value, so there is no
- * need to nest matches or to build a tuple first.
- */
-
-fun add(x, y) = if
-  x is Some(a) and y is Some(b) then Some(a + b)
-  x is Some(_) then x
-  y is Some(_) then y
-  else None
-
-//➜ Some(3) Some(5) None
-echo(add(Some(1), Some(2)), add(None, Some(5)), add(None, None))
-
-/**
- * Or nest them, splitting after `y is`:
- */
-
-fun combine(x, y) = if x is
-  Some(a) and y is
-    Some(b) then a + b
-    None then a
-  None then 0
-
-//➜ 3 1 0
-echo(combine(Some(1), Some(2)), combine(Some(1), None), combine(None, Some(9)))
-
-/**
- * Operator splits: a condition can also be split after its left operand,
- * so each line only gives the rest of the comparison.
+ * Comparisons share their start the same way: write the left operand once,
+ * and each line gives the rest.
  */
 
 fun grade(score) = if score
@@ -188,8 +181,9 @@ fun grade(score) = if score
 echo(grade(95), grade(81), grade(42))
 
 /**
- * Splits nest. Here `x |> Math.sign` and `x |> Math.abs` are each computed
- * once and compared in several ways (`|>` passes a value to a function).
+ * Shared parts can be nested. Here `x |> Math.sign` and `x |> Math.abs` are
+ * each written once and compared in several ways (`|>` passes a value to a
+ * function).
  */
 
 fun magnitude(x) =
@@ -206,8 +200,8 @@ fun magnitude(x) =
 echo(magnitude(-3), magnitude(0), magnitude(500), magnitude(5), magnitude(50))
 
 /**
- * Bindings between conditions: a `let` line computes a value that the
- * cases below it can use.
+ * A `let` line between cases computes a value that the cases below it can
+ * use.
  */
 
 fun parse(s) = if
