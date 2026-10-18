@@ -59,13 +59,9 @@ function diagnosticsError(diagnostics) {
   return new SyntaxError([...new Set(messages)].join("\n"));
 }
 
-/**
- * The compiler finds the standard library at "std/…" (`import "std/Option.mls"`),
- * while the package ships it as "/std/….mjs".
- */
+/** Standard-library paths ("std/Option.mls", "/std/Option.mjs") resolve to the bundled modules. */
 function resolve(path) {
-  const std = /^std\/(\w+)\.mls$/.exec(path);
-  if (std && isStdModule(`/std/${std[1]}.mjs`)) return loadModule(`/std/${std[1]}.mjs`);
+  if (isStdModule(path)) return loadModule(path);
   return import(/* @vite-ignore */ /* webpackIgnore: true */ path);
 }
 

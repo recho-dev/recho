@@ -47,6 +47,9 @@ importers:
       '@lezer/javascript':
         specifier: ^1.5.4
         version: 1.5.4
+      '@mlscript/recho':
+        specifier: 0.1.1
+        version: 0.1.1
       '@observablehq/notebook-kit':
         specifier: ^1.5.0
         version: 1.5.0(@types/markdown-it@14.1.2)(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)
@@ -1137,6 +1140,10 @@ packages:
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
+
+  '@mlscript/recho@0.1.1':
+    resolution: {integrity: sha512-Fmu6auUONbkv8HZmKfYQNnIuo4Jibwuwe4pn7IhSQp1lIKipc9iSkB5teeko+7FxuFLc3LYmKdJcFPeY32xDWw==}
+    engines: {node: '>=18'}
 
   '@next/env@15.5.9':
     resolution: {integrity: sha512-4GlTZ+EJM7WaW2HEZcyU317tIQDjkQIyENDLxYJfSWlfqguN+dHkZgyQTV/7ykvobU7yEH5gKvreNrH4B6QgIg==}
@@ -5265,6 +5272,8 @@ snapshots:
       '@lezer/lr': 1.4.5
 
   '@marijn/find-cluster-break@1.0.2': {}
+
+  '@mlscript/recho@0.1.1': {}
 
   '@next/env@15.5.9': {}
 
