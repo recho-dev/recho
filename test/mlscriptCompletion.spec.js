@@ -123,18 +123,14 @@ describe("MLscript completion", () => {
     expect(labels(complete("fun area(r) = r\necho(ar§"))).toContain("area");
   });
 
-  it("offers the members of the notebook's modules and objects, not of classes", () => {
+  it("offers the members of the notebook's modules and classes", () => {
     const doc = "module Point with\n  fun origin = 0\n  val unit = 1\n  let hidden = 2\nlet p = Point.§";
     const result = complete(doc);
     expect(result.from).toBe(doc.length - 1);
     expect(labels(result)).toEqual(["origin", "unit", "hidden"]);
-    const prefixed = complete("object O with\n  fun norm = 1\nO.no§");
-    expect(prefixed.from).toBe("object O with\n  fun norm = 1\nO.".length);
-    expect(labels(prefixed)).toEqual(["norm"]);
-    // A class's methods and `val` parameters belong to its instances.
-    expect(complete("class C(val x: Int) with\n  fun norm = x\nC.no§")).toBeNull();
-    const companion = "class P(val x: Int) with\n  fun norm = x\nmodule P with\n  fun origin = P(0)\nP.§";
-    expect(labels(complete(companion))).toEqual(["origin"]);
+    const prefixed = complete("class C(val x: Int) with\n  fun norm = x\nC.no§");
+    expect(prefixed.from).toBe("class C(val x: Int) with\n  fun norm = x\nC.".length);
+    expect(labels(prefixed)).toEqual(["norm", "x"]);
     expect(complete("let q = Unknown.§")).toBeNull();
   });
 
