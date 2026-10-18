@@ -3,6 +3,7 @@ import {getAllJSExamples} from "../utils.js";
 import {cn} from "../cn.js";
 import {LabelFilters} from "./LabelFilters.jsx";
 import {ExamplesClient} from "./ExamplesClient.jsx";
+import {exampleThumbnail} from "./thumbnails.js";
 
 export const metadata = {
   title: "Examples | Recho",
@@ -12,6 +13,14 @@ export const metadata = {
 // Cache examples at module level - Node.js module cache ensures this only runs once per process
 // This keeps the page static and fast
 const examples = getAllJSExamples();
+
+// Highlighted thumbnails replace the code, so cards ship HTML instead of sources.
+const cards = Promise.all(
+  examples.map(async ({content, ...example}) => ({
+    ...example,
+    thumbnail: await exampleThumbnail({content, ...example}),
+  })),
+);
 
 // Extract all unique labels from examples (done once at module level)
 const allLabels = (() => {
@@ -24,7 +33,7 @@ const allLabels = (() => {
   return Array.from(labelSet).sort();
 })();
 
-export default function Page() {
+export default async function Page() {
   // Page is static - no searchParams usage here!
   // All filtering happens client-side via ExamplesClient component
   return (
@@ -37,7 +46,7 @@ export default function Page() {
           <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>Loading examples...</div>
         }
       >
-        <ExamplesClient examples={examples} />
+        <ExamplesClient examples={await cards} />
       </Suspense>
     </div>
   );
