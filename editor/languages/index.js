@@ -6,5 +6,6 @@
  */
 export async function loadLanguageSupport(id) {
   if (id === "wenyan") return (await import("./wenyan.js")).wenyanSupport();
+  if (id === "mlscript") return (await import("./mlscript.js")).mlscriptSupport();
   return [];
 }

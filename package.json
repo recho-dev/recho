@@ -129,6 +129,7 @@
     "suncalc": "^1.9.0",
     "table": "^6.9.0",
     "three": "^0.160.1",
+    "web-tree-sitter": "0.26.9",
     "wenyan": "github:recho-dev/wenyan#master"
   }
 }
