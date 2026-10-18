@@ -162,7 +162,9 @@ async function load() {
         // its name.
         start: lineStart(code, toCode(node.start)),
         end: toCode(node.end),
-        // Recho provides `echo`; the host provides the imports.
+        // Recho provides `echo` and `recho` (its standard library; an output
+        // that is a generator, e.g. `recho.interval(ms)`, takes each value it
+        // yields, as in JavaScript); the host provides the imports.
         inputs: [...node.inputs, HOST],
         outputs: node.outputs,
         hiddenOutputs: node.hiddenOutputs,
