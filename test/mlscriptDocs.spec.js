@@ -68,7 +68,9 @@ describe("MLscript docs", () => {
     const code = removeJSMeta(doc.content);
     const after = await run(code);
     expect(after).not.toContain("\n//✗");
-    expect(after).toBe(code);
+    // Timings differ from run to run.
+    const withoutTimings = (text) => text.replace(/\b\d+ ms\b/g, "N ms");
+    expect(withoutTimings(after)).toBe(withoutTimings(code));
   });
 
   it("starts a new notebook that runs cleanly and links to the tour", async () => {

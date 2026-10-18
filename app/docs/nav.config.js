@@ -60,6 +60,10 @@ export const docsNavConfig = [
       },
       {
         type: "page",
+        slug: "mlscript-patterns",
+      },
+      {
+        type: "page",
         slug: "mlscript-modules",
       },
       {

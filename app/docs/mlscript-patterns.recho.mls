@@ -1,0 +1,161 @@
+/**
+ * @title Patterns
+ */
+
+/**
+ * ============================================================================
+ * =                                 Patterns                                 =
+ * ============================================================================
+ *
+ * In MLscript, patterns are definitions too. `pattern` gives a pattern a
+ * name, so you can reuse it, combine it with others, make it recursive, and
+ * have it transform the value it matches. Matching with a compiled pattern
+ * never backtracks, so it takes time linear in the size of the input.
+ *
+ * This feature is described in "Programming with Composable Recursive
+ * Patterns and Transformations" by Luyu Cheng, Florent Ferrari, Michael D.
+ * Adams and Lionel Parreaux (OOPSLA 2026): https://doi.org/10.1145/3839500
+ *
+ * Edit the code and press Cmd+S to run it again.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                              Named Patterns
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `|` means "or". `P => e` matches `P`, then gives `e` as the result of the
+ * match, which `as` binds to a name. Here `BoolLike` accepts booleans and
+ * integers, and turns integers into booleans.
+ */
+
+pattern BoolLike = true | false | ((Int as n) => n !== 0)
+
+fun truthy(value) = if value is
+  BoolLike as b then b
+  else "not boolean-like"
+
+//➜ true false true not boolean-like
+echo(truthy(true), truthy(0), truthy(7), truthy("yes"))
+
+/**
+ * Patterns can look inside records, and `P as Q` feeds the result of `P` to
+ * `Q`. Here one pattern computes a body mass index, another one rounds it,
+ * and `BMI as Rounded` does both.
+ */
+
+pattern BMI = ((:weight, :height)) => weight / (height * height)
+
+pattern Rounded = (Num as x) => Math.round(x)
+
+//➜ 23 not a person
+echo(
+  if (weight: 70, height: 1.75) is BMI as Rounded as bmi then bmi else "not a person",
+  if (name: "Ada") is BMI as Rounded as bmi then bmi else "not a person",
+)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                             Recursive Patterns
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A pattern can refer to itself, like a recursive type. Take linked lists:
+ */
+
+data class Cons(head, tail)
+object Nil
+
+fun range(n) = if n <= 0 then Nil else Cons(n, range(n - 1))
+
+/**
+ * `EvenLength` checks that a list holds an even number of integers, and
+ * `Sum` adds them up while it matches. Change `n` with the widget and see
+ * both results change.
+ */
+
+pattern EvenLength = Nil | Cons(Int, Cons(Int, EvenLength))
+
+pattern Sum = (Nil => 0) | (Cons(Int as head, Sum as rest) => head + rest)
+
+val n = recho.number(4, {min: 0, max: 10})
+
+val xs = range(n)
+
+//➜ Cons(4, Cons(3, Cons(2, Cons(1, Nil))))
+echo(xs)
+
+//➜ even length: true sum: 10
+echo("even length:", xs is EvenLength, "sum:", if xs is Sum as total then total else "none")
+
+/**
+ * A pattern can also build a new value: `Negate` copies a list with every
+ * number negated.
+ */
+
+pattern Negate = (Nil => Nil) | (Cons(Int as head, Negate as rest) => Cons(0 - head, rest))
+
+//➜ Cons(-4, Cons(-3, Cons(-2, Cons(-1, Nil))))
+echo(if xs is Negate as negated then negated else "not a list of numbers")
+
+/**
+ * Patterns work on tuples too. `Tree` accepts nested pairs of integers and
+ * adds up their leaves; anything else doesn't match.
+ */
+
+pattern Tree = ((Int as n) => n) | ([Tree as left, Tree as right] => left + right)
+
+//➜ 6 false
+echo(if [1, [2, 3]] is Tree as total then total else "no", [1, ["x", 3]] is Tree)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                             Composing Patterns
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Patterns combine like types. A pattern can take another pattern as a
+ * parameter: `OrElse(P)` gives the result of `P`, or "none" if `P` fails.
+ */
+
+pattern OrElse(pattern P) = ((P as x) => x) | (_ => "none")
+
+//➜ 10 none
+echo(if xs is OrElse(Sum) as r then r else 0, if "text" is OrElse(Sum) as r then r else 0)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                          Matching Without Backtracking
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `Steps` accepts a list of integers taken one or two at a time, so most
+ * lists match it in many ways. On a list that fails at its very end, plain
+ * matching tries all of those ways before giving up, and the number of ways
+ * grows exponentially with the length of the list.
+ *
+ * `@compile` (from `open annotations`) turns a pattern into code that reads
+ * the input once, without backtracking. Raise `size` a few steps at a time
+ * and compare the two timings.
+ */
+
+open annotations
+
+pattern Steps = Nil | Cons(Int, Steps) | Cons(Int, Cons(Int, Steps))
+
+fun failsAtTheEnd(n) = if n <= 0 then Cons("end", Nil) else Cons(n, failsAtTheEnd(n - 1))
+
+fun timed(f) =
+  let start = globalThis.performance.now()
+  let matched = f()
+  let ms = globalThis.Math.round(globalThis.performance.now() - start)
+  "" + matched + " in " + ms + " ms"
+
+val size = recho.number(22, {min: 1, max: 32})
+
+val input = failsAtTheEnd(size)
+
+//➜ plain: false in 4 ms
+echo("plain:", timed(() => input is Steps))
+
+//➜ compiled: false in 0 ms
+echo("compiled:", timed(() => input is @compile Steps))
+
+/**
+ * Next: Modules and Imports (https://recho.dev/docs/mlscript-modules).
+ */

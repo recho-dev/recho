@@ -121,5 +121,5 @@ echo(tree)
 echo(sum(tree))
 
 /**
- * Next: Modules and Imports (https://recho.dev/docs/mlscript-modules).
+ * Next: Patterns (https://recho.dev/docs/mlscript-patterns).
  */
