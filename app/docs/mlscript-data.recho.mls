@@ -101,6 +101,125 @@ echo(show(pair))
 echo(show(r))
 
 /**
+ * A tuple pattern can end with `...rest` to match the remaining elements.
+ */
+
+fun firstTwo(xs) = if xs is
+  [] then "empty"
+  [x] then "one: " + x
+  [x, y, ...rest] and rest is
+    [] then "two: " + x + ", " + y
+    else "starts with " + x + ", " + y
+
+//➜ empty one: 1 two: 1, 2 starts with 1, 2
+echo(firstTwo([]), firstTwo([1]), firstTwo([1, 2]), firstTwo([1, 2, 3]))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                      The Ultimate Conditional Syntax
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * In MLscript, `if`, `is` and `and` are one syntax, so plain conditions,
+ * pattern matches and guards mix freely, and a condition shared by several
+ * cases is written once. It is described in "The Ultimate Conditional
+ * Syntax" by Luyu Cheng and Lionel Parreaux (OOPSLA 2024):
+ * https://doi.org/10.1145/3689746
+ *
+ * The examples use an optional value: `Some(value)` or `None`.
+ */
+
+data class Some(value)
+object None
+
+/**
+ * Splitting a condition: after `Some(v) and`, the indented lines continue
+ * the condition, each with its own `then`. The match on `o` is written once.
+ */
+
+fun describe(o) = if o is
+  Some(v) and
+    v < 0 then "negative"
+    v > 0 then "positive"
+    else "zero"
+  None then "nothing"
+
+//➜ negative zero nothing
+echo(describe(Some(-2)), describe(Some(0)), describe(None))
+
+/**
+ * Matching several values: each case can test any value, so there is no
+ * need to nest matches or to build a tuple first.
+ */
+
+fun add(x, y) = if
+  x is Some(a) and y is Some(b) then Some(a + b)
+  x is Some(_) then x
+  y is Some(_) then y
+  else None
+
+//➜ Some(3) Some(5) None
+echo(add(Some(1), Some(2)), add(None, Some(5)), add(None, None))
+
+/**
+ * Or nest them, splitting after `y is`:
+ */
+
+fun combine(x, y) = if x is
+  Some(a) and y is
+    Some(b) then a + b
+    None then a
+  None then 0
+
+//➜ 3 1 0
+echo(combine(Some(1), Some(2)), combine(Some(1), None), combine(None, Some(9)))
+
+/**
+ * Operator splits: a condition can also be split after its left operand,
+ * so each line only gives the rest of the comparison.
+ */
+
+fun grade(score) = if score
+  >= 90 then "A"
+  >= 80 then "B"
+  >= 70 then "C"
+  else "F"
+
+//➜ A B F
+echo(grade(95), grade(81), grade(42))
+
+/**
+ * Splits nest. Here `x |> Math.sign` and `x |> Math.abs` are each computed
+ * once and compared in several ways (`|>` passes a value to a function).
+ */
+
+fun magnitude(x) =
+  if x
+    |> Math.sign
+      < 0 then "invalid"
+      == 0 then "null"
+    |> Math.abs
+      > 100 then "large"
+      < 10 then "small"
+      else "medium"
+
+//➜ invalid null large small medium
+echo(magnitude(-3), magnitude(0), magnitude(500), magnitude(5), magnitude(50))
+
+/**
+ * Bindings between conditions: a `let` line computes a value that the
+ * cases below it can use.
+ */
+
+fun parse(s) = if
+  let n = globalThis.parseInt(s)
+  globalThis.isNaN(n) then "not a number"
+  n < 0 then "minus " + (0 - n)
+  else "number " + n
+
+//➜ number 42 minus 7 not a number
+echo(parse("42"), parse("-7"), parse("hi"))
+
+/**
  * Data classes can be recursive. Here is a small tree and a function that
  * adds up its leaves. Try adding another `Leaf` and pressing Cmd+S.
  */
