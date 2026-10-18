@@ -94,5 +94,6 @@ describe("latestOnly", () => {
     expect(sources).toEqual([versions[0], versions[3]]);
     expect(settled.map((r) => r.status)).toEqual(["fulfilled", "rejected", "rejected", "fulfilled"]);
     expect(settled[3].value.nodes.map((node) => node.outputs)).toEqual([["x"], ["y"]]);
-  });
+    // Starting the compiler can take more than the default 5 s when the other test files run alongside.
+  }, 30000);
 });

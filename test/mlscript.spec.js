@@ -154,6 +154,16 @@ describe("mlscript", () => {
     expect(notebook.doc()).toContain(`//➜ Some(11)\necho(Option.Some(x))`);
   });
 
+  it("matches on classes from the standard library", async () => {
+    run(
+      `import "std/Option.mls"\n\nopen Option\n\n` +
+        `fun orZero(o) = if o is\n  Some(x) then x\n  None then 0\n\necho(orZero(Some(3)), orZero(None))\n`,
+    );
+    await wait();
+    expect(notebook.doc()).toContain(`//➜ 3 0\necho(orZero(Some(3)), orZero(None))`);
+    expect(notebook.doc()).not.toContain("//✗");
+  });
+
   describe("recho", () => {
     // The value shown above `before` (a regular expression), once it
     // differs from `previous`.
