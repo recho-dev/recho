@@ -10,15 +10,21 @@ import {docsNavConfig} from "../app/docs/nav.config.js";
 const wait = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let mlscript, runtime;
+const realSetTimeout = globalThis.setTimeout;
 
 beforeAll(async () => {
-  // The docs show the output of `recho.now()` at noon.
+  // The docs show the output of `recho.now()` at noon, and the first frame of
+  // `recho.interval`: timers of a second or more never fire.
   vi.useFakeTimers({toFake: ["Date"]});
   vi.setSystemTime(new Date(2026, 9, 19, 12, 0, 0));
+  globalThis.setTimeout = (callback, ms, ...args) => (ms >= 1000 ? 0 : realSetTimeout(callback, ms, ...args));
   mlscript = await loadLanguage(RUNTIMES.mlscript);
 }, 30000);
 
-afterAll(() => vi.useRealTimers());
+afterAll(() => {
+  globalThis.setTimeout = realSetTimeout;
+  vi.useRealTimers();
+});
 
 afterEach(async () => {
   runtime?.destroy();
@@ -35,7 +41,12 @@ async function run(code) {
     runtime.setCode(state.doc.toString());
   });
   runtime.run();
-  await wait();
+  // Until the output has stopped changing.
+  let before;
+  for (let i = 0; i < 100 && state.doc.toString() !== before; i++) {
+    before = state.doc.toString();
+    await wait(200);
+  }
   return state.doc.toString();
 }
 

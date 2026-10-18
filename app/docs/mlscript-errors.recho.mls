@@ -39,7 +39,7 @@ echo(total)
  *
  * A bracket that is never closed is reported where it opens:
  *
- *   //✗ [ParseError: This `[` is never closed. (7:11)]
+ *   //✗ [ParseError: This `[` is never closed. (2:11)]
  *   let nums = [1, 2,
  */
 
@@ -52,13 +52,13 @@ let nums = [1, 2, 3]
  *
  * MLscript checks field selections when it knows the class of a value:
  *
- *   //✗ [CompileError: Value of type `P` does not contain member `y`. (29:17)
- *   //✗ The value comes from here. (29:12)]
+ *   //✗ [CompileError: Value of type `P` does not contain member `y`. (3:17)
+ *   //✗ The value comes from here. (3:12)]
  *   fun getY(p: P) = p.y
  *
  * Without the annotation `p: P`, it doesn't know where to find `x` at all:
  *
- *   //✗ [CompileError: `p` has no member `x`. (25:14)]
+ *   //✗ [CompileError: `p` has no member `x`. (2:14)]
  *   fun getX(p) = p.x
  */
 
