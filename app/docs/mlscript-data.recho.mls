@@ -1,0 +1,125 @@
+/**
+ * @title Data and Pattern Matching
+ */
+
+/**
+ * ============================================================================
+ * =                         Data and Pattern Matching                        =
+ * ============================================================================
+ *
+ * MLscript has classes, objects and tuples, and `if ... is ...` to look
+ * inside them. Edit the code and press Cmd+S to run it again.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                  Classes
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A class lists its parameters after its name. `val` makes a parameter a
+ * field you can read from outside. Methods go after `with`. You create an
+ * instance by calling the class like a function, without `new`.
+ */
+
+class Rect(val w: Int, val h: Int) with
+  fun area = w * h
+  fun scale(k) = Rect(w * k, h * k)
+
+let r = Rect(3, 2)
+
+//➜ 3 6 600
+echo(r.w, r.area, r.scale(10).area)
+
+/**
+ * A `data class` makes all its parameters fields, and `echo` shows what is
+ * inside it.
+ */
+
+data class Point(x, y)
+
+let p = Point(1, 2)
+
+//➜ Point(1, 2) 3
+echo(p, p.x + p.y)
+
+/**
+ * `object` defines a single value with its own name, often used for cases
+ * that carry no data.
+ */
+
+object Origin
+
+//➜ Origin
+echo(Origin)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                   Tuples
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Square brackets make a tuple, which is a JavaScript array. Index it with
+ * `.0`, `.1`, ... or take it apart with a pattern.
+ */
+
+let pair = [10, "ten"]
+
+//➜ 10 ten 2
+echo(pair.0, pair.1, pair.length)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                              Pattern Matching
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `if x is P then ... else ...` checks whether `x` matches the pattern `P`
+ * and binds the names in it. With one case per line, the first case that
+ * matches wins. `and` adds a condition to a case.
+ */
+
+fun show(shape) = if shape is
+  Origin then "the origin"
+  Point(0, y) then "on the y axis at " + y
+  Point(x, y) and x == y then "on the diagonal at " + x
+  Point(x, y) then "at (" + x + ", " + y + ")"
+  [a, b] then "a pair of " + a + " and " + b
+  else "something else"
+
+//➜ "the origin"
+echo(show(Origin))
+
+//➜ "on the y axis at 5"
+echo(show(Point(0, 5)))
+
+//➜ "on the diagonal at 3"
+echo(show(Point(3, 3)))
+
+//➜ "at (1, 2)"
+echo(show(p))
+
+//➜ "a pair of 10 and ten"
+echo(show(pair))
+
+//➜ "something else"
+echo(show(r))
+
+/**
+ * Data classes can be recursive. Here is a small tree and a function that
+ * adds up its leaves. Try adding another `Leaf` and pressing Cmd+S.
+ */
+
+data class Leaf(value)
+data class Node(left, right)
+
+fun sum(t) = if t is
+  Leaf(v) then v
+  Node(l, r) then sum(l) + sum(r)
+
+let tree = Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+
+//➜ Node(Leaf(1), Node(Leaf(2), Leaf(3)))
+echo(tree)
+
+//➜ 6
+echo(sum(tree))
+
+/**
+ * Next: Modules and Imports (https://recho.dev/docs/mlscript-modules).
+ */

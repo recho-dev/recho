@@ -1,0 +1,106 @@
+/**
+ * @title MLscript Basics
+ */
+
+/**
+ * ============================================================================
+ * =                              MLscript Basics                             =
+ * ============================================================================
+ *
+ * This page is a live MLscript notebook. Edit any code below and press
+ * Cmd+S (Ctrl+S on Windows) to run it again. Nothing you change is saved.
+ *
+ * `echo` shows its arguments above the block that calls it, as `//➜` lines.
+ * Blocks are separated by blank lines.
+ */
+
+//➜ "Hello, MLscript!"
+echo("Hello, MLscript!")
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                   Values
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `let` and `val` give a name to a value. Each definition is a block, and
+ * the blocks below it can use the name.
+ */
+
+let width = 6
+
+val height = 4
+
+//➜ 24
+echo(width * height)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                 Functions
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `fun` defines a function. A longer body goes on indented lines, and its
+ * last line is the result. `x => ...` is an anonymous function.
+ */
+
+fun area(w, h) = w * h
+
+fun describe(w, h) =
+  let a = area(w, h)
+  "a " + w + "x" + h + " rectangle has area " + a
+
+//➜ "a 6x4 rectangle has area 24"
+echo(describe(width, height))
+
+let double = x => x * 2
+
+//➜ 12
+echo(double(width))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                 Conditions
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `if ... then ... else ...` is an expression: it has a value. Several
+ * conditions can be listed on their own lines, each with its own `then`.
+ */
+
+fun sign(n) = if n > 0 then "positive" else if n < 0 then "negative" else "zero"
+
+//➜ positive zero negative
+echo(sign(width), sign(0), sign(-1))
+
+fun size(n) = if
+  n < 10 then "small"
+  n < 100 then "medium"
+  else "large"
+
+//➜ "medium"
+echo(size(area(width, height)))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                  Strings
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Strings are JavaScript strings, so their methods are all there.
+ */
+
+let name = "recho"
+
+//➜ RECHO 5 r
+echo(name.toUpperCase(), name.length, name.at(0))
+
+//➜ "######"
+echo("#".repeat(width))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                 Reactivity
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Try it: change `width` above from 6 to 10 and press Cmd+S. Only the blocks
+ * that use `width` run again, and their output above them changes.
+ *
+ * Next: Data and Pattern Matching (https://recho.dev/docs/mlscript-data).
+ */

@@ -48,6 +48,32 @@ export const docsNavConfig = [
   },
   {
     type: "group",
+    title: "MLscript Tour",
+    items: [
+      {
+        type: "page",
+        slug: "mlscript-basics",
+      },
+      {
+        type: "page",
+        slug: "mlscript-data",
+      },
+      {
+        type: "page",
+        slug: "mlscript-modules",
+      },
+      {
+        type: "page",
+        slug: "mlscript-interactive",
+      },
+      {
+        type: "page",
+        slug: "mlscript-errors",
+      },
+    ],
+  },
+  {
+    type: "group",
     title: "API Reference",
     slug: "api-reference",
     items: [

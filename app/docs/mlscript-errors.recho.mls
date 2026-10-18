@@ -1,0 +1,102 @@
+/**
+ * @title Reading Errors
+ */
+
+/**
+ * ============================================================================
+ * =                               Reading Errors                             =
+ * ============================================================================
+ *
+ * When a block has a mistake, Recho shows the error above it as `//✗` lines
+ * and keeps running the other blocks. The number in parentheses is the line
+ * and column of the mistake. The mistakes below are in comments so that this
+ * page runs cleanly; copy one into a block to see it for real.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                Unknown Names
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A block can only use names defined in the blocks above it. Using `total`
+ * before the block that defines it gives:
+ *
+ *   //✗ [CompileError: Unknown name `total`. (2:5)]
+ *   echo(total)
+ *
+ *   let total = 1
+ *
+ * Move the definition up, and the error goes away:
+ */
+
+let total = 1
+
+//➜ 1
+echo(total)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                Syntax Errors
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * A bracket that is never closed is reported where it opens:
+ *
+ *   //✗ [ParseError: This `[` is never closed. (7:11)]
+ *   let nums = [1, 2,
+ */
+
+let nums = [1, 2, 3]
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                Missing Fields
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * MLscript checks field selections when it knows the class of a value:
+ *
+ *   //✗ [CompileError: Value of type `P` does not contain member `y`. (29:17)
+ *   //✗ The value comes from here. (29:12)]
+ *   fun getY(p: P) = p.y
+ *
+ * Without the annotation `p: P`, it doesn't know where to find `x` at all:
+ *
+ *   //✗ [CompileError: `p` has no member `x`. (25:14)]
+ *   fun getX(p) = p.x
+ */
+
+class P(val x: Int)
+
+fun getX(p: P) = p.x
+
+//➜ 42
+echo(getX(P(42)))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                               Runtime Errors
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * An error thrown while a block runs is shown above that block. Blocks that
+ * use a failed block's value show it too, with `input` naming the value
+ * they were waiting for:
+ *
+ *   //✗ [Error: odd number: 3]
+ *   let h = half(3)
+ *
+ *   //✗ { [RuntimeError: odd number: 3] input: "h" }
+ *   echo(h + 1)
+ *
+ * Change the 4 below to an odd number and press Cmd+S to see this live.
+ */
+
+fun half(n) =
+  if n % 2 == 0 then n / 2
+  else throw Error("odd number: " + n)
+
+let h = half(4)
+
+//➜ 3
+echo(h + 1)
+
+/**
+ * That's the end of the tour. For bigger notebooks, see the MLscript
+ * examples on https://recho.dev/examples.
+ */

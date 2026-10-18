@@ -81,22 +81,29 @@ const WENYAN_CONTENT = `
 `;
 
 const MLSCRIPT_CONTENT = `
-// Welcome to MLscript in Recho! Values passed to echo are shown above the
-// block that echoes them. Blocks are separated by blank lines.
-// Learn more about MLscript: https://github.com/hkust-taco/mlscript
+// Welcome to MLscript in Recho! Blocks are separated by blank lines, and
+// echo shows values above the block that calls it. Edit, then press Cmd+S.
 
-class Point(val x: Int, val y: Int) with
-  fun norm1 = x + y
-module Point with
-  fun origin = Point(0, 0)
+let name = "MLscript"
 
-let p = Point(3, 4)
-echo(p, p.norm1, Point.origin)
+echo("Hello, " + name + "!")
 
-fun even(n) = if n == 0 then true else odd(n - 1)
-fun odd(n) = if n == 0 then false else even(n - 1)
+// A function, and a block that uses it. Change 5 and run again.
+fun square(x) = x * x
 
-echo(even(10), odd(10))
+echo(square(5))
+
+// Data classes and pattern matching.
+data class Point(x, y)
+
+fun quadrant(p) = if p is
+  Point(0, 0) then "origin"
+  Point(x, y) and x > 0 and y > 0 then "first quadrant"
+  else "somewhere else"
+
+echo(quadrant(Point(3, 4)))
+
+// Learn more in the MLscript Tour: https://recho.dev/docs/mlscript-basics
 `;
 
 // A new notebook's file extension and starter code, by language.

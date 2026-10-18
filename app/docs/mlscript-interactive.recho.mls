@@ -1,0 +1,95 @@
+/**
+ * @title Interactive Notebooks
+ */
+
+/**
+ * ============================================================================
+ * =                           Interactive Notebooks                          =
+ * ============================================================================
+ *
+ * Recho's standard library is called `recho` in MLscript too. With it, a
+ * notebook can animate, keep state and show inline controls.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                 Time
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `recho.interval(ms)` counts 0, 1, 2, ... every `ms` milliseconds. Every
+ * block that reads `tick` runs again on each count.
+ */
+
+val tick = recho.interval(1000)
+
+//➜ Seconds since opening: 0
+echo("Seconds since opening:", tick)
+
+//➜ "[         ]"
+echo("[" + "=".repeat(tick % 10) + " ".repeat(9 - tick % 10) + "]")
+
+/**
+ * `recho.now()` is the current time in milliseconds, updated on every
+ * animation frame. `new!` calls a JavaScript constructor such as `Date`.
+ */
+
+val now = recho.now()
+
+fun pad(n) = globalThis.String(n).padStart(2, "0")
+
+fun clock(ms) =
+  let date = new! globalThis.Date(ms)
+  pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds())
+
+//➜ Time: 12:00:00
+echo("Time:", clock(now))
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                   State
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * `recho.state(initial)` gives a pair: the current value and a setter. Bind
+ * the pair first, then use `.0` for the value and `.1` for the setter. When
+ * a block calls the setter, the blocks that read the value run again.
+ */
+
+val counter = recho.state(0)
+val count = counter.0
+val setCount = counter.1
+
+// Add the seconds as they pass, so the count is 0, 1, 3, 6, 10, ...
+if tick > 0 do setCount(c => c + tick)
+
+//➜ Total: 0
+echo("Total:", count)
+
+/**
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                                  Controls
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * These calls show a widget next to their first argument. Using the widget
+ * edits that literal in the code and runs the notebook again.
+ *
+ * - `recho.number(value, {min, max, step})`: a number input.
+ * - `recho.toggle(value)`: a checkbox for `true` or `false`.
+ * - `recho.radio(index, options)`: radio buttons; gives the chosen option.
+ */
+
+val size = recho.number(5, {min: 1, max: 10})
+
+val filled = recho.toggle(true)
+
+val mark = recho.radio(0, ["#", "*", "o"])
+
+fun row(n) = if filled then mark.repeat(n) else mark + " ".repeat(n - 2) + mark
+
+//➜ #####
+//➜ #####
+//➜ #####
+//➜ #####
+//➜ #####
+echo(globalThis.Array(size).fill(row(size)).join("\n"))
+
+/**
+ * Next: Reading Errors (https://recho.dev/docs/mlscript-errors).
+ */
