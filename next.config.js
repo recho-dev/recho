@@ -1,5 +1,34 @@
+/**
+ * Next's minifier (SWC's compress) breaks the MLscript compiler, which is
+ * Scala.js output: it fails an assertion when it starts. The compiler's chunk
+ * is marked as minimized before Next minifies the rest, so it's left as is.
+ * It's only downloaded by MLscript notebooks.
+ */
+class KeepMLscriptCompiler {
+  apply(compiler) {
+    const {Compilation} = compiler.webpack;
+    compiler.hooks.compilation.tap("KeepMLscriptCompiler", (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {name: "KeepMLscriptCompiler", stage: Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_SIZE - 1},
+        () => {
+          for (const chunk of compilation.chunks) {
+            const modules = compilation.chunkGraph.getChunkModules(chunk);
+            if (!modules.some((m) => /[\\/]@mlscript[\\/]recho[\\/]dist[\\/]MLscript\.mjs$/.test(m.resource ?? "")))
+              continue;
+            for (const file of chunk.files) compilation.updateAsset(file, (source) => source, {minimized: true});
+          }
+        },
+      );
+    });
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack(config, {dev}) {
+    if (!dev) config.plugins.push(new KeepMLscriptCompiler());
+    return config;
+  },
   async redirects() {
     return [
       {

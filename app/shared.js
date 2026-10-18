@@ -2,13 +2,14 @@ import {OUTPUT_MARK} from "../runtime/constant.js";
 
 export const BASE_PATH = "";
 
-// Output lines in JavaScript (//➜) and wenyan (批曰。「「➜) notebooks.
+// Output lines in JavaScript and MLscript (//➜) and wenyan (批曰。「「➜) notebooks.
 const OUTPUT_PREFIXES = [`//${OUTPUT_MARK}`, `批曰。「「${OUTPUT_MARK}`];
 
 /** The runtimes a notebook can have, as stored in its `runtime` field. */
 export const RUNTIMES = {
   javascript: "javascript@0.1.0",
   wenyan: "wenyan@0.1.0",
+  mlscript: "mlscript@0.1.0",
 };
 
 /** The language of a runtime: "wenyan@0.1.0" → "wenyan". */
@@ -18,7 +19,7 @@ export function languageOf(runtime = RUNTIMES.javascript) {
 
 /** Shiki's language for highlighting a notebook's code. */
 export function highlightLanguage(runtime) {
-  return languageOf(runtime) === "wenyan" ? "text" : "javascript";
+  return languageOf(runtime) === "javascript" ? "javascript" : "text";
 }
 
 export function findFirstOutputRange(content) {

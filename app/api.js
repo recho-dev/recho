@@ -80,14 +80,40 @@ const WENYAN_CONTENT = `
 夫「和」。示之。
 `;
 
+const MLSCRIPT_CONTENT = `
+// Welcome to MLscript in Recho! Values passed to echo are shown above the
+// block that echoes them. Blocks are separated by blank lines.
+// Learn more about MLscript: https://github.com/hkust-taco/mlscript
+
+class Point(val x: Int, val y: Int) with
+  fun norm1 = x + y
+module Point with
+  fun origin = Point(0, 0)
+
+let p = Point(3, 4)
+echo(p, p.norm1, Point.origin)
+
+fun even(n) = if n == 0 then true else odd(n - 1)
+fun odd(n) = if n == 0 then false else even(n - 1)
+
+echo(even(10), odd(10))
+`;
+
+// A new notebook's file extension and starter code, by language.
+const STARTERS = {
+  javascript: {extension: ".js", content: DEFAULT_CONTENT},
+  wenyan: {extension: ".wy", content: WENYAN_CONTENT},
+  mlscript: {extension: ".mls", content: MLSCRIPT_CONTENT},
+};
+
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const wenyan = languageOf(runtime) === "wenyan";
+  const {extension, content} = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
   return {
     id: generate(),
-    title: generateProjectName(wenyan ? ".wy" : ".js"),
+    title: generateProjectName(extension),
     created: null,
     updated: null,
-    content: (wenyan ? WENYAN_CONTENT : DEFAULT_CONTENT).trimStart(),
+    content: content.trimStart(),
     autoRun: true,
     runtime,
     visibility: PRIVATE,

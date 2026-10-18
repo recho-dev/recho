@@ -66,6 +66,8 @@ export function removeMeta(example) {
 const EXAMPLE_FORMATS = [
   {extension: ".recho.js", runtime: RUNTIMES.javascript, parseMeta: parseJSMeta},
   {extension: ".recho.wy", runtime: RUNTIMES.wenyan, parseMeta: parseWenyanMeta},
+  // MLscript has /* */ comments, so its examples have the same header as JavaScript's.
+  {extension: ".recho.mls", runtime: RUNTIMES.mlscript, parseMeta: parseJSMeta},
 ];
 
 export function getAllJSDocs() {
