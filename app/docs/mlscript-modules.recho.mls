@@ -97,5 +97,16 @@ echo(find([1, 4], x => x > 5))
 echo(getOrElse(find([1, 4], x => x > 5), 0), isDefined(find([9], x => x > 5)))
 
 /**
+ * Classes from the standard library work in patterns like your own:
+ */
+
+fun describe(o) = if o is
+  Some(x) then "found " + x
+  None then "nothing"
+
+//➜ found 9 nothing
+echo(describe(find([1, 4, 9], x => x > 5)), describe(find([1], x => x > 5)))
+
+/**
  * Next: Interactive Notebooks (https://recho.dev/docs/mlscript-interactive).
  */
