@@ -70,16 +70,19 @@ const EXAMPLE_FORMATS = [
   {extension: ".recho.mls", runtime: RUNTIMES.mlscript, parseMeta: parseJSMeta},
 ];
 
+// Docs are JavaScript or MLscript notebooks with the same header.
+const DOC_FORMATS = EXAMPLE_FORMATS.filter(({runtime}) => runtime !== RUNTIMES.wenyan);
+
 export function getAllJSDocs() {
   const dir = path.join(process.cwd(), "app/docs/");
   const files = fs.readdirSync(dir);
-  return files
-    .filter((file) => file.endsWith(".recho.js"))
-    .map((file) => {
-      const content = fs.readFileSync(path.join(dir, file), "utf8");
-      const meta = parseJSMeta(content);
-      return {...meta, content, slug: file.replace(".recho.js", "")};
-    });
+  return files.flatMap((file) => {
+    const format = DOC_FORMATS.find(({extension}) => file.endsWith(extension));
+    if (!format) return [];
+    const content = fs.readFileSync(path.join(dir, file), "utf8");
+    const meta = format.parseMeta(content);
+    return [{...meta, content, slug: file.replace(format.extension, ""), runtime: format.runtime}];
+  });
 }
 
 export function getAllJSExamples() {
