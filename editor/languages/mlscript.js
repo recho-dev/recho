@@ -6,6 +6,7 @@ import {Parser, Language, Query} from "web-tree-sitter";
 import {loadGrammar} from "./mlscript/grammar.js";
 import {captureSpans, captureValue} from "./mlscript/highlight.js";
 import {markLineType} from "../../lib/blocks/detect.ts";
+import {OUTPUT_MARK, WARNING_LABEL} from "../../runtime/constant.js";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
 import {outputDecoration, outputLineFinder, outputLines} from "../blocks/output.ts";
 
@@ -154,9 +155,13 @@ function highlighter(field, query) {
   );
 }
 
+// The compiler's warnings about a block (see ../../runtime/languages/mlscript.js).
+const WARNING_START = `//${OUTPUT_MARK} ${WARNING_LABEL} `;
+
 /**
  * Output lines are `//➜` and `//✗` comments covering a whole line, which
- * excludes look-alike lines inside `"""` strings and block comments.
+ * excludes look-alike lines inside `"""` strings and block comments. Of the
+ * `//➜` lines, warnings are told apart.
  */
 function outputLineFinderFor(field) {
   return (state) => {
@@ -168,7 +173,10 @@ function outputLineFinderFor(field) {
       if (type === null) continue;
       const node = tree.rootNode.descendantForIndex(line.from, line.to);
       if (node?.type === "comment" && node.startIndex === line.from && node.endIndex === line.to) {
-        lines.push({from: line.from, type});
+        lines.push({
+          from: line.from,
+          type: type === "output" && line.text.startsWith(WARNING_START) ? "warning" : type,
+        });
       }
     }
     return lines;

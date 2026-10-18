@@ -72,6 +72,26 @@ function merge(...strings) {
   return output;
 }
 
+/**
+ * A value as text. A value that can't be shown (e.g. a proxy whose traps
+ * throw) is shown the way JavaScript shows it, or else as an error.
+ */
+function formatValue(value, options, outputFormat) {
+  try {
+    const inspector = value instanceof Inspector ? value : outputFormat.inspect(value, options);
+    return {text: inspector.format(), error: false};
+  } catch (error) {
+    console.error(error);
+    try {
+      if (outputFormat !== JAVASCRIPT_OUTPUT) return {text: new Inspector(value, options).format(), error: false};
+    } catch {
+      // Shown as an error below.
+    }
+    const failure = new Error(`Couldn't show this value: ${error?.message ?? error}`);
+    return {text: new Inspector(failure).format(), error: true};
+  }
+}
+
 export function makeOutput(values, outputFormat = JAVASCRIPT_OUTPUT) {
   // Group values by key. Each group is a row if using table, otherwise a column.
   const groupValues = groups(values, (v) => v.options?.key);
@@ -102,8 +122,9 @@ export function makeOutput(values, outputFormat = JAVASCRIPT_OUTPUT) {
         // Disable string quoting for multi-value outputs to improve readability.
         // Example: echo("a =", 1) produces "a = 1" instead of "a = "1""
         const options = n === 1 ? {} : {quote: false};
-        const inspector = v instanceof Inspector ? v : outputFormat.inspect(v, options);
-        return inspector.format();
+        const {text, error: failed} = formatValue(v, options, outputFormat);
+        if (failed) error = true;
+        return text;
       });
 
       // Merge all formatted values into a single cell.
@@ -114,10 +135,13 @@ export function makeOutput(values, outputFormat = JAVASCRIPT_OUTPUT) {
   }
 
   // Format the table into a single string and add prefix.
-  const formatted = format(data, {
+  let formatted = format(data, {
     border: getBorderCharacters("ramac"),
     columnDefault: {alignment: "right"},
   });
+  // Merging values pads lines to the same width, which an error's lines
+  // don't need.
+  if (error && format === columns) formatted = formatted.replace(/[ \t]+$/gm, "");
   const prefixed = addPrefix(
     formatted,
     error ? outputFormat.errorPrefix : outputFormat.outputPrefix,

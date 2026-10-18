@@ -45,6 +45,10 @@ export function Editor({
   const editorRef = useRef(null);
   const [needRerun, setNeedRerun] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  // Bumped by Retry, to load the language again after it failed.
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  // Whether the language is taking long to compile the code.
+  const [compiling, setCompiling] = useState(false);
   // For a language that loads on demand: the parts it loads (e.g. compiler,
   // syntax highlighting) and those still loading.
   const [loading, setLoading] = useState({parts: [], remaining: []});
@@ -81,6 +85,7 @@ export function Editor({
         containerRef.current.innerHTML = "";
         editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, language, languageSupport});
         editorRef.current.on("userInput", (code) => onInputRef.current(code));
+        editorRef.current.on("status", ({compiling}) => !cancelled && setCompiling(compiling));
         if (autoRun) onRun();
       },
       (error) => {
@@ -91,13 +96,14 @@ export function Editor({
     );
     return () => {
       cancelled = true;
+      setCompiling(false);
       if (editorRef.current) {
         editorRef.current.destroy();
         editorRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialCode, runtime]);
+  }, [initialCode, runtime, loadAttempt]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -143,6 +149,11 @@ export function Editor({
       >
         {toolBarStart}
         <div className={cn("flex items-center gap-3")}>
+          {compiling && (
+            <span role="status" className={cn("text-xs text-gray-500")}>
+              Compiling…
+            </span>
+          )}
           <button
             onClick={onRun}
             data-tooltip-id="action-tooltip"
@@ -187,9 +198,17 @@ export function Editor({
           />
         )}
         {loadError && (
-          <p className={cn("p-4 text-sm text-red-700")}>
-            Couldn&apos;t load this notebook&apos;s language: {loadError.message} Reload the page to try again.
-          </p>
+          <div className={cn("p-4 text-sm")}>
+            <p className={cn("text-red-700")}>Couldn&apos;t load this notebook&apos;s language: {loadError.message}</p>
+            <button
+              onClick={() => setLoadAttempt((n) => n + 1)}
+              className={cn("mt-2 px-2 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-100")}
+            >
+              Retry
+            </button>
+            {/* The code, read-only, so that it can still be read or copied. */}
+            <pre className={cn("mt-4 font-mono text-gray-700 overflow-x-auto")}>{initialCode}</pre>
+          </div>
         )}
         <div
           ref={containerRef}

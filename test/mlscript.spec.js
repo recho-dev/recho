@@ -102,7 +102,7 @@ describe("mlscript", () => {
     run(`let a = 1\n\nlet bad = nope + 1\n\necho(a + 1)\n`);
     await wait();
     expect(notebook.doc()).toBe(
-      `let a = 1\n\n//✗ [SyntaxError: Name not found in wildcard opens: nope]\nlet bad = nope + 1\n\n//➜ 2\necho(a + 1)\n`,
+      `let a = 1\n\n//✗ [CompileError: Name not found in wildcard opens: nope (4:10)]\nlet bad = nope + 1\n\n//➜ 2\necho(a + 1)\n`,
     );
     notebook.edit("nope + 1", "a + 10");
     await wait();
@@ -113,7 +113,7 @@ describe("mlscript", () => {
     run(`let a = (1 +\n\nlet b = 2\n\necho(b)\n`);
     await wait();
     const doc = notebook.doc();
-    expect(doc).toMatch(/^\/\/✗ \[SyntaxError: Unmatched opening parenthesis/);
+    expect(doc).toMatch(/^\/\/✗ \[ParseError: Unmatched opening parenthesis \(3:8\)\n/);
     expect(doc).toContain(`//➜ 2\necho(b)`);
   });
 

@@ -76,6 +76,9 @@ export function trimChange(oldText, change) {
   return {from: from + p, to: to - s, insert: insert.slice(p, insert.length - s)};
 }
 
+// How long a language's `nodes` may take before the editor says it's compiling.
+const COMPILING_DELAY = 1000;
+
 function debounce(fn, delay = 0) {
   let timeout;
   return (...args) => {
@@ -153,7 +156,7 @@ export function createRuntime(initialCode, options = {}) {
 
   const main = runtime.module();
   const nodesByKey = new Map();
-  const dispatcher = d3Dispatch("changes", "error");
+  const dispatcher = d3Dispatch("changes", "error", "status");
 
   const refresh = debounce((code) => {
     if (disposed) return;
@@ -169,16 +172,26 @@ export function createRuntime(initialCode, options = {}) {
     const blocks = [];
     for (const node of nodes) {
       const start = node.start;
-      const {values} = node.state;
+      let {values} = node.state;
+      // A language's node that failed to compile shows its error at once, not
+      // only when its variable rejects, so that the error doesn't flicker
+      // when the node is replaced (its key has the message, see above).
+      if (!values.length && language.nodes && node.error) values = [{options: {}, values: [node.error]}];
       const sourceRange = {from: node.start, to: node.end};
+      // A language's warnings about a node go above its output, as output.
+      const warnings = node.warnings?.length
+        ? addPrefix(node.warnings.join("\n"), outputFormat.outputPrefix, outputFormat.formatLine)
+        : null;
 
-      if (!values.length) {
+      if (!values.length && !warnings) {
         // Create a block even if there are no values.
         blocks.push(new BlockMetadata(node.id, node.type, null, sourceRange, node.state.attributes));
         continue;
       }
 
-      const {output, error} = makeOutput(values, outputFormat);
+      const made = values.length ? makeOutput(values, outputFormat) : {output: null, error: false};
+      const output = [warnings, made.output].filter((part) => part !== null).join("\n");
+      const {error} = made;
 
       // The range of line numbers of output lines.
       let outputRange = null;
@@ -220,6 +233,12 @@ export function createRuntime(initialCode, options = {}) {
     }
 
     dispatch(trimmed, effects);
+
+    // A language's errors and warnings may refer to lines of the code (as
+    // `(line:column)`), which writing output moves: split the new code, until
+    // the output stops changing.
+    const located = language.nodes && nodes.some((node) => node.error || node.warnings?.length);
+    if (located && trimmed.length && isRunning && !disposed) rerun(currentCode());
   }, 0);
 
   function setCode(newCode) {
@@ -242,7 +261,24 @@ export function createRuntime(initialCode, options = {}) {
     dispatcher.on("error", callback);
   }
 
+  // Whether a language's `nodes` has taken long enough (it may be compiling
+  // in a worker) that the editor says so.
+  let compiling = false;
+  let compilingTimer = null;
+  function setCompiling(value) {
+    clearTimeout(compilingTimer);
+    if (compiling === value) return;
+    compiling = value;
+    dispatcher.call("status", null, {compiling});
+  }
+
+  /** Calls `callback({compiling})` when a split starts or stops taking long. */
+  function onStatus(callback) {
+    dispatcher.on("status", callback);
+  }
+
   function destroy() {
+    setCompiling(false);
     disposed = true;
     isRunning = false;
     runtime.dispose();
@@ -292,12 +328,28 @@ export function createRuntime(initialCode, options = {}) {
     console.error(error);
     // Display the syntax error at the appropriate location.
     const from = language.errorOffset(code, error);
-    const changes = removeChanges(code);
     const errorMsg =
       addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
-    changes.push({from, insert: errorMsg});
-    dispatch(changes);
+    dispatch(
+      language.nodes ? nodesErrorChanges(code, from, errorMsg) : [...removeChanges(code), {from, insert: errorMsg}],
+    );
     dispatcher.call("error", null, {source: "split", error});
+  }
+
+  // For a language of nodes, whose blocks compile separately, an error of
+  // the whole document (or a compiler failure) isn't about the other blocks:
+  // their output stays, and only error output (which may be from an earlier
+  // such error) is replaced by this one.
+  function nodesErrorChanges(code, from, errorMsg) {
+    const changes = removeChanges(code).map((c) => {
+      // Lines of output, each with its newline.
+      const lines = code.slice(c.from, c.to).match(/[^\n]*\n?/g);
+      const kept = lines.filter((line) => !line.startsWith(outputFormat.errorPrefix)).join("");
+      // The error goes above the output that is right above its line.
+      return {...c, insert: c.to === from ? errorMsg + kept : kept};
+    });
+    if (!changes.some((c) => c.to === from)) changes.push({from, insert: errorMsg});
+    return changes.map((c) => trimChange(code, c)).filter(Boolean);
   }
 
   function transpile(cell, writes) {
@@ -345,17 +397,19 @@ export function createRuntime(initialCode, options = {}) {
   // A language's nodes -> nodes: they already know their inputs and outputs,
   // and their body is that of an async function of the inputs.
   function nodesOfLanguage(nodes) {
-    return nodes.map(({key, start, end, inputs, outputs, hiddenOutputs = [], body, error = null}) => {
+    return nodes.map(({key, start, end, inputs, outputs, hiddenOutputs = [], body, error = null, warnings = []}) => {
       inputs = inputs.filter((i) => i !== "echo");
       return {
         ...noMutables,
-        key: JSON.stringify([key, body, inputs, outputs, hiddenOutputs]),
+        // With its error's message, which may refer to lines that moved.
+        key: JSON.stringify([key, body, inputs, outputs, hiddenOutputs, error?.message ?? null]),
         start,
         end,
         inputs,
         outputs,
         hiddenOutputs,
         error,
+        warnings,
         // A node that fails to compile shows why when it runs.
         definition(inputs) {
           const fail = (error) => () => {
@@ -455,15 +509,19 @@ export function createRuntime(initialCode, options = {}) {
     const parts = split(code);
     if (typeof parts?.then !== "function") {
       splitting = false;
+      setCompiling(false);
       if (parts) updateNodes(code, parts);
       return;
     }
     // Only the latest split's parts are used: a newer run wins over an
     // earlier one that ends later.
     splitting = true;
+    clearTimeout(compilingTimer);
+    compilingTimer = setTimeout(() => setCompiling(true), COMPILING_DELAY);
     const done = (use) => (result) => {
       if (disposed || id !== splitId) return;
       splitting = false;
+      setCompiling(false);
       if (code === currentCode()) return use(code, result);
       // The code changed while splitting, so the offsets are for the old
       // code: split the new code instead (unless an edit stopped running).
@@ -636,5 +694,15 @@ export function createRuntime(initialCode, options = {}) {
     rerun(code);
   }
 
-  return {setCode, setIsRunning, run, onChanges, onError, destroy, isRunning: () => isRunning, buttonRegistry};
+  return {
+    setCode,
+    setIsRunning,
+    run,
+    onChanges,
+    onError,
+    onStatus,
+    destroy,
+    isRunning: () => isRunning,
+    buttonRegistry,
+  };
 }

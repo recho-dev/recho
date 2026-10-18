@@ -5,7 +5,7 @@ import {markLineType} from "../../lib/blocks/detect.ts";
 
 export type OutputLine = {
   from: number;
-  type: "output" | "error";
+  type: "output" | "error" | "warning";
 };
 
 function computeLineNumbers(state: EditorState): OutputLine[] {
@@ -54,6 +54,7 @@ export const outputLines = outputLinesField.extension;
 
 const highlight = Decoration.line({attributes: {class: "cm-output-line"}});
 const errorHighlight = Decoration.line({attributes: {class: "cm-output-line cm-error-line"}});
+const warningHighlight = Decoration.line({attributes: {class: "cm-output-line cm-warning-line"}});
 
 export const outputDecoration = ViewPlugin.fromClass(
   class {
@@ -80,6 +81,7 @@ export const outputDecoration = ViewPlugin.fromClass(
       for (const {from, type} of lines) {
         if (type === "output") builder.add(from, from, highlight);
         else if (type === "error") builder.add(from, from, errorHighlight);
+        else if (type === "warning") builder.add(from, from, warningHighlight);
       }
       return builder.finish();
     }

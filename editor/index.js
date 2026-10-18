@@ -24,7 +24,7 @@ import {javascriptSupport} from "./languages/javascript.js";
  */
 export function createEditor(container, options) {
   const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
-  const dispatcher = d3Dispatch("userInput");
+  const dispatcher = d3Dispatch("userInput", "status");
   const runtimeRef = {current: null};
   const isJavaScript = language.id === "javascript";
 
@@ -81,6 +81,9 @@ export function createEditor(container, options) {
 
     // Stop the runtime when there is an error.
     runtime.onError(stop);
+
+    // E.g. whether the language is taking long to compile.
+    runtime.onStatus((status) => dispatcher.call("status", null, status));
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);

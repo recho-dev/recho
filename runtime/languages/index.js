@@ -25,6 +25,8 @@
  *     (and `echo`) as parameters and returns an object with the outputs and
  *     hidden outputs.
  *   - `error`: an error to show at the node instead of running it.
+ *   - `warnings` (optional): lines of text about the node (e.g. a compiler's
+ *     warnings), shown above its output as output.
  *   Throws on a syntax error, like `cells`. Recho doesn't analyse the body:
  *   no `let` support, and `isHiddenOutput` isn't used.
  *   May return a promise of the parts instead (rejecting on a syntax error),
