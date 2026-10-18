@@ -25,31 +25,35 @@ function defaultCompileCell(source) {
   return new Function(`return ${source};`)();
 }
 
-// Compile `code` (a Recho-transpiled cell expression) into a callable that
-// the Observable runtime can invoke with input values.
-function safeEval(code, inputs, __setEcho__, compileCell) {
-  const create = (codeStr) => {
-    const argList = ["__setEcho__", ...inputs].join(",");
-    const resultVar = `__recho_v_${uid()}`;
-    const body = `(function(${argList}){
+// Compile `code` (a function expression) into a callable that the Observable
+// runtime can invoke with input values. The wrapper routes echo calls made
+// while it runs to the cell's own echo (see `__setEcho__`).
+function compileWrapper(code, inputs, __setEcho__, compileCell) {
+  const argList = ["__setEcho__", ...inputs].join(",");
+  const resultVar = `__recho_v_${uid()}`;
+  const body = `(function(${argList}){
       __setEcho__(echo);
-      const __foo__ = ${codeStr};
+      const __foo__ = ${code};
       const ${resultVar} = __foo__(${inputs.join(",")});
       __setEcho__(null);
       return ${resultVar};
     })`;
-    const fn = compileCell(body);
-    return (...args) => fn(__setEcho__, ...args);
-  };
+  const fn = compileCell(body);
+  return (...args) => fn(__setEcho__, ...args);
+}
+
+// Compile `code` (a Recho-transpiled cell expression) into a callable that
+// the Observable runtime can invoke with input values.
+function safeEval(code, inputs, __setEcho__, compileCell) {
   try {
-    return create(code);
+    return compileWrapper(code, inputs, __setEcho__, compileCell);
   } catch (error) {
     // Wrap non-function statements in an arrow function for proper evaluation.
     // Example:
     // Input: `for (let i = 0; i < 10; i++) { echo(i); }`
     // Output: `() => { for (let i = 0; i < 10; i++) { echo(i); } }`
     const wrapped = `() => {${code}}`;
-    return create(wrapped);
+    return compileWrapper(wrapped, inputs, __setEcho__, compileCell);
   }
 }
 
@@ -272,9 +276,12 @@ export function createRuntime(initialCode, options = {}) {
     };
   }
 
+  // The language's top-level parts: cells of JavaScript (`cells`) or
+  // ready-made nodes (`nodes`). Shows the error a language throws, as a
+  // syntax error, and returns null.
   function split(code) {
     try {
-      return language.cells(code);
+      return language.nodes ? language.nodes(code) : language.cells(code);
     } catch (error) {
       console.error(error);
       // Display the syntax error at the appropriate location.
@@ -296,6 +303,69 @@ export function createRuntime(initialCode, options = {}) {
       console.error(error);
       return {body: cell, inputs: [], outputs: [], error};
     }
+  }
+
+  // A node is what the runtime defines Observable variables for:
+  // - `key`: its identity; a node with the same key as one in the previous
+  //   run keeps that node's variables and state
+  // - `start`, `end`: its range in the code
+  // - `inputs`, `outputs`: the names it reads and the names it defines
+  // - `hiddenOutputs`: names it defines for other nodes only (see ./languages/)
+  // - `error`: an error to show instead of running it
+  // - `definition(inputs)`: compiles its body into a function of `inputs`
+  // - `defines`, `reads`, `mutators`, `extraInputs`, `chainOutputs`, `waits`:
+  //   its part in promoted `let`s (see ./mutable.js)
+  const noMutables = {defines: [], reads: [], mutators: {}, extraInputs: [], chainOutputs: [], waits: {}};
+
+  // JavaScript cells -> nodes: find promoted `let`s, then let notebook-kit
+  // work out each cell's inputs and outputs.
+  function nodesOfCells(cells) {
+    const mutables = analyzeMutables(cells.map((cell) => cell.js));
+    return cells.map(({start, end, js}, i) => {
+      const mutable = mutables[i];
+      const {inputs, body, outputs, error = null} = transpile(js, mutable.writes);
+      return {
+        ...mutable,
+        start,
+        end,
+        inputs,
+        // A hidden output stays private to its cell.
+        outputs: outputs.filter((o) => !language.isHiddenOutput(o)),
+        hiddenOutputs: [],
+        error,
+        definition: (inputs) => safeEval(body, inputs, __setEcho__, compileCell),
+      };
+    });
+  }
+
+  // A language's nodes -> nodes: they already know their inputs and outputs,
+  // and their body is that of an async function of the inputs.
+  function nodesOfLanguage(nodes) {
+    return nodes.map(({key, start, end, inputs, outputs, hiddenOutputs = [], body, error = null}) => {
+      inputs = inputs.filter((i) => i !== "echo");
+      return {
+        ...noMutables,
+        key: JSON.stringify([key, body, inputs, outputs, hiddenOutputs]),
+        start,
+        end,
+        inputs,
+        outputs,
+        hiddenOutputs,
+        error,
+        // A node that fails to compile shows why when it runs.
+        definition(inputs) {
+          const fail = (error) => () => {
+            throw error;
+          };
+          if (error) return fail(error);
+          try {
+            return compileWrapper(`(async function(${inputs}) {\n${body}\n})`, inputs, __setEcho__, compileCell);
+          } catch (error) {
+            return fail(error);
+          }
+        },
+      };
+    });
   }
 
   /**
@@ -367,17 +437,12 @@ export function createRuntime(initialCode, options = {}) {
     // This allows buttons to be re-registered while detecting duplicates within the same execution
     buttonRegistry.startExecution();
 
-    const nodes = split(code);
-    if (!nodes) return;
+    const parts = split(code);
+    if (!parts) return;
+    const nodes = language.nodes ? nodesOfLanguage(parts) : nodesOfCells(parts);
+    for (const node of nodes) node.id = uid();
 
-    const mutables = analyzeMutables(nodes.map((node) => node.js));
-    nodes.forEach((node, i) => {
-      node.id = uid();
-      node.mutable = mutables[i];
-      node.transpiled = transpile(node.js, node.mutable.writes);
-    });
-
-    const groups = group(nodes, (n) => n.mutable.key);
+    const groups = group(nodes, (n) => n.key);
     const enter = [];
     const remove = [];
     const exit = new Set(nodesByKey.keys());
@@ -422,8 +487,8 @@ export function createRuntime(initialCode, options = {}) {
     // https://github.com/observablehq/notebook-kit/blob/02914e034fd21a50ebcdca08df57ef5773864125/src/runtime/define.ts#L33
     for (const node of enter) {
       const vid = node.id;
-      const {inputs, body, outputs, error = null} = node.transpiled;
-      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node.mutable;
+      const {inputs, outputs, hiddenOutputs, error} = node;
+      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node;
       const state = {
         values: [],
         variables: [],
@@ -487,13 +552,12 @@ export function createRuntime(initialCode, options = {}) {
       // the cell when its variable starts over, and order it after the
       // previous writer.
       const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
-      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), reads);
+      const definition = trackInputs(node.definition(newInputs), reads);
       state.variables.push(v.define(vid, newInputs, definition));
 
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
-        if (language.isHiddenOutput(o)) continue;
         if (defines.includes(o)) {
           const mutator = mutatorNames[o];
           const create = (exports) => {
@@ -515,6 +579,11 @@ export function createRuntime(initialCode, options = {}) {
         } else {
           state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
         }
+      }
+      // Hidden outputs aren't observed: they're computed only for the nodes
+      // that read them.
+      for (const o of hiddenOutputs) {
+        state.variables.push(main.variable().define(o, [vid], (exports) => exports[o]));
       }
       for (const {name, index, variable} of chainOutputs) {
         state.variables.push(main.variable().define(variable, [mutatorNames[name]], (m) => m.settled(index)));
