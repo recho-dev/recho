@@ -5,6 +5,7 @@ import {tags as t} from "@lezer/highlight";
 import {Parser, Language, Query} from "web-tree-sitter";
 import {loadGrammar} from "./mlscript/grammar.js";
 import {captureSpans, captureValue} from "./mlscript/highlight.js";
+import {mlscriptControls} from "./mlscript/controls.js";
 import {markLineType} from "../../lib/blocks/detect.ts";
 import {OUTPUT_MARK, WARNING_LABEL} from "../../runtime/constant.js";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
@@ -185,10 +186,13 @@ function outputLineFinderFor(field) {
 
 /**
  * Editor extensions for MLscript from a loaded grammar and highlights query.
+ * With the editor's `runtimeRef`, they include the controls (toggles, number
+ * inputs and radio buttons), which re-run the notebook.
  * @param {Language} language
  * @param {string} querySource
+ * @param {{current: any}} [runtimeRef]
  */
-export function mlscriptExtensions(language, querySource) {
+export function mlscriptExtensions(language, querySource, runtimeRef) {
   const parser = new Parser();
   parser.setLanguage(language);
   const query = new Query(language, querySource);
@@ -202,6 +206,7 @@ export function mlscriptExtensions(language, querySource) {
     outputLines,
     outputDecoration,
     outputLineFinder.of(outputLineFinderFor(field)),
+    runtimeRef ? mlscriptControls(language, field, runtimeRef) : [],
     // Cmd+/ toggles `//` line comments (Shift+Alt+A uses `/* */`).
     EditorState.languageData.of(() => [{commentTokens: {line: "//", block: {open: "/*", close: "*/"}}}]),
   ];
@@ -210,9 +215,11 @@ export function mlscriptExtensions(language, querySource) {
 /**
  * Editor support for MLscript: syntax highlighting with the tree-sitter
  * grammar, the blocks behind the gutter's block indicator (moved along with
- * edits until the next run), and the box around output lines.
+ * edits until the next run), the box around output lines, and controls.
+ * Controls need the editor's runtime, so this gives a function of it (see
+ * ../index.js).
  */
 export async function mlscriptSupport() {
   const {language, query} = await loadGrammar();
-  return mlscriptExtensions(language, query);
+  return (runtimeRef) => mlscriptExtensions(language, query, runtimeRef);
 }

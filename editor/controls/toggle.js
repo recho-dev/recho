@@ -36,15 +36,57 @@ class ToggleWidget extends WidgetType {
   }
 }
 
+/**
+ * The `recho.toggle(true)` calls of a JavaScript document in the visible
+ * ranges, as the positions of their boolean literals and their values.
+ * @param {EditorView} view
+ * @returns {{from: number, checked: boolean}[]}
+ */
+export function findJsToggles(view) {
+  let toggles = [];
+  for (let {from, to} of view.visibleRanges) {
+    syntaxTree(view.state).iterate({
+      from,
+      to,
+      enter: (node) => {
+        if (
+          node.name == "BooleanLiteral" &&
+          node.matchContext(["CallExpression", "ArgList"]) &&
+          node.node.prevSibling.name === "(" &&
+          node.node.nextSibling.name === ")"
+        ) {
+          // Check if the callee is `recho.toggle`.
+          // We do not consider the case of shadowing.
+          const memberExpression = node.node.parent.parent.firstChild;
+          if (memberExpression.name !== "MemberExpression") return;
+          const variableNameNode = memberExpression.firstChild;
+          const propertyNameNode = memberExpression.lastChild;
+          if (variableNameNode.name !== "VariableName") return;
+          if (propertyNameNode.name !== "PropertyName") return;
+          // If the API is changed, we need to update the comparison here.
+          if (view.state.doc.sliceString(variableNameNode.from, variableNameNode.to) !== "recho") return;
+          if (view.state.doc.sliceString(propertyNameNode.from, propertyNameNode.to) !== "toggle") return;
+          const text = view.state.doc.sliceString(node.from, node.to);
+          toggles.push({from: node.from, checked: text === "true"});
+        }
+      },
+    });
+  }
+  return toggles;
+}
+
 class TogglePlugin {
   #decorations;
+  #find;
 
   /**
    *
    * @param {EditorView} view
+   * @param {(view: EditorView) => {from: number, checked: boolean}[]} find
    */
-  constructor(view) {
-    this.#decorations = TogglePlugin.createToggleWidgets(view);
+  constructor(view, find) {
+    this.#find = find;
+    this.#decorations = TogglePlugin.createToggleWidgets(view, find);
   }
 
   /**
@@ -53,7 +95,7 @@ class TogglePlugin {
    */
   update(update) {
     if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) != syntaxTree(update.state))
-      this.#decorations = TogglePlugin.createToggleWidgets(update.view);
+      this.#decorations = TogglePlugin.createToggleWidgets(update.view, this.#find);
   }
 
   get decorations() {
@@ -63,43 +105,16 @@ class TogglePlugin {
   /**
    *
    * @param {EditorView} view
+   * @param {(view: EditorView) => {from: number, checked: boolean}[]} find
    * @returns
    */
-  static createToggleWidgets(view) {
-    let widgets = [];
-    for (let {from, to} of view.visibleRanges) {
-      syntaxTree(view.state).iterate({
-        from,
-        to,
-        enter: (node) => {
-          if (
-            node.name == "BooleanLiteral" &&
-            node.matchContext(["CallExpression", "ArgList"]) &&
-            node.node.prevSibling.name === "(" &&
-            node.node.nextSibling.name === ")"
-          ) {
-            // Check if the callee is `recho.toggle`.
-            // We do not consider the case of shadowing.
-            const memberExpression = node.node.parent.parent.firstChild;
-            if (memberExpression.name !== "MemberExpression") return;
-            const variableNameNode = memberExpression.firstChild;
-            const propertyNameNode = memberExpression.lastChild;
-            if (variableNameNode.name !== "VariableName") return;
-            if (propertyNameNode.name !== "PropertyName") return;
-            // If the API is changed, we need to update the comparison here.
-            if (view.state.doc.sliceString(variableNameNode.from, variableNameNode.to) !== "recho") return;
-            if (view.state.doc.sliceString(propertyNameNode.from, propertyNameNode.to) !== "toggle") return;
-            const text = view.state.doc.sliceString(node.from, node.to);
-            widgets.push(
-              Decoration.widget({
-                widget: new ToggleWidget(text === "true"),
-                side: -1,
-              }).range(node.from),
-            );
-          }
-        },
-      });
-    }
+  static createToggleWidgets(view, find) {
+    const widgets = find(view).map(({from, checked}) =>
+      Decoration.widget({
+        widget: new ToggleWidget(checked),
+        side: -1,
+      }).range(from),
+    );
     return Decoration.set(widgets);
   }
 }
@@ -107,9 +122,11 @@ class TogglePlugin {
 /**
  * Create a toggle extension for the editor.
  * @param {*} runtimeRef
+ * @param {(view: EditorView) => {from: number, checked: boolean}[]} [find] -
+ *   Where the toggles are; the language's calls of `recho.toggle`.
  * @returns {ViewPlugin<TogglePlugin, undefined>}
  */
-export function toggle(runtimeRef) {
+export function toggle(runtimeRef, find = findJsToggles) {
   /**
    * Toggle the boolean value at the given position in the editor.
    * @param {EditorView} view
@@ -127,7 +144,7 @@ export function toggle(runtimeRef) {
     return true;
   }
 
-  return ViewPlugin.fromClass(TogglePlugin, {
+  return ViewPlugin.define((view) => new TogglePlugin(view, find), {
     decorations: (v) => v.decorations,
     eventHandlers: {
       mousedown: (event, view) => {

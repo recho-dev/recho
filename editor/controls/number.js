@@ -50,14 +50,33 @@ function isNumericUnaryExpression(state, node) {
  */
 const NUMBER_PATTERN = /^([+-]?)(?:0x([0-9a-fA-F]+)|0o([0-7]+)|0b([01]+)|(\d+)|((?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?))$/;
 
-export const numberInputsField = StateField.define({
-  create(state) {
-    return collectNumberInputs(state);
-  },
-  update(value, tr) {
-    return tr.docChanged ? collectNumberInputs(tr.state) : value;
-  },
-});
+/**
+ * The value and format of a number literal (with an optional sign) in one of
+ * the formats the number control writes back, or null for other literals.
+ * @param {string} numberLiteral
+ * @returns {[number, "hexadecimal" | "octal" | "binary" | "decimal" | "real"] | null}
+ */
+export function parseNumberLiteral(numberLiteral) {
+  return NUMBER_PATTERN.test(numberLiteral) ? parseNumber(numberLiteral) : null;
+}
+
+/**
+ * A field of the document's `recho.number` calls, as found by `collect`: the
+ * range of the value literal, its value and format, and the options.
+ * @param {(state: import("@codemirror/state").EditorState) => {from: number, to: number, value: number, format: string, min: number, max: number, step: number}[]} collect
+ */
+export function numberInputsFieldFor(collect) {
+  return StateField.define({
+    create(state) {
+      return collect(state);
+    },
+    update(value, tr) {
+      return tr.docChanged ? collect(tr.state) : value;
+    },
+  });
+}
+
+export const numberInputsField = numberInputsFieldFor(collectNumberInputs);
 
 function collectNumberInputs(state) {
   const ranges = [];
@@ -224,12 +243,15 @@ class NumberWidget extends WidgetType {
 
 class NumberPlugin {
   #decorations;
+  #field;
 
   /**
    * @param {EditorView} view
+   * @param {StateField<any[]>} field
    */
-  constructor(view) {
-    this.#decorations = NumberPlugin.createNumberWidgets(view);
+  constructor(view, field) {
+    this.#field = field;
+    this.#decorations = NumberPlugin.createNumberWidgets(view, field);
   }
 
   /**
@@ -238,7 +260,7 @@ class NumberPlugin {
    */
   update(update) {
     if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) != syntaxTree(update.state))
-      this.#decorations = NumberPlugin.createNumberWidgets(update.view);
+      this.#decorations = NumberPlugin.createNumberWidgets(update.view, this.#field);
   }
 
   get decorations() {
@@ -247,10 +269,11 @@ class NumberPlugin {
 
   /**
    * @param {EditorView} view
+   * @param {StateField<any[]>} field
    * @returns {import("@codemirror/view").DecorationSet}
    */
-  static createNumberWidgets(view) {
-    const numberInputs = view.state.field(numberInputsField);
+  static createNumberWidgets(view, field) {
+    const numberInputs = view.state.field(field);
     let widgets = [];
 
     for (let {from, to} of view.visibleRanges) {
@@ -282,9 +305,11 @@ class NumberPlugin {
 /**
  * Create a number control extension for the editor.
  * @param {*} runtimeRef
+ * @param {StateField<any[]>} [field] - The number inputs, from the language's
+ *   calls of `recho.number` (see `numberInputsFieldFor`).
  * @returns {ViewPlugin<NumberPlugin, undefined>}
  */
-export function number(runtimeRef) {
+export function number(runtimeRef, field = numberInputsField) {
   /**
    * Increment or decrement the number value at the given position.
    * @param {EditorView} view
@@ -294,7 +319,7 @@ export function number(runtimeRef) {
    */
   function adjustNumber(view, pos, action) {
     // Get number inputs from state field
-    const numberInputs = view.state.field(numberInputsField);
+    const numberInputs = view.state.field(field);
 
     // Find the number input that contains this position
     let targetInput = null;
@@ -366,8 +391,8 @@ export function number(runtimeRef) {
   }
 
   return [
-    numberInputsField,
-    ViewPlugin.fromClass(NumberPlugin, {
+    field,
+    ViewPlugin.define((view) => new NumberPlugin(view, field), {
       decorations: (v) => v.decorations,
       eventHandlers: {
         mousedown: (event, view) => {

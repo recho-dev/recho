@@ -18,9 +18,9 @@ import {javascriptSupport} from "./languages/javascript.js";
  * @param {import("@codemirror/state").Extension[]} [options.extensions]
  * @param {object} [options.language] - The notebook's language (see
  *   ../runtime/languages/index.js), JavaScript by default.
- * @param {import("@codemirror/state").Extension[]} [options.languageSupport] -
+ * @param {import("@codemirror/state").Extension[] | ((runtimeRef: {current: any}) => import("@codemirror/state").Extension[])} [options.languageSupport] -
  *   Editor extensions for a language other than JavaScript (see
- *   ./languages/index.js).
+ *   ./languages/index.js), or a function of the runtime giving them.
  */
 export function createEditor(container, options) {
   const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
@@ -34,8 +34,13 @@ export function createEditor(container, options) {
   myBasicSetup.splice(2, 0, blockIndicator);
 
   // JavaScript's support needs the runtime (for controls), so it is set up
-  // here; other languages bring theirs (see ./languages/index.js).
-  const languageExtensions = isJavaScript ? javascriptSupport(runtimeRef) : languageSupport;
+  // here; other languages bring theirs (see ./languages/index.js), as a
+  // function when they need the runtime too.
+  const languageExtensions = isJavaScript
+    ? javascriptSupport(runtimeRef)
+    : typeof languageSupport === "function"
+      ? languageSupport(runtimeRef)
+      : languageSupport;
 
   const state = EditorState.create({
     doc: code,
