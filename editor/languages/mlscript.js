@@ -6,7 +6,6 @@ import {Parser, Language, Query} from "web-tree-sitter";
 import {loadGrammar} from "./mlscript/grammar.js";
 import {captureSpans, captureValue} from "./mlscript/highlight.js";
 import {mlscriptControls} from "./mlscript/controls.js";
-import {mlscriptCompletion} from "./mlscript/completion.js";
 import {markLineType} from "../../lib/blocks/detect.ts";
 import {OUTPUT_MARK, WARNING_LABEL} from "../../runtime/constant.js";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
@@ -198,7 +197,6 @@ export function mlscriptExtensions(language, querySource, runtimeRef) {
   parser.setLanguage(language);
   const query = new Query(language, querySource);
   const field = treeField(parser);
-  const completion = mlscriptCompletion(field);
   return [
     field,
     treeCleanup(field),
@@ -209,19 +207,15 @@ export function mlscriptExtensions(language, querySource, runtimeRef) {
     outputDecoration,
     outputLineFinder.of(outputLineFinderFor(field)),
     runtimeRef ? mlscriptControls(language, field, runtimeRef) : [],
-    // Cmd+/ toggles `//` line comments (Shift+Alt+A uses `/* */`); completion
-    // reads the tree.
-    EditorState.languageData.of(() => [
-      {commentTokens: {line: "//", block: {open: "/*", close: "*/"}}, autocomplete: completion},
-    ]),
+    // Cmd+/ toggles `//` line comments (Shift+Alt+A uses `/* */`).
+    EditorState.languageData.of(() => [{commentTokens: {line: "//", block: {open: "/*", close: "*/"}}}]),
   ];
 }
 
 /**
  * Editor support for MLscript: syntax highlighting with the tree-sitter
  * grammar, the blocks behind the gutter's block indicator (moved along with
- * edits until the next run), the box around output lines, completion and
- * controls.
+ * edits until the next run), the box around output lines, and controls.
  * Controls need the editor's runtime, so this gives a function of it (see
  * ../index.js).
  */
