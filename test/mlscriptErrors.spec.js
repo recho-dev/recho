@@ -83,12 +83,12 @@ describe("MLscript errors", () => {
   });
 
   describe("compile errors", () => {
-    it("shows every location's message, with its line and column in the document", async () => {
+    it("shows a compile error with its line and column in the document", async () => {
       run(`let a = 1\n\nfun f(x) = x\n\nf(1, 2, 3)\n\necho(a)\n`);
       await wait();
       expect(notebook.doc()).toBe(
         `let a = 1\n\nfun f(x) = x\n\n` +
-          `//✗ [CompileError: Resolution error in application (7:0)\n//✗ Function 'f' expected 1 argument, but got 3]\nf(1, 2, 3)\n\n` +
+          `//✗ [CompileError: \`f\` expects 1 argument but got 3. (6:0)]\nf(1, 2, 3)\n\n` +
           `//➜ 1\necho(a)\n`,
       );
     });
@@ -97,7 +97,7 @@ describe("MLscript errors", () => {
       run(`fun f = 1\nfun f = 2\n\necho(3)\n`);
       await wait();
       expect(notebook.doc()).toBe(
-        `//✗ [CompileError: Multiple definitions of symbol 'f'\n//✗ defined here (4:0)\n//✗ defined here (5:0)]\nfun f = 1\nfun f = 2\n\n//➜ 3\necho(3)\n`,
+        `//✗ [CompileError: \`f\` is defined more than once in this block. (5:0)\n//✗ Defined here. (4:0)\n//✗ Defined here. (5:0)]\nfun f = 1\nfun f = 2\n\n//➜ 3\necho(3)\n`,
       );
     });
 
@@ -105,13 +105,13 @@ describe("MLscript errors", () => {
       run(`fun g(x) =\n  let y = x\n  nope + y\n`);
       await wait();
       expect(notebook.doc()).toBe(
-        `//✗ [CompileError: Name not found in wildcard opens: nope (4:2)]\nfun g(x) =\n  let y = x\n  nope + y\n`,
+        `//✗ [CompileError: Unknown name \`nope\`. (4:2)]\nfun g(x) =\n  let y = x\n  nope + y\n`,
       );
     });
 
     it("keeps the line numbers right as output above moves the block, and is idempotent", async () => {
       const code = `echo("a\\nb")\n\nlet bad = nope\n`;
-      const expected = `//➜ a\n//➜ b\necho("a\\nb")\n\n//✗ [CompileError: Name not found in wildcard opens: nope (6:10)]\nlet bad = nope\n`;
+      const expected = `//➜ a\n//➜ b\necho("a\\nb")\n\n//✗ [CompileError: Unknown name \`nope\`. (6:10)]\nlet bad = nope\n`;
       run(code);
       await wait();
       expect(notebook.doc()).toBe(expected);
@@ -124,7 +124,7 @@ describe("MLscript errors", () => {
     it("names parse errors ParseError", async () => {
       run(`let a = (1 +\n\necho(2)\n`);
       await wait();
-      expect(notebook.doc()).toMatch(/^\/\/✗ \[ParseError: Unmatched opening parenthesis \(3:8\)\n/);
+      expect(notebook.doc()).toMatch(/^\/\/✗ \[ParseError: This `\(` is never closed\. \(2:8\)\]\n/);
       expect(notebook.doc()).toContain(`//➜ 2\necho(2)`);
     });
 
@@ -174,7 +174,7 @@ describe("MLscript errors", () => {
 
   describe("warnings", () => {
     const code = `fun g(x) =\n  x\n  1\n\necho(g(2))\n`;
-    const shown = `//➜ Warning: Pure expression in statement position (3:2)\nfun g(x) =\n  x\n  1\n\n//➜ 1\necho(g(2))\n`;
+    const shown = `//➜ Warning: This value is computed and then discarded. (3:2)\nfun g(x) =\n  x\n  1\n\n//➜ 1\necho(g(2))\n`;
 
     it("shows a warning above its block, as output, and still runs it", async () => {
       run(code);
@@ -223,9 +223,7 @@ describe("MLscript errors", () => {
       notebook.runtime.destroy();
       run(notebook.doc(), language);
       await wait();
-      expect(notebook.doc()).toBe(
-        `//✗ [CompileError: Name not found in wildcard opens: a (2:5)]\necho(a + 1)\n\nlet a = 1\n`,
-      );
+      expect(notebook.doc()).toBe(`//✗ [CompileError: Unknown name \`a\`. (2:5)]\necho(a + 1)\n\nlet a = 1\n`);
     });
   });
 
@@ -334,14 +332,14 @@ describe("MLscript errors", () => {
   });
 
   describe("imports", () => {
-    it("shows an unknown standard library module once, at its import", async () => {
+    it("shows an unknown standard library module at its import, and at its uses", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       run(`import "std/Nope.mls"\n\nlet a = 1\n\necho(a)\n\nlet x = Nope.f\n`);
       await wait(600);
       expect(notebook.doc()).toBe(
-        `//✗ [Error: The standard library module std/Nope.mls is not included in this package]\nimport "std/Nope.mls"\n\n` +
+        `//✗ [CompileError: There is no standard library module \`Nope\`. (2:7)]\nimport "std/Nope.mls"\n\n` +
           `let a = 1\n\n//➜ 1\necho(a)\n\n` +
-          `//✗ [Error: std/Nope.mls didn't load (see the error at its import).]\nlet x = Nope.f\n`,
+          `//✗ [CompileError: \`Nope\` has no member \`f\`. (10:8)]\nlet x = Nope.f\n`,
       );
     });
 
