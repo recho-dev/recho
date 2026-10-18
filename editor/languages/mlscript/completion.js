@@ -290,16 +290,13 @@ function scopeNode(state, root, from, pos) {
 function memberOptions(root, name) {
   const options = [];
   const seen = new Set();
+  // Only modules and objects: a class's methods and `val` parameters belong to
+  // its instances, so `Point.x` would be wrong.
   for (const node of topLevelStatements(root)) {
-    if (!["module_definition", "class_definition", "object_definition"].includes(node.type)) continue;
+    if (node.type !== "module_definition" && node.type !== "object_definition") continue;
     if (definedNames(node)[0]?.text !== name) continue;
     const body = bodyOf(node);
     if (body) definitionOptions(namedChildren(body), -1, seen, options);
-    // The `val` parameters of a class: `class Point(val x: Int)`.
-    const vals = parameterLists(headOf(node)).flatMap((args) =>
-      namedChildren(args).filter((c) => c.type === "val_definition"),
-    );
-    definitionOptions(vals, -1, seen, options);
   }
   return options;
 }
