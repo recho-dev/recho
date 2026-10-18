@@ -6,9 +6,19 @@ const examples = getAllJSExamples();
 const bySlug = (slug) => examples.find((example) => example.slug === slug);
 
 describe("example thumbnails", () => {
-  it("highlights MLscript examples with the MLscript grammar", async () => {
-    const html = await exampleThumbnail(bySlug("mlscript-clock"));
+  it("highlights MLscript examples with the tree-sitter grammar", async () => {
+    const example = bySlug("mlscript-clock");
+    const html = await exampleThumbnail(example);
+    expect(html).toContain('<pre class="shiki github-light" style="background-color:#fff;color:#24292e" tabindex="0">');
     expect(html).toContain('<span style="color:#D73A49">val</span>');
+    expect(html).toContain('<span style="color:#D73A49">fun</span><span style="color:#24292E"> </span>');
+    expect(html).toContain('<span style="color:#032F62">"Seconds since opening:"</span>');
+    expect(html).toContain('<span style="color:#005CC5">2</span>');
+    expect(html).toContain('<span style="color:#6A737D">// The current time, once per animation frame.</span>');
+    expect(html).toContain('<span class="line"><span style="color:#6A737D">//➜ Seconds since opening: 0</span></span>');
+    const lines = html.match(/<span class="line">/g) ?? [];
+    const shown = example.content.split("\n").length - example.outputStartLine + 1;
+    expect(lines.length).toBe(Math.min(shown, 60));
   });
 
   it("highlights JavaScript examples", async () => {

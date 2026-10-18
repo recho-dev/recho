@@ -3,15 +3,11 @@ import {Decoration, ViewPlugin} from "@codemirror/view";
 import {highlightingFor} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
 import {Parser, Language, Query} from "web-tree-sitter";
+import {loadGrammar} from "./mlscript/grammar.js";
+import {captureSpans, captureValue} from "./mlscript/highlight.js";
 import {markLineType} from "../../lib/blocks/detect.ts";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
 import {outputDecoration, outputLineFinder, outputLines} from "../blocks/output.ts";
-
-// The tree-sitter grammar and its highlights query, from the
-// @mlscript/tree-sitter-mlscript package. This module is only loaded for
-// MLscript notebooks, and they are only fetched from here.
-const GRAMMAR_URL = new URL("@mlscript/tree-sitter-mlscript/tree-sitter-mlscript.wasm", import.meta.url);
-const QUERY_URL = new URL("@mlscript/tree-sitter-mlscript/queries/highlights.scm", import.meta.url);
 
 /**
  * The highlight tag for a capture of the highlights query, so MLscript gets
@@ -47,34 +43,14 @@ const TAGS = {
   module: t.namespace,
 };
 
-export function captureTag(name) {
-  for (let key = name; ; key = key.slice(0, key.lastIndexOf("."))) {
-    if (key in TAGS) return TAGS[key];
-    if (!key.includes(".")) return null;
-  }
-}
+export const captureTag = (name) => captureValue(TAGS, name);
 
 /**
  * The highlighted spans of `tree` between `from` and `to`, as `{from, to,
- * capture, tag}`, sorted by position (outer spans first). When patterns
- * capture the same node, the first one in the query wins, as the query's more
- * specific patterns come before the catch-all `(identifier)` ones.
+ * capture, tag}`, sorted by position (outer spans first).
  */
-export function highlightSpans(query, tree, from = 0, to = tree.rootNode.endIndex) {
-  const byNode = new Map();
-  // Nodes report UTF-16 indices, but web-tree-sitter 0.26.9 passes a query's
-  // range to tree-sitter as is, where it means bytes of UTF-16 text.
-  for (const capture of query.captures(tree.rootNode, {startIndex: from * 2, endIndex: to * 2})) {
-    const tag = captureTag(capture.name);
-    const {startIndex, endIndex, id} = capture.node;
-    if (!tag || startIndex === endIndex) continue;
-    const seen = byNode.get(id);
-    if (seen && seen.patternIndex <= capture.patternIndex) continue;
-    byNode.set(id, {from: startIndex, to: endIndex, capture: capture.name, tag, patternIndex: capture.patternIndex});
-  }
-  return [...byNode.values()]
-    .sort((a, b) => a.from - b.from || b.to - a.to)
-    .map(({from, to, capture, tag}) => ({from, to, capture, tag}));
+export function highlightSpans(query, tree, from, to) {
+  return captureSpans(query, tree, captureTag, from, to).map(({value, ...span}) => ({...span, tag: value}));
 }
 
 /** Where `text` would end if inserted at `point` (rows and UTF-16 columns). */
@@ -223,25 +199,12 @@ export function mlscriptExtensions(language, querySource) {
   ];
 }
 
-let loading = null;
-
-function load() {
-  return (loading ??= (async () => {
-    const [, query] = await Promise.all([Parser.init(), fetch(QUERY_URL).then((r) => r.text())]);
-    const language = await Language.load(new Uint8Array(await (await fetch(GRAMMAR_URL)).arrayBuffer()));
-    return {language, query};
-  })().catch((error) => {
-    loading = null;
-    throw error;
-  }));
-}
-
 /**
  * Editor support for MLscript: syntax highlighting with the tree-sitter
  * grammar, the blocks behind the gutter's block indicator (moved along with
  * edits until the next run), and the box around output lines.
  */
 export async function mlscriptSupport() {
-  const {language, query} = await load();
+  const {language, query} = await loadGrammar();
   return mlscriptExtensions(language, query);
 }

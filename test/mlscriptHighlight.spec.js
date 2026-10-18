@@ -9,6 +9,8 @@ import {classHighlighter} from "@lezer/highlight";
 import {Parser, Language, Query} from "web-tree-sitter";
 import {captureTag, highlightSpans, mlscriptExtensions} from "../editor/languages/mlscript.js";
 import {outputLinesField} from "../editor/blocks/output.ts";
+import {createHighlighter} from "../editor/languages/mlscript/highlight.js";
+import {thumbnailHtml} from "../app/thumbnailHtml.js";
 
 const grammarUrl = pathToFileURL(
   createRequire(import.meta.url).resolve("@mlscript/tree-sitter-mlscript/tree-sitter-mlscript.wasm"),
@@ -122,6 +124,25 @@ describe("MLscript highlighting", () => {
       [3, "output"],
       [4, "error"],
     ]);
+  });
+
+  it("highlights thumbnails as Shiki would", () => {
+    const highlight = createHighlighter(language, querySource);
+    const html = highlight('class A\n\nfun f(x) = x < 1 && "a\\n"\n//➜ <b>');
+    expect(html).toBe(
+      '<pre class="shiki github-light" style="background-color:#fff;color:#24292e" tabindex="0"><code>' +
+        '<span class="line"><span style="color:#D73A49">class</span><span style="color:#24292E"> </span><span style="color:#6F42C1">A</span></span>\n' +
+        '<span class="line"></span>\n' +
+        '<span class="line"><span style="color:#D73A49">fun</span><span style="color:#24292E"> </span><span style="color:#6F42C1">f</span>' +
+        '<span style="color:#24292E">(x) </span><span style="color:#D73A49">=</span><span style="color:#24292E"> x </span>' +
+        '<span style="color:#D73A49">&#x3C;</span><span style="color:#24292E"> </span><span style="color:#005CC5">1</span>' +
+        '<span style="color:#24292E"> </span><span style="color:#D73A49">&#x26;&#x26;</span><span style="color:#24292E"> </span>' +
+        '<span style="color:#032F62">"a</span><span style="color:#005CC5">\\n</span><span style="color:#032F62">"</span></span>\n' +
+        '<span class="line"><span style="color:#6A737D">//➜ &#x3C;b&#x3E;</span></span></code></pre>',
+    );
+    expect(thumbnailHtml(html, 4)).toContain(
+      '<code><span class="line"><span style="color:#6A737D">//➜ &lt;b&gt;</span>',
+    );
   });
 
   it("toggles `//` line comments", () => {
