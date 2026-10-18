@@ -1,0 +1,112 @@
+/**
+ * @title Box-Drawing Writing in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label ASCII Art, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                    Box-Drawing Writing in MLscript                       =
+ * ============================================================================
+ *
+ * A take on the "Box-Drawing Writing" example: write a block of characters,
+ * picking each one at random by a simple rule. This time the rules are data.
+ * A rule is a small tree built from three kinds of nodes, and `pick` is an
+ * interpreter for it, written as one pattern match.
+ *
+ * The random numbers come from a seed, so each block is the same every time.
+ */
+
+// A rule always writes the same text, picks one of two rules (the first
+// with probability `p`), or writes two rules side by side.
+data class Always(text)
+data class Choose(p, first, second)
+data class Both(left, right)
+
+val cols = 36
+val rows = 8
+
+// The next pseudo-random seed (Park–Miller), and a number in [0, 1) from it.
+fun next(s) = s * 48271 % 2147483647
+fun unit(s) = (s - 1) / 2147483646
+
+// The result of picking: some text and the seed to continue with.
+data class Picked(text, seed)
+
+fun pick(rule, seed) = if rule is
+  Always(text) then Picked(text, seed)
+  Choose(p, first, second) and
+    let s = next(seed)
+    unit(s) < p then pick(first, s)
+    else pick(second, s)
+  Both(left, right) and pick(left, seed) is Picked(a, s) and pick(right, s) is Picked(b, s2) then
+    Picked(a + b, s2)
+
+// Write one line of a block: pick until the line is `cols` characters wide.
+fun line(rule, seed, text: Str) = if
+  text.length >= cols then Picked(text.slice(0, cols), seed)
+  pick(rule, seed) is Picked(more, s) then line(rule, s, text + more)
+
+fun block(rule, seed) =
+  fun go(i, s) = if
+    i == rows then []
+    line(rule, s, "") is Picked(text, s2) then [text, ...go(i + 1, s2)]
+  go(0, seed).join("\n")
+
+val coin = Choose(0.5, Always("╱"), Always("╲"))
+
+//➜ Picked("╱", 48271)
+echo(pick(coin, 1))
+
+// The classic: a fair coin between two diagonals.
+//➜ ╱╲╱╲╲╲╱╲╲╱╲╲╲╱╲╱╲╲╱╲╲╱╲╲╱╲╲╲╱╲╱╱╱╱╲╲
+//➜ ╲╱╲╲╱╱╲╱╲╲╲╲╱╲╲╲╱╲╱╱╱╱╱╲╲╲╲╱╲╲╱╲╱╱╱╲
+//➜ ╲╲╲╲╱╲╲╲╲╲╱╲╱╲╱╲╲╲╲╲╲╲╲╲╲╲╱╱╱╲╲╱╱╱╱╱
+//➜ ╲╲╱╱╱╲╱╱╲╲╱╲╱╲╲╲╲╱╲╲╲╱╱╱╲╱╲╲╲╱╲╲╲╱╲╱
+//➜ ╲╲╱╲╱╱╱╱╲╲╲╲╱╱╱╱╱╲╱╱╱╲╱╲╱╱╲╱╱╱╲╱╱╱╱╱
+//➜ ╱╲╱╱╲╲╱╱╲╲╲╲╲╱╱╲╱╱╱╱╲╱╲╲╲╱╲╱╱╱╱╱╱╲╱╲
+//➜ ╲╱╲╲╲╲╲╲╱╲╲╱╱╲╱╱╱╲╱╱╱╲╱╲╱╲╲╲╲╲╱╱╲╲╱╲
+//➜ ╱╱╱╱╲╲╱╱╲╱╱╲╱╲╱╱╲╲╲╲╱╱╲╱╱╲╲╲╲╱╲╲╲╱╱╲
+echo(block(coin, 10))
+
+// Horizontal and vertical lines, seven to three.
+//➜ ─│─│─│─│─││───│──│──│─│──────││───││
+//➜ ││││──│││──│──────│─│──│──│─────││──
+//➜ ──│──││──│─────│──│││─│─│││───││││││
+//➜ ─────────││─│───│───│────│││───│────
+//➜ ─│──│───│────│────│─│───││──│───│─│─
+//➜ ───│───│────────────────│──│──│─│───
+//➜ ───│──│─│────│─││─────│────│││─│───│
+//➜ ──││││─││││─│││────│─││──────────│──
+echo(block(Choose(0.7, Always("─"), Always("│")), 20))
+
+// Rounded corners, written two at a time.
+val arc = Choose(0.5, Always("╭"), Always("╯"))
+val cra = Choose(0.5, Always("╮"), Always("╰"))
+
+//➜ ╭╰╭╰╭╰╭╰╯╮╯╰╭╮╯╮╭╰╯╰╯╰╯╰╭╰╯╰╭╰╭╮╭╮╯╰
+//➜ ╯╮╯╰╭╰╯╮╯╮╭╰╯╮╯╮╯╮╭╮╭╮╭╰╭╰╯╮╯╮╯╮╭╮╭╮
+//➜ ╭╮╯╮╯╰╯╰╯╰╭╮╯╮╭╰╯╰╯╰╯╮╯╮╯╰╭╰╯╰╯╮╭╮╭╮
+//➜ ╯╰╭╰╭╮╭╮╭╰╭╰╭╮╯╰╯╰╯╰╯╰╯╰╭╮╯╰╯╮╯╰╭╮╯╮
+//➜ ╯╰╭╰╭╮╭╮╯╮╯╰╯╮╭╮╯╰╭╮╭╰╭╰╭╮╯╮╭╮╭╰╭╰╭╰
+//➜ ╭╮╭╮╯╰╭╮╭╮╭╰╭╮╯╮╭╰╭╮╯╰╭╰╯╮╯╮╯╰╭╮╭╮╯╮
+//➜ ╭╰╯╰╯╰╯╮╭╰╭╮╯╰╭╮╭╮╭╮╭╰╭╮╭╰╯╰╯╰╭╮╭╮╭╰
+//➜ ╭╮╭╮╯╰╯╮╯╮╭╰╭╰╭╮╭╮╯╰╯╮╯╮╭╮╯╰╯╮╯╮╯╮╭╰
+echo(block(Both(arc, cra), 30))
+
+// Rules nest: mostly blocks, sometimes a pair of shades.
+//➜ ▚▞▞▞▞▚▚▚▞▞░▒▞▚▞▚▚▚▞▞▞▚▞▞░▒░▒▞▚▞▞▞▚▚▞
+//➜ ▚▚░▒▚▞▞▞▞▞▞▞░▒░▒▞▚░▒▞░▒░▒░▒░▒░▒░▒▚▞░
+//➜ ▞░▒▚▚░▒▞▚░▒░▒▞▞▚▞▚▞▚▞▞▞▞░▒▚▚░▒▚░▒▚▞▞
+//➜ ▞░▒▚▚▚▚▚▞▚░▒▚░▒▚▞▚▚▚▞▞▚▚▚▚▚▞▚▞▚▚▚▚▞░
+//➜ ▞▚▞▞▞▞░▒▞▞▚▚░▒░▒▚▞░▒░▒▞▞▞▚░▒▞▞▞░▒▚▞▚
+//➜ ▚▞▞░▒▞░▒▚▚▞▞▚▞▞░▒▞▚▞▚░▒▚▞▞░▒░▒▚▞▚▞▚▞
+//➜ ░▒▞▞▚▞░▒░▒░▒▚▚▞▚▚▞▚░▒▞░▒▚▞▞▚▞▚▚▞▞░▒▚
+//➜ ░▒▚▞░▒▚▚░▒░▒▚▞▚▞▞░▒▚░▒▞▞░▒░▒▚▞▚▚▚▚▞▚
+echo(block(Choose(0.8, Choose(0.5, Always("▚"), Always("▞")), Both(Always("░"), Always("▒"))), 40))
+
+/**
+ * Try writing your own rule from `Always`, `Choose` and `Both`!
+ */
