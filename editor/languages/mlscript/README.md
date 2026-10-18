@@ -11,3 +11,11 @@ to PR #577"; the later `676efdc` only touches its README).
   `web-tree-sitter` 0.26.9 (keep the two in step when updating).
 
 Both are fetched only when an MLscript notebook loads `../mlscript.js`.
+
+## TextMate grammar
+
+`mlscript.tmLanguage.json` is `syntaxes/mlscript.tmLanguage.json` from
+[mlscript-syntax-highlight](https://github.com/chengluyu/mlscript-syntax-highlight)
+(MIT), commit `a6ad721`, unchanged. Shiki uses it to highlight MLscript code in
+example and work thumbnails (`app/ThumbnailClient.js`), which load it only
+when they show an MLscript notebook.

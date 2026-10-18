@@ -1,0 +1,538 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "MLscript",
+  "patterns": [
+    {
+      "include": "#imports"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#multiline-strings"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#diffTestComments"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#field-selection"
+    },
+    {
+      "include": "#identifiers"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "imports": {
+      "patterns": [
+        {
+          "name": "meta.import.mlscript",
+          "match": "\\b(import)\\s+(\"[^\"]+\")",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.mlscript"
+            },
+            "2": {
+              "name": "string.quoted.double.mlscript"
+            }
+          }
+        },
+        {
+          "name": "meta.open.declaration.mlscript",
+          "begin": "\\b(open)\\s+([_A-Z][_a-zA-Z0-9]*)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.open.mlscript"
+            },
+            "2": {
+              "name": "entity.name.type.mlscript"
+            }
+          },
+          "end": "(?=\\s*\\{)|(?=\\s*$)",
+          "patterns": [
+            {
+              "name": "meta.open.brace-list.mlscript",
+              "begin": "\\{",
+              "beginCaptures": {
+                "0": {
+                  "name": "punctuation.section.braces.begin.mlscript"
+                }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.section.braces.end.mlscript"
+                }
+              },
+              "patterns": [
+                {
+                  "match": "\\b(_*[A-Z][_a-zA-Z0-9]*)\\b",
+                  "name": "entity.name.type.mlscript"
+                },
+                {
+                  "match": "\\b(_*[a-z][_a-zA-Z0-9]*)\\b",
+                  "name": "entity.name.function.mlscript"
+                },
+                {
+                  "include": "#punctuation-comma"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.with.mlscript",
+          "match": "\\b(with)\\b"
+        },
+        {
+          "name": "keyword.structure.mlscript",
+          "match": "\\b(type)\\b"
+        },
+        {
+          "name": "keyword.control.mlscript",
+          "match": "\\b(let|set|of|is|extends|as)\\b"
+        },
+        {
+          "name": "keyword.control.conditional.mlscript",
+          "match": "\\b(if|while|and|or|then|else|do)\\b"
+        },
+        {
+          "name": "storage.type.function.mlscript",
+          "match": "\\b(fun)\\b"
+        },
+        {
+          "name": "variable.language.mlscript",
+          "match": "\\b(this|super)\\b"
+        },
+        {
+          "name": "keyword.declaration.mlscript",
+          "match": "\\b(new)\\b"
+        },
+        {
+          "name": "keyword.declaration.mlscript",
+          "match": "\\b(val)\\b"
+        },
+        {
+          "name": "keyword.other.import.mlscript",
+          "match": "\\b(import)\\b"
+        },
+        {
+          "name": "keyword.other.open.mlscript",
+          "match": "\\b(open)\\b"
+        },
+        {
+          "name": "keyword.other.use.mlscript",
+          "match": "\\b(use)\\b"
+        },
+        {
+          "name": "constant.language.scala",
+          "match": "\\b(false|null|true)\\b"
+        },
+        {
+          "name": "keyword.declaration.mlscript",
+          "match": "\\b(trait|class|module|object|mixin|pattern)\\b"
+        },
+        {
+          "name": "storage.modifier.parameter.mlscript",
+          "match": "\\b(using)\\b"
+        },
+        {
+          "name": "storage.modifier.other.mlscript",
+          "match": "\\b(declare|private|lazy|virtual|abstract|data)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "meta.variable.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(?:(declare)\\s+)?(?:(private)\\s+)?(?:(lazy)\\s+)?(val)\\s+([_a-zA-Z][_a-zA-Z0-9]*(?:'+|\\b))",
+              "captures": {
+                "1": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "2": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "3": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "4": {
+                  "name": "storage.type.function.mlscript"
+                },
+                "5": {
+                  "name": "entity.name.variable.mlscript"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.function.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(?:(virtual|declare)\\s+)?(fun)(?:\\s+\\(([!#%&*+\\-\\/:<=>?@\\\\^|~.;]+)\\))?\\s+([_a-zA-Z][_a-zA-Z0-9]*(?:'+|\\b))",
+              "captures": {
+                "1": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "2": {
+                  "name": "storage.type.function.mlscript"
+                },
+                "3": {
+                  "name": "entity.name.function.mlscript"
+                },
+                "4": {
+                  "name": "entity.name.function.mlscript"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.class.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(?:(declare)\\s+)?(?:(private)\\s+)?(?:(abstract|data)\\s+)?(class)\\s+([_A-Z][_a-zA-Z0-9]*(?:'+|\\b))\\s*(\\[.+?\\])?",
+              "captures": {
+                "1": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "2": {
+                  "name": "storage.modifier.access.mlscript"
+                },
+                "3": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "4": {
+                  "name": "keyword.declaration.mlscript"
+                },
+                "5": {
+                  "name": "entity.name.class.mlscript"
+                },
+                "6": {
+                  "name": "meta.type-parameter-list.mlscript",
+                  "patterns": [
+                    {
+                      "include": "#type-parameter-list"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.trait.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(?:(private)\\s+)?(trait)\\s+([_A-Z][_a-zA-Z0-9]*(?:'+|\\b))",
+              "captures": {
+                "1": {
+                  "name": "storage.modifier.access.mlscript"
+                },
+                "2": {
+                  "name": "keyword.declaration.mlscript"
+                },
+                "3": {
+                  "name": "entity.name.class.mlscript"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.module.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(?:(declare)\\s+)?(?:(private)\\s+)?(module|object)\\s+([_A-Z][_a-zA-Z0-9]*(?:'+|\\b))",
+              "captures": {
+                "1": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "2": {
+                  "name": "storage.modifier.other.mlscript"
+                },
+                "3": {
+                  "name": "keyword.declaration.mlscript"
+                },
+                "4": {
+                  "name": "entity.name.class.mlscript"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.mixin.declaration.mlscript",
+          "patterns": [
+            {
+              "match": "\\b(mixin)\\s+([_A-Z][_a-zA-Z0-9]*(?:'+|\\b))",
+              "captures": {
+                "1": {
+                  "name": "keyword.declaration.mlscript"
+                },
+                "2": {
+                  "name": "entity.name.class.mlscript"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.variable.mlscript",
+          "patterns": [
+            {
+              "match": "\\b[A-Z][a-zA-Z0-9]*(?:'+|\\b)",
+              "name": "entity.name.type.mlscript"
+            },
+            {
+              "match": "\\b(?:anything|nothing|string|int|number|bool)\\b",
+              "name": "entity.name.type.mlscript"
+            },
+            {
+              "match": "'[a-zA-Z_][a-zA-Z0-9_]*\\b",
+              "name": "entity.name.type.mlscript"
+            }
+          ]
+        }
+      ]
+    },
+    "field-selection": {
+      "match": "\\.([_a-zA-Z][_a-zA-Z0-9]*)\\b",
+      "captures": {
+        "1": {
+          "name": "entity.name.variable.mlscript"
+        }
+      }
+    },
+    "identifiers": {
+      "match": "\\b([_a-zA-Z][_a-zA-Z0-9]*)('+|\\b)",
+      "captures": {
+        "0": {
+          "name": "entity.name.variable.mlscript"
+        }
+      }
+    },
+    "operators": {
+      "match": "[!#%&*+\\-/:<=>?@\\\\^|~=\\.<>]+",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.mlscript"
+        }
+      }
+    },
+    "type-parameter-list": {
+      "begin": "\\[",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.type-parameter-list.begin.mlscript"
+        }
+      },
+      "end": "\\]",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.type-parameter-list.end.mlscript"
+        }
+      },
+      "patterns": [
+        {
+          "match": "\\btype\\b",
+          "name": "keyword.structure.mlscript"
+        },
+        {
+          "match": "\\b(in|out)\\b",
+          "name": "storage.modifier.mlscript"
+        },
+        {
+          "match": "\\b[A-Z][a-zA-Z0-9]*\\b",
+          "name": "entity.name.type.mlscript"
+        },
+        {
+          "match": "'[a-zA-Z_][a-zA-Z0-9_]*\\b",
+          "name": "entity.name.type.mlscript"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#punctuation-comma"
+        }
+      ],
+      "scopeName": "meta.type-parameter-list.mlscript"
+    },
+    "multiline-strings": {
+      "name": "string.quoted.triple.mlscript",
+      "begin": "\"\"\"",
+      "end": "\"\"\""
+    },
+    "strings": {
+      "name": "string.quoted.double.mlscript",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.mlscript",
+          "match": "\\\\u\\d{4}"
+        },
+        {
+          "name": "constant.character.escape.mlscript",
+          "match": "\\\\u\\{[0-9a-fA-F]{1,6}\\}"
+        },
+        {
+          "name": "constant.character.escape.mlscript",
+          "match": "\\\\x[0-9a-fA-F]{2}"
+        },
+        {
+          "name": "constant.character.escape.mlscript",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.decimal.mlscript",
+          "match": "\\b[0-9][0-9_]*\\b"
+        },
+        {
+          "name": "constant.numeric.hexadecimal.mlscript",
+          "match": "\\b0x[0-9a-fA-F][0-9a-fA-F_]*\\b"
+        },
+        {
+          "name": "constant.numeric.binary.mlscript",
+          "match": "\\b0b[01][01_]*\\b"
+        },
+        {
+          "name": "constant.numeric.octal.mlscript",
+          "match": "\\b0o[0-7][0-7_]*\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.mlscript",
+          "match": "\\b[0-9][0-9_]*(\\.[0-9][0-9_]*)?([Ee][+-]?[0-9][0-9_]*)?\\b"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.DiffTests.flag.mlscript",
+          "match": "^(\\:)([\\w:, \\.-]+)",
+          "captures": {
+            "2": {
+              "patterns": [
+                {
+                  "match": "\\b([\\w\\.-]+)\\b",
+                  "captures": {
+                    "1": {
+                      "name": "markup.italic"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.opening.mlscript",
+          "begin": "^//│ (?:╔══|═══)(\\[(?:PARSE |RUNTIME |COMPILATION )?ERROR\\])?(\\[WARNING\\])? (.+)",
+          "end": "$",
+          "beginCaptures": {
+            "1": {
+              "name": "markup.bold"
+            },
+            "2": {
+              "name": "markup.bold"
+            },
+            "3": {
+              "name": "markup.underline"
+            }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.support.mlscript",
+          "begin": "^//│ ╟── (.+)",
+          "end": "$",
+          "beginCaptures": {
+            "1": {
+              "name": "markup.underline"
+            }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.quote.mlscript",
+          "begin": "^//│ ║  l.(\\d+):",
+          "end": "$",
+          "beginCaptures": {
+            "1": {
+              "name": "markup.bold"
+            }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.circumflex.mlscript",
+          "begin": "^//│ (?:╙──|╟──|║  )\\s*(\\^+)",
+          "end": "$",
+          "beginCaptures": {
+            "1": {
+              "name": "markup.bold"
+            }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.body.mlscript",
+          "begin": "^//│",
+          "end": "$"
+        },
+        {
+          "name": "comment.line.double-slash.DiffTests.message.closing.mlscript",
+          "begin": "^//│ ╙──",
+          "end": "$"
+        },
+        {
+          "name": "comment.line.double-slash.mlscript",
+          "begin": "//",
+          "end": "$",
+          "patterns": [
+            {
+              "include": "#commentContents"
+            }
+          ]
+        }
+      ]
+    },
+    "commentContents": {
+      "patterns": [
+        {
+          "match": "\\b(TODO|FIXME|XXX|NOTE)\\b:?",
+          "name": "keyword.todo.mlscript"
+        }
+      ]
+    },
+    "punctuation-comma": {
+      "name": "punctuation.separator.comma.mlscript",
+      "match": ","
+    }
+  },
+  "scopeName": "source.mlscript"
+}

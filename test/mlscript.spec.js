@@ -49,7 +49,15 @@ describe("mlscript", () => {
     expect(mlscript.id).toBe("mlscript");
     expect(await loadLanguage("mlscript@0.1.0")).toBe(mlscript);
     expect(languageOf(RUNTIMES.mlscript)).toBe("mlscript");
-    expect(highlightLanguage(RUNTIMES.mlscript)).toBe("text");
+    expect(highlightLanguage(RUNTIMES.mlscript)).toBe("mlscript");
+  });
+
+  it("highlights thumbnails with the MLscript TextMate grammar", async () => {
+    const {codeToHtml} = await import("shiki");
+    const {default: grammar} = await import("../editor/languages/mlscript/mlscript.tmLanguage.json");
+    const html = await codeToHtml("fun f(x) = x\n//➜ 1", {lang: {...grammar, name: "mlscript"}, theme: "github-light"});
+    expect(html).toContain('<span style="color:#D73A49">fun</span>');
+    expect(html).toContain('<span style="color:#6A737D">//➜ 1</span>');
   });
 
   it("writes output above the blocks: classes, a companion module, mutual recursion", async () => {

@@ -19,7 +19,8 @@ export function languageOf(runtime = RUNTIMES.javascript) {
 
 /** Shiki's language for highlighting a notebook's code. */
 export function highlightLanguage(runtime) {
-  return languageOf(runtime) === "javascript" ? "javascript" : "text";
+  const language = languageOf(runtime);
+  return language === "javascript" || language === "mlscript" ? language : "text";
 }
 
 export function findFirstOutputRange(content) {
