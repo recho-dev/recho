@@ -7,6 +7,18 @@
 @theme {
   --default-font-family: "Inter Variable";
   --font-mono: "Spline Sans Mono Variable";
+  --animate-loading-slide: loading-slide 1.1s ease-in-out infinite;
+
+  /* Only `transform` changes, so the browser can run it off the main thread:
+     it keeps moving while a language's compiler starts and blocks the page. */
+  @keyframes loading-slide {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
 }
 
 button {
