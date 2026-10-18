@@ -1,4 +1,6 @@
-import {createReplSession, isStdModule, loadImports, loadModule} from "@mlscript/recho";
+// Only the standard library's loaders: the compiler itself runs in a worker
+// (see ./mlscript.worker.js).
+import {isStdModule, loadImports, loadModule} from "@mlscript/recho";
 import {ERROR_PREFIX, JAVASCRIPT_OUTPUT, OUTPUT_PREFIX} from "../output.js";
 import {Inspector} from "../stdlib/inspect.js";
 
@@ -9,6 +11,9 @@ import {Inspector} from "../stdlib/inspect.js";
  *
  * Output is written as in JavaScript (//➜ …), which MLscript reads as
  * comments, and values are shown the way MLscript prints them.
+ *
+ * The compiler runs in a worker, so that starting it and compiling don't
+ * block the page; node bodies run here, like those of other languages.
  */
 
 // The name of the builtin through which node bodies get the values the
@@ -100,11 +105,52 @@ function bodyOf(node, requiredImports) {
   return `const {${names}} = await ${HOST}.load(${JSON.stringify(imports)});\n{\n${node.body}\n}`;
 }
 
+/**
+ * The compiler in a worker: `update(source)` returns a promise of what
+ * createCompiler's `update` returns (see ./mlscript.compile.js).
+ */
+function workerCompiler() {
+  const worker = new Worker(new URL("./mlscript.worker.js", import.meta.url), {type: "module"});
+  const pending = new Map(); // id -> {resolve, reject}
+  let nextId = 0;
+  worker.onmessage = ({data: {id, result, error}}) => {
+    const {resolve, reject} = pending.get(id);
+    pending.delete(id);
+    if (error) reject(Object.assign(error.name === "SyntaxError" ? new SyntaxError() : new Error(), error));
+    else resolve(result);
+  };
+  worker.onerror = (event) => {
+    event.preventDefault?.();
+    const error = new Error(`The MLscript compiler failed: ${event.message ?? "it didn't load"}`);
+    for (const {reject} of pending.values()) reject(error);
+    pending.clear();
+  };
+  return {
+    update(source) {
+      const id = nextId++;
+      return new Promise((resolve, reject) => {
+        pending.set(id, {resolve, reject});
+        worker.postMessage({id, source});
+      });
+    },
+    terminate: () => worker.terminate(),
+  };
+}
+
+/** The compiler in this thread, where there are no workers (e.g. in tests). */
+async function sameThreadCompiler() {
+  // Ignored by webpack, so that the browser bundle doesn't include the
+  // compiler twice; browsers have workers.
+  const {createCompiler} = await import(/* webpackIgnore: true */ "./mlscript.compile.js");
+  const compiler = createCompiler();
+  return {update: async (source) => compiler.update(source)};
+}
+
 let loading = null;
 
 /**
- * The MLscript language, once the standard library modules that every node
- * needs are loaded.
+ * The MLscript language, once the compiler has started and the standard
+ * library modules that every node needs are loaded.
  */
 export function loadMLscript() {
   return (loading ??= load().catch((error) => {
@@ -114,11 +160,24 @@ export function loadMLscript() {
 }
 
 async function load() {
+  const compiler = typeof Worker === "function" ? workerCompiler() : await sameThreadCompiler();
+  try {
+    return await createMLscript(compiler);
+  } catch (error) {
+    compiler.terminate?.();
+    throw error;
+  }
+}
+
+/**
+ * The language, with `compiler` (whose `update(source)` returns a promise of
+ * createCompiler's result) compiling the code.
+ */
+export async function createMLscript(compiler) {
   const host = createHost();
-  let session = createReplSession();
   // Load what the compiler always requires (its runtime, Predef), and use
   // its runtime to display values.
-  const {requiredImports} = session.update("");
+  const {requiredImports} = await compiler.update("");
   const {runtime} = await host.load(requiredImports);
 
   const output = {
@@ -129,48 +188,60 @@ async function load() {
         : new Inspector(runtime.render(value), {...options, quote: false}),
   };
 
-  // The last compiled source and its result: Recho splits the code again
-  // when only its output changed.
+  // The last compiled source and its result, so that when only the output
+  // changed (Recho splits the code again then), the nodes are ready at once;
+  // and the source being compiled, so that it's compiled only once.
   let last = {source: null, result: null};
+  let compiling = {source: null, promise: null};
 
   function update(source) {
     if (source === last.source) return last.result;
-    let result;
-    try {
-      result = session.update(source);
-    } catch (error) {
-      // The session may be left inconsistent; start a new one.
-      session = createReplSession();
-      last = {source: null, result: null};
-      throw error;
-    }
-    last = {source, result};
-    return result;
+    if (source === compiling.source) return compiling.promise;
+    const promise = compiler.update(source).then(
+      (result) => {
+        last = {source, result};
+        return result;
+      },
+      (error) => {
+        // Compile it again if asked again (the compiler started over).
+        if (compiling.promise === promise) compiling = {source: null, promise: null};
+        throw error;
+      },
+    );
+    compiling = {source, promise};
+    return promise;
+  }
+
+  function nodesOf(code, toCode, {nodes, requiredImports, diagnostics}) {
+    const error = diagnosticsError(diagnostics);
+    if (error) throw error;
+    return nodes.map((node) => ({
+      key: node.key,
+      // Output goes above a node's first line; a `let` node starts at
+      // its name.
+      start: lineStart(code, toCode(node.start)),
+      end: toCode(node.end),
+      // Recho provides `echo` and `recho` (its standard library; an output
+      // that is a generator, e.g. `recho.interval(ms)`, takes each value it
+      // yields, as in JavaScript); the host provides the imports.
+      inputs: [...node.inputs, HOST],
+      outputs: node.outputs,
+      hiddenOutputs: node.hiddenOutputs,
+      body: bodyOf(node, requiredImports),
+      error: diagnosticsError(node.diagnostics),
+    }));
   }
 
   return {
     id: "mlscript",
     output,
+    // The nodes, at once if this source was compiled last (only the output
+    // changed), and otherwise as a promise (see ./index.js).
     nodes(code) {
       const {source, toCode} = withoutOutput(code);
-      const {nodes, requiredImports, diagnostics} = update(source);
-      const error = diagnosticsError(diagnostics);
-      if (error) throw error;
-      return nodes.map((node) => ({
-        key: node.key,
-        // Output goes above a node's first line; a `let` node starts at
-        // its name.
-        start: lineStart(code, toCode(node.start)),
-        end: toCode(node.end),
-        // Recho provides `echo` and `recho` (its standard library; an output
-        // that is a generator, e.g. `recho.interval(ms)`, takes each value it
-        // yields, as in JavaScript); the host provides the imports.
-        inputs: [...node.inputs, HOST],
-        outputs: node.outputs,
-        hiddenOutputs: node.hiddenOutputs,
-        body: bodyOf(node, requiredImports),
-        error: diagnosticsError(node.diagnostics),
-      }));
+      const result = update(source);
+      if (typeof result.then === "function") return result.then((result) => nodesOf(code, toCode, result));
+      return nodesOf(code, toCode, result);
     },
     errorOffset(code, error) {
       return Number.isInteger(error.pos) ? lineStart(code, error.pos) : 0;

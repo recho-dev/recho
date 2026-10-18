@@ -27,6 +27,10 @@
  *   - `error`: an error to show at the node instead of running it.
  *   Throws on a syntax error, like `cells`. Recho doesn't analyse the body:
  *   no `let` support, and `isHiddenOutput` isn't used.
+ *   May return a promise of the parts instead (rejecting on a syntax error),
+ *   e.g. when compiling in a worker. Of overlapping runs, only the latest
+ *   one's parts are used; if the code changed meanwhile, they're discarded
+ *   and the new code is split.
  * - `errorOffset(code, error)`: where in `code` to show an error `cells` or
  *   `nodes` threw.
  * - `isHiddenOutput(name)` (for `cells`): whether a name a cell declares stays

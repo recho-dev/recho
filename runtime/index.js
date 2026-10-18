@@ -277,23 +277,27 @@ export function createRuntime(initialCode, options = {}) {
   }
 
   // The language's top-level parts: cells of JavaScript (`cells`) or
-  // ready-made nodes (`nodes`). Shows the error a language throws, as a
-  // syntax error, and returns null.
+  // ready-made nodes (`nodes`, possibly as a promise). Shows the error a
+  // language throws, as a syntax error, and returns null.
   function split(code) {
     try {
       return language.nodes ? language.nodes(code) : language.cells(code);
     } catch (error) {
-      console.error(error);
-      // Display the syntax error at the appropriate location.
-      const from = language.errorOffset(code, error);
-      const changes = removeChanges(code);
-      const errorMsg =
-        addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
-      changes.push({from, insert: errorMsg});
-      dispatch(changes);
-      dispatcher.call("error", null, {source: "split", error});
+      splitError(code, error);
       return null;
     }
+  }
+
+  function splitError(code, error) {
+    console.error(error);
+    // Display the syntax error at the appropriate location.
+    const from = language.errorOffset(code, error);
+    const changes = removeChanges(code);
+    const errorMsg =
+      addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
+    changes.push({from, insert: errorMsg});
+    dispatch(changes);
+    dispatcher.call("error", null, {source: "split", error});
   }
 
   function transpile(cell, writes) {
@@ -426,9 +430,19 @@ export function createRuntime(initialCode, options = {}) {
     rerun(code);
   }
 
+  // The number of the latest split, and whether its parts are still being
+  // computed (a language's `nodes` can return a promise, e.g. when it
+  // compiles in a worker).
+  let splitId = 0;
+  let splitting = false;
+
   function rerun(code) {
     if (disposed) return;
-    if (code === prevCode) return refresh(code);
+    if (code === prevCode) {
+      // The current nodes are for an earlier code until the split ends.
+      if (!splitting) refresh(code);
+      return;
+    }
 
     prevCode = code;
     isRunning = true;
@@ -437,8 +451,33 @@ export function createRuntime(initialCode, options = {}) {
     // This allows buttons to be re-registered while detecting duplicates within the same execution
     buttonRegistry.startExecution();
 
+    const id = ++splitId;
     const parts = split(code);
-    if (!parts) return;
+    if (typeof parts?.then !== "function") {
+      splitting = false;
+      if (parts) updateNodes(code, parts);
+      return;
+    }
+    // Only the latest split's parts are used: a newer run wins over an
+    // earlier one that ends later.
+    splitting = true;
+    const done = (use) => (result) => {
+      if (disposed || id !== splitId) return;
+      splitting = false;
+      if (code === currentCode()) return use(code, result);
+      // The code changed while splitting, so the offsets are for the old
+      // code: split the new code instead (unless an edit stopped running).
+      prevCode = null;
+      if (isRunning) rerun(currentCode());
+    };
+    parts.then(done(updateNodes), done(splitError));
+  }
+
+  const currentCode = () => code;
+
+  // Replaces the nodes with those of `parts` (of `code`), re-running only
+  // those that changed.
+  function updateNodes(code, parts) {
     const nodes = language.nodes ? nodesOfLanguage(parts) : nodesOfCells(parts);
     for (const node of nodes) node.id = uid();
 

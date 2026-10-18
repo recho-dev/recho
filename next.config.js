@@ -2,7 +2,8 @@
  * Next's minifier (SWC's compress) breaks the MLscript compiler, which is
  * Scala.js output: it fails an assertion when it starts. The compiler's chunk
  * is marked as minimized before Next minifies the rest, so it's left as is.
- * It's only downloaded by MLscript notebooks.
+ * It is only downloaded by MLscript notebooks, in their compiler worker
+ * (runtime/languages/mlscript.worker.js).
  */
 class KeepMLscriptCompiler {
   apply(compiler) {

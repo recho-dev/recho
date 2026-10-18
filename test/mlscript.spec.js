@@ -64,10 +64,10 @@ describe("mlscript", () => {
     expect(notebook.doc()).toBe(SAMPLE_OUTPUT);
   });
 
-  it("keeps node keys and offsets when output lines are inserted", () => {
+  it("keeps node keys and offsets when output lines are inserted", async () => {
     const code = `let a = 1\n\necho(a)\n`;
-    const before = mlscript.nodes(code);
-    const after = mlscript.nodes(`//➜ stale\nlet a = 1\n\n//➜ 1\n//➜ 2\necho(a)\n`);
+    const before = await mlscript.nodes(code);
+    const after = await mlscript.nodes(`//➜ stale\nlet a = 1\n\n//➜ 1\n//➜ 2\necho(a)\n`);
     expect(after.map((n) => n.key)).toEqual(before.map((n) => n.key));
     expect(after.map((n) => n.body)).toEqual(before.map((n) => n.body));
     expect(before.map((n) => [n.start, n.end])).toEqual([
@@ -167,8 +167,8 @@ describe("mlscript", () => {
       return shownAbove(before);
     }
 
-    it("is an input of the nodes that use it, and only of those", () => {
-      const nodes = mlscript.nodes(`val t = recho.interval(10)\n\necho(t)\n`);
+    it("is an input of the nodes that use it, and only of those", async () => {
+      const nodes = await mlscript.nodes(`val t = recho.interval(10)\n\necho(t)\n`);
       expect(nodes.map((n) => n.inputs)).toEqual([
         ["echo", "recho", "__mlscript__"],
         ["echo", "t", "__mlscript__"],

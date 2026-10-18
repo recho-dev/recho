@@ -39,10 +39,26 @@ const fake = {
   errorOffset: () => 0,
 };
 
+// `fake`, with `nodes` returning a promise after `delay(code)` ms (like a
+// compiler in a worker).
+const delayed = (delay) => ({
+  ...fake,
+  nodes: (code) =>
+    new Promise((resolve, reject) =>
+      setTimeout(() => {
+        try {
+          resolve(fake.nodes(code));
+        } catch (error) {
+          reject(error);
+        }
+      }, delay(code)),
+    ),
+});
+
 // Mirrors the editor: apply the runtime's changes and feed the new code back.
-function start(code) {
+function start(code, language = fake) {
   let state = EditorState.create({doc: code});
-  const runtime = createRuntime(code, {language: fake});
+  const runtime = createRuntime(code, {language});
   runtime.onChanges((specs) => {
     state = state.update(specs).state;
     runtime.setCode(state.doc.toString());
@@ -62,7 +78,7 @@ function start(code) {
 
 describe("a language with nodes", () => {
   let notebook;
-  const run = (code) => (notebook = start(code));
+  const run = (code, language) => (notebook = start(code, language));
 
   afterEach(async () => {
     notebook?.runtime.destroy();
@@ -119,5 +135,32 @@ describe("a language with nodes", () => {
     run(`a | return {a: 1};`);
     await wait();
     expect(notebook.doc()).toBe(`//✗ [SyntaxError: Expected \`outputs | inputs | body\`]\na | return {a: 1};`);
+  });
+
+  it("accepts nodes as a promise, and shows its rejection like a syntax error", async () => {
+    run(
+      `a | | return {a: 1};\n| a | echo(a + 1);`,
+      delayed(() => 10),
+    );
+    await wait();
+    expect(notebook.doc()).toBe(`a | | return {a: 1};\n//➜ 2\n| a | echo(a + 1);`);
+
+    notebook.edit("{a: 1};", "{a: 1};\nb | return {b: 1};");
+    await wait();
+    expect(notebook.doc()).toMatch(/^\/\/✗ \[SyntaxError: Expected/);
+  });
+
+  it("uses the nodes of the latest run, even when an earlier run's come later", async () => {
+    globalThis.__runs__ = [];
+    const node = (name) => `| | __runs__.push("${name}"); echo("${name}"); return {};`;
+    // The first run's nodes come after the second's.
+    run(
+      node("old"),
+      delayed((code) => (code.includes("old") ? 100 : 10)),
+    );
+    notebook.edit(node("old"), node("new"));
+    await wait(300);
+    expect(notebook.doc()).toBe(`//➜ "new"\n${node("new")}`);
+    expect(globalThis.__runs__).toEqual(["new"]);
   });
 });
