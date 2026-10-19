@@ -40,6 +40,10 @@ export const docsNavConfig = [
         type: "page",
         slug: "errors-handling",
       },
+      {
+        type: "page",
+        slug: "mlscript-notebooks",
+      },
     ],
   },
   {

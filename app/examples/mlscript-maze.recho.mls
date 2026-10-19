@@ -1,0 +1,181 @@
+/**
+ * @title Maze in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label ASCII Art, Algorithm, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                            Maze in MLscript                              =
+ * ============================================================================
+ *
+ * A maze carved by a randomized depth-first search, solved by another search,
+ * and drawn with box-drawing characters. It is written in a purely functional
+ * style: the carving threads an immutable state (the visited cells, the open
+ * passages and the random seed) through the recursion instead of mutating a
+ * grid.
+ *
+ * Change `seed` for a new maze, or `cols` and `rows` for a bigger one.
+ */
+
+val cols = 18
+val rows = 8
+val seed = 2026
+
+data class Cell(x, y)
+
+// The four directions are objects, and moving is a pattern match.
+object North
+object East
+object South
+object West
+
+fun move(c, d) = if c is Cell(x, y) and d is
+  North then Cell(x, y - 1)
+  East then Cell(x + 1, y)
+  South then Cell(x, y + 1)
+  West then Cell(x - 1, y)
+
+fun inside(c) = if c is Cell(x, y) then x >= 0 and x < cols and y >= 0 and y < rows
+
+fun key(c) = if c is Cell(x, y) then x + "," + y
+
+// A passage between two neighbouring cells, the same in both directions.
+fun passage(a, b) = if key(a) < key(b) then key(a) + "|" + key(b) else key(b) + "|" + key(a)
+
+//➜ Cell(4, 2) true false 3,2|4,2
+echo(move(Cell(3, 2), East), inside(Cell(0, 0)), inside(Cell(cols, 0)), passage(Cell(4, 2), Cell(3, 2)))
+
+// Sets are copied, never changed: `adding` returns a new set with one more key.
+fun adding(keys: Set, k) = new Set([...keys, k])
+
+// The next pseudo-random seed (Park–Miller), and eight orders of the four
+// directions, from which the seed picks one at each cell.
+fun next(s) = s * 48271 % 2147483647
+
+val orders = [
+  [North, East, South, West], [North, West, East, South], [East, South, North, West],
+  [East, North, West, South], [South, West, North, East], [South, East, West, North],
+  [West, North, South, East], [West, South, East, North]
+]
+
+data class State(visited: Set, passages: Set, seed: Num)
+
+// Visit a cell, then try each neighbour in a random order. A neighbour that
+// is still unvisited gets a passage to this cell and is carved recursively.
+// (Mutually recursive functions go in the same block.)
+fun carve(cell, st) = if st is State(visited, passages, s) then
+  let start = State(adding(visited, key(cell)), passages, next(s))
+  orders.at(next(s) % orders.length).reduce((st, d, _, _) => step(cell, d, st), start)
+fun step(cell, d, st) = if
+  let n = move(cell, d)
+  inside(n) and st is State(visited, passages, s) and not visited.has(key(n)) then
+    carve(n, State(visited, adding(passages, passage(cell, n)), s))
+  else st
+
+let maze = carve(Cell(0, 0), State(new Set(), new Set(), seed))
+
+fun connected(a, b) = if maze is State(_, passages, _) then passages.has(passage(a, b))
+
+// A perfect maze is a tree: one passage fewer than there are cells.
+//➜ 143 144
+echo(maze.passages.size, maze.visited.size)
+
+/**
+ * Solving: in a perfect maze there is exactly one path between two cells.
+ * A search either finds it, `Some(path)`, or comes back with `None`.
+ */
+
+data class Some(value)
+object None
+
+val goal = Cell(cols - 1, rows - 1)
+
+// Try the directions one by one; the first that leads to the goal wins.
+fun solve(cell, prev) =
+  if key(cell) == key(goal) then Some([cell])
+  else tryFrom(cell, prev, [North, East, South, West], 0)
+fun tryFrom(cell, prev, dirs: Array, i) = if
+  i == dirs.length then None
+  let n = move(cell, dirs.at(i))
+  inside(n) and connected(cell, n) and key(n) != key(prev) and solve(n, cell) is Some(rest) then
+    Some([cell, ...rest])
+  else tryFrom(cell, prev, dirs, i + 1)
+
+let path = if solve(Cell(0, 0), Cell(-1, -1)) is Some(p) then p else []
+
+//➜ 59 Cell(0, 0) Cell(17, 7)
+echo(path.length, path.at(0), path.at(-1))
+
+/**
+ * Drawing: walls run between the corners of cells. Each corner picks the
+ * box-drawing character that joins the walls around it, from a table indexed
+ * by which of its four sides have a wall.
+ */
+
+val junctions = " ╵╶└╷│┌├╴┘─┴┐┤┬┼"
+
+val onPath = new Set(path.map((c, _, _) => key(c)))
+val pathSteps = new Set(path.slice(1).map((c, i, _) => passage(path.at(i), c)))
+
+// The wall along the top of cell (x, y), and the one on its left. There is
+// an entrance at the top left and an exit at the bottom right.
+fun hwall(x, y) = if
+  y == 0 then x != 0
+  y == rows then x != cols - 1
+  else not connected(Cell(x, y - 1), Cell(x, y))
+
+fun vwall(x, y) = if
+  x == 0 then true
+  x == cols then true
+  else not connected(Cell(x - 1, y), Cell(x, y))
+
+fun corner(x, y) = junctions.at(
+  (if y > 0 and vwall(x, y - 1) then 1 else 0) +
+  (if x < cols and hwall(x, y) then 2 else 0) +
+  (if y < rows and vwall(x, y) then 4 else 0) +
+  (if x > 0 and hwall(x - 1, y) then 8 else 0))
+
+fun stepped(a, b) = pathSteps.has(passage(a, b))
+
+// Between corners: a wall, the path going through, or nothing.
+fun across(x, y) = if
+  hwall(x, y) then "───"
+  y == 0 then " · "
+  y == rows then " · "
+  stepped(Cell(x, y - 1), Cell(x, y)) then " · "
+  else "   "
+
+fun beside(x, y) = if
+  vwall(x, y) then "│"
+  stepped(Cell(x - 1, y), Cell(x, y)) then "·"
+  else " "
+
+fun inner(x, y) = if onPath.has(key(Cell(x, y))) then " · " else "   "
+
+fun range(n) = Array.from((length: n), (_, i) => i)
+
+fun cornerRow(y) = range(cols).map((x, _, _) => corner(x, y) + across(x, y)).join("") + corner(cols, y)
+
+fun cellRow(y) = range(cols).map((x, _, _) => beside(x, y) + inner(x, y)).join("") + beside(cols, y)
+
+//➜ ╷ · ┌───────────┬───────────────────────────────┬───────────┬───────────┐
+//➜ │ · │ · · · · · │                               │           │           │
+//➜ │ · ╵ · ┌───┐ · │   ┌───────┐   ┌───────────┐   ╵   ┌───┐   ╵   ╶───┐   │
+//➜ │ · · · │   │ · │   │ · · · │   │ · · · · · │       │   │           │   │
+//➜ ├───┬───┘   │ · └───┘ · ╷ · └───┘ · ┌───┐ · │   ╶───┘   └───┬───────┘   │
+//➜ │   │       │ · · · · · │ · · · · · │   │ · │               │           │
+//➜ │   ╵   ╷   └───────────┴───────┬───┘   │ · ├───────────────┤   ╶───┐   │
+//➜ │       │                       │ · · · │ · │ · · · · · · · │       │   │
+//➜ │   ┌───┴───╴   ┌───────┬───╴   │ · ╷ · ╵ · │ · ╶───────┐ · │   ╷   └───┤
+//➜ │   │           │       │       │ · │ · · · │ · · · · · │ · │   │       │
+//➜ │   │   ╶───┬───┘   ╷   └───┐   │ · ├───────┴───┬───╴ · │ · ├───┴───┐   │
+//➜ │   │       │       │       │   │ · │ · · · · · │ · · · │ · │ · · · │   │
+//➜ │   ├───┐   ╵   ┌───┴───┐   ├───┘ · │ · ╶───┐ · ╵ · ┌───┤ · │ · ╷ · │   │
+//➜ │   │   │       │       │   │ · · · │ · · · │ · · · │   │ · │ · │ · │   │
+//➜ │   ╵   └───────┘   ╷   │   ╵ · ╶───┴───╴ · ├───────┘   ╵ · ╵ · │ · ╵   │
+//➜ │                   │   │     · · · · · · · │             · · · │ · · · │
+//➜ └───────────────────┴───┴───────────────────┴───────────────────┴───╴ · ╵
+echo of [...range(rows).flatMap((y, _, _) => [cornerRow(y), cellRow(y)]), cornerRow(rows)].join("\n")

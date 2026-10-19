@@ -349,6 +349,7 @@ export function EditorPage({id: initialId}) {
                 >
                   <option value={RUNTIMES.javascript}>JavaScript</option>
                   <option value={RUNTIMES.wenyan}>文言 wenyan</option>
+                  <option value={RUNTIMES.mlscript}>MLscript</option>
                 </select>
               )}
               {!isAdded && (

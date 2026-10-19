@@ -1,0 +1,96 @@
+/**
+ * @title Mandelbrot Set in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label ASCII Art, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                       Mandelbrot Set in MLscript                         =
+ * ============================================================================
+ *
+ * The Mandelbrot set[1] again, this time in MLscript[2]. Complex numbers are
+ * a `data class`, their arithmetic lives in a module, and the escape loop is
+ * a small recursive function instead of a `while` loop with mutable state.
+ *
+ * Every value here is immutable: `step` makes a new complex number each time,
+ * and the picture is a pipeline from rows of points to rows of characters.
+ */
+
+val cols = 72
+val rows = 25
+val maxIter = 60
+val palette = "·:-=+*%#@"
+
+// A complex number is plain data: MLscript generates its constructor,
+// fields, structural pattern and a readable printed form. Its companion
+// module, right below it, holds the arithmetic.
+data class Complex(re: Num, im: Num)
+module Complex with
+  fun add(a, b) = if a is Complex(p, q) and b is Complex(r, s) then
+    Complex(p + r, q + s)
+  fun mul(a, b) = if a is Complex(p, q) and b is Complex(r, s) then
+    Complex(p * r - q * s, p * s + q * r)
+  fun norm2(z) = if z is Complex(re, im) then re * re + im * im
+
+//➜ Complex(-0.75, 0.1) Complex(-0.6, -0.15) 0.5725
+echo(Complex(-0.75, 0.1), Complex.mul(Complex(0.5, 0.5), Complex(-0.75, 0.45)), Complex.norm2(Complex(-0.75, 0.1)))
+
+// How many steps of z ↦ z² + c before |z| > 2? Pattern matching on two
+// conditions reads like the definition.
+fun escape(c) =
+  fun go(z, i) = if
+    i >= maxIter then maxIter
+    Complex.norm2(z) > 4 then i
+    else go(Complex.add(Complex.mul(z, z), c), i + 1)
+  go(Complex(0, 0), 0)
+
+//➜ 60 5 1
+echo(escape(Complex(-1, 0)), escape(Complex(0.5, 0.5)), escape(Complex(2, 2)))
+
+fun lerp(t, lo, hi) = lo + (hi - lo) * t
+
+fun shade(i) = palette.at(Math.floor(i / maxIter * (palette.length - 1)))
+
+fun row(y) =
+  Array.from((length: cols), (_, x) =>
+    Complex(lerp(x / (cols - 1), -2.2, 0.7), lerp(y / (rows - 1), -1.15, 1.15))
+      |> escape
+      |> shade
+  ).join("")
+
+//➜ ········································································
+//➜ ·················································::·····················
+//➜ ·················································::-::··················
+//➜ ···············································:-:-@+::·················
+//➜ ··············································::=@@@@@-:················
+//➜ ·······································+==:::#::-=@@@-:-:-:···:-········
+//➜ ······································::=@@=@@@@@@@@@@@@@@@:+@%-:·······
+//➜ ·····································:@:@@@@@@@@@@@@@@@@@@@@@=::········
+//➜ ·······················=:···::·····::@@@@@@@@@@@@@@@@@@@@@@@@@@::-······
+//➜ ·······················::--::%=-::::*%@@@@@@@@@@@@@@@@@@@@@@@@@@:·······
+//➜ ······················::-+@@@@@@@@=-+@@@@@@@@@@@@@@@@@@@@@@@@@@@:·······
+//➜ ··················::-:--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%········
+//➜ ·····@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@::·········
+//➜ ··················::-:--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%········
+//➜ ······················::-+@@@@@@@@=-+@@@@@@@@@@@@@@@@@@@@@@@@@@@:·······
+//➜ ·······················::--::%=-::::*%@@@@@@@@@@@@@@@@@@@@@@@@@@:·······
+//➜ ·······················=:···::·····::@@@@@@@@@@@@@@@@@@@@@@@@@@::-······
+//➜ ·····································:@:@@@@@@@@@@@@@@@@@@@@@=::········
+//➜ ······································::=@@=@@@@@@@@@@@@@@@:+@%-:·······
+//➜ ·······································+==:::#::-=@@@-:-:-:···:-········
+//➜ ··············································::=@@@@@-:················
+//➜ ···············································:-:-@+::·················
+//➜ ·················································::-::··················
+//➜ ·················································::·····················
+//➜ ········································································
+echo of Array.from((length: rows), (_, y) => row(y)).join("\n")
+
+/**
+ * Try changing `palette`, `maxIter` or the ranges in `row` to zoom in.
+ *
+ * [1] https://en.wikipedia.org/wiki/Mandelbrot_set
+ * [2] https://github.com/hkust-taco/mlscript
+ */

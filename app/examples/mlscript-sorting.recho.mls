@@ -1,0 +1,157 @@
+/**
+ * @title Sorting Lists in MLscript
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label Algorithm, MLscript
+ */
+
+/**
+ * ============================================================================
+ * =                        Sorting Lists in MLscript                         =
+ * ============================================================================
+ *
+ * Three sorting algorithms on immutable linked lists, written with MLscript's
+ * pattern matching. Nothing is sorted in place: every step builds a new list,
+ * so we can keep each intermediate state and draw it as a little bar chart.
+ *
+ * - Insertion sort: insert each element into an already-sorted list.
+ * - Quicksort: split around a pivot, sort both sides, glue them together.
+ * - Merge sort: split in halves, sort them, merge two sorted lists.
+ */
+
+// A list is either `head :: tail` or `Nil`. Declaring the class with a
+// symbolic name lets us build and match lists with `::`.
+data class (::) Cons(head, tail)
+object Nil
+
+fun fromArray(arr: Array) = arr.reduceRight((acc, x, _, _) => x :: acc, Nil)
+
+fun toArray(xs) = if xs is
+  h :: t then [h, ...toArray(t)]
+  Nil then []
+
+fun (++) concat(xs, ys) = if xs is
+  h :: t then h :: (t ++ ys)
+  Nil then ys
+
+fun filter(xs, p) = if xs is
+  h :: t and
+    p(h) then h :: filter(t, p)
+    else filter(t, p)
+  Nil then Nil
+
+// Pseudo-random numbers from a seed (Park–Miller), so the notebook shows
+// the same data every time it runs.
+fun randoms(seed, n, max) = if n == 0 then Nil else
+  let next = seed * 48271 % 2147483647
+  (next % max + 1) :: randoms(next, n - 1, max)
+
+val ticks = "▁▂▃▄▅▆▇█"
+
+// One character per element, for values from 1 to 8. (JavaScript's `map`
+// passes three arguments to its callback, hence the two wildcards.)
+fun spark(xs) = toArray(xs).map((v, _, _) => ticks.at(v - 1)).join("")
+
+fun trimEnd(s: Str) = if s.endsWith(" ") then trimEnd(s.slice(0, -1)) else s
+
+let small = fromArray([5, 2, 8, 3, 7, 1, 6, 4])
+
+//➜ ▅▂█▃▇▁▆▄
+echo(spark(small))
+
+/**
+ * Insertion sort reads exactly like its definition: to insert `x` into a
+ * sorted list, skip the heads smaller than `x`. The `and` continues the
+ * pattern `h :: t` with a condition, and `else` covers everything else.
+ */
+
+fun insert(x, xs) = if xs is
+  h :: t and h < x then h :: insert(x, t)
+  else x :: xs
+
+// Each step keeps the sorted part and the rest, so we can draw the trace.
+data class Step(sorted, rest)
+
+fun insertionTrace(sorted, rest) = if rest is
+  x :: t then Step(sorted, rest) :: insertionTrace(insert(x, sorted), t)
+  Nil then Step(sorted, Nil) :: Nil
+
+fun showStep(step) = if step is Step(sorted, rest) then
+  let left = spark(sorted)
+  trimEnd(left + " ".repeat(8 - left.length) + " | " + spark(rest))
+
+//➜          | ▅▂█▃▇▁▆▄
+//➜ ▅        | ▂█▃▇▁▆▄
+//➜ ▂▅       | █▃▇▁▆▄
+//➜ ▂▅█      | ▃▇▁▆▄
+//➜ ▂▃▅█     | ▇▁▆▄
+//➜ ▂▃▅▇█    | ▁▆▄
+//➜ ▁▂▃▅▇█   | ▆▄
+//➜ ▁▂▃▅▆▇█  | ▄
+//➜ ▁▂▃▄▅▆▇█ |
+echo of toArray(insertionTrace(Nil, small)).map((step, _, _) => showStep(step)).join("\n")
+
+/**
+ * Quicksort and merge sort on a bigger list. To draw taller bars, each
+ * column is stacked from full blocks and one partial block on top.
+ */
+
+fun quicksort(xs) = if xs is
+  pivot :: rest then
+    quicksort(filter(rest, x => x < pivot))
+      ++ (pivot :: quicksort(filter(rest, x => x >= pivot)))
+  Nil then Nil
+
+fun split(xs) = if xs is
+  a :: b :: t and split(t) is [l, r] then [a :: l, b :: r]
+  else [xs, Nil]
+
+fun merge(xs, ys) = if
+  xs is Nil then ys
+  ys is Nil then xs
+  xs is x :: xt and ys is y :: yt and
+    x <= y then x :: merge(xt, ys)
+    else y :: merge(xs, yt)
+
+fun mergesort(xs) = if xs is
+  _ :: _ :: _ and split(xs) is [l, r] then merge(mergesort(l), mergesort(r))
+  else xs
+
+val height = 4
+
+fun cell(v, level) = if
+  v >= (level + 1) * 8 then "█"
+  v > level * 8 then ticks.at(v - level * 8 - 1)
+  else " "
+
+fun chart(xs) =
+  let values = toArray(xs)
+  Array.from((length: height), (_, i) =>
+    trimEnd(values.map((v, _, _) => cell(v, height - 1 - i)).join(""))
+  ).join("\n")
+
+let big = randoms(2026, 48, height * 8)
+
+//➜   ▇  ▇▆  ▁         ▅    ▅     ▃ ▇█  ▅      ▂
+//➜ ▇ █▁▄██ ▃█▄      ▅▆█   ▁█ ▂▃  █▁██▂ █▁     █
+//➜ █ █████ ███ ▂▃▂▃▃███ ▂ ██ ██▄ █████ ██▇ ▇ ▅█  █
+//➜ █▁█████▁███▆████████▂█▇██▅███▂█████▇████████▆▄█▅
+echo(chart(big))
+
+//➜                                      ▁▂▃▅▅▅▆▇▇▇█
+//➜                         ▁▁▁▁▂▂▃▃▄▄▅▆▇███████████
+//➜              ▂▂▂▃▃▃▄▅▇▇█████████████████████████
+//➜ ▁▁▂▂▄▅▅▆▆▇▇█████████████████████████████████████
+echo(chart(quicksort(big)))
+
+//➜                                      ▁▂▃▅▅▅▆▇▇▇█
+//➜                         ▁▁▁▁▂▂▃▃▄▄▅▆▇███████████
+//➜              ▂▂▂▃▃▃▄▅▇▇█████████████████████████
+//➜ ▁▁▂▂▄▅▅▆▆▇▇█████████████████████████████████████
+echo(chart(mergesort(big)))
+
+/**
+ * Both sorted charts are the same, of course. Change the seed of `big`
+ * (or its length) and every chart above follows.
+ */

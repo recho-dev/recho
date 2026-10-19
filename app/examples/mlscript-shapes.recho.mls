@@ -1,0 +1,46 @@
+/**
+ * @title MLscript Shapes
+ * @author Luyu Cheng
+ * @github chengluyu
+ * @created 2026-10-18
+ * @label Beginner, MLscript
+ */
+
+// MLscript (https://github.com/hkust-taco/mlscript) is a functional and
+// object-oriented language. In Recho, each top-level definition re-runs on
+// its own when it or what it uses changes, and `echo` shows values above.
+
+// A class with a companion module, which holds its constructors.
+class Shape(val name: Str, val width: Int, val height: Int) with
+  fun area = width * height
+  fun draw = globalThis.Array(height).fill("#".repeat(width)).join("\n")
+module Shape with
+  fun square(n) = Shape("square", n, n)
+  fun rect(w, h) = Shape("rect", w, h)
+
+let sq = Shape.square(3)
+let rc = Shape.rect(5, 2)
+//➜ Shape("square", 3, 3) 9 10
+echo(sq, sq.area, rc.area)
+
+//➜ #####
+//➜ #####
+echo(rc.draw)
+
+// Mutually recursive functions are defined together.
+fun even(n) = if n == 0 then true else odd(n - 1)
+fun odd(n) = if n == 0 then false else even(n - 1)
+
+//➜ false true
+echo(even(sq.area), even(rc.area))
+
+// Pattern matching on data classes.
+data class Leaf(value)
+data class Node(left, right)
+
+fun sum(t) = if t is
+  Leaf(v) then v
+  Node(l, r) then sum(l) + sum(r)
+
+//➜ 6
+echo(sum(Node(Leaf(1), Node(Leaf(2), Leaf(3)))))

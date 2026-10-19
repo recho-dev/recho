@@ -209,6 +209,12 @@
     color: #c83f30 !important;
   }
 
+  /* A warning is output, muted. */
+  .cm-output-line.cm-warning-line span {
+    color: #9a6700 !important;
+    opacity: 0.75;
+  }
+
   .cm-doc-tag span {
     color: #cf222e;
   }

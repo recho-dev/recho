@@ -25,31 +25,35 @@ function defaultCompileCell(source) {
   return new Function(`return ${source};`)();
 }
 
-// Compile `code` (a Recho-transpiled cell expression) into a callable that
-// the Observable runtime can invoke with input values.
-function safeEval(code, inputs, __setEcho__, compileCell) {
-  const create = (codeStr) => {
-    const argList = ["__setEcho__", ...inputs].join(",");
-    const resultVar = `__recho_v_${uid()}`;
-    const body = `(function(${argList}){
+// Compile `code` (a function expression) into a callable that the Observable
+// runtime can invoke with input values. The wrapper routes echo calls made
+// while it runs to the cell's own echo (see `__setEcho__`).
+function compileWrapper(code, inputs, __setEcho__, compileCell) {
+  const argList = ["__setEcho__", ...inputs].join(",");
+  const resultVar = `__recho_v_${uid()}`;
+  const body = `(function(${argList}){
       __setEcho__(echo);
-      const __foo__ = ${codeStr};
+      const __foo__ = ${code};
       const ${resultVar} = __foo__(${inputs.join(",")});
       __setEcho__(null);
       return ${resultVar};
     })`;
-    const fn = compileCell(body);
-    return (...args) => fn(__setEcho__, ...args);
-  };
+  const fn = compileCell(body);
+  return (...args) => fn(__setEcho__, ...args);
+}
+
+// Compile `code` (a Recho-transpiled cell expression) into a callable that
+// the Observable runtime can invoke with input values.
+function safeEval(code, inputs, __setEcho__, compileCell) {
   try {
-    return create(code);
+    return compileWrapper(code, inputs, __setEcho__, compileCell);
   } catch (error) {
     // Wrap non-function statements in an arrow function for proper evaluation.
     // Example:
     // Input: `for (let i = 0; i < 10; i++) { echo(i); }`
     // Output: `() => { for (let i = 0; i < 10; i++) { echo(i); } }`
     const wrapped = `() => {${code}}`;
-    return create(wrapped);
+    return compileWrapper(wrapped, inputs, __setEcho__, compileCell);
   }
 }
 
@@ -71,6 +75,9 @@ export function trimChange(oldText, change) {
   if (p === 0 && s === 0) return change;
   return {from: from + p, to: to - s, insert: insert.slice(p, insert.length - s)};
 }
+
+// How long a language's `nodes` may take before the editor says it's compiling.
+const COMPILING_DELAY = 1000;
 
 function debounce(fn, delay = 0) {
   let timeout;
@@ -149,7 +156,7 @@ export function createRuntime(initialCode, options = {}) {
 
   const main = runtime.module();
   const nodesByKey = new Map();
-  const dispatcher = d3Dispatch("changes", "error");
+  const dispatcher = d3Dispatch("changes", "error", "status");
 
   const refresh = debounce((code) => {
     if (disposed) return;
@@ -165,16 +172,26 @@ export function createRuntime(initialCode, options = {}) {
     const blocks = [];
     for (const node of nodes) {
       const start = node.start;
-      const {values} = node.state;
+      let {values} = node.state;
+      // A language's node that failed to compile shows its error at once, not
+      // only when its variable rejects, so that the error doesn't flicker
+      // when the node is replaced (its key has the message, see above).
+      if (!values.length && language.nodes && node.error) values = [{options: {}, values: [node.error]}];
       const sourceRange = {from: node.start, to: node.end};
+      // A language's warnings about a node go above its output, as output.
+      const warnings = node.warnings?.length
+        ? addPrefix(node.warnings.join("\n"), outputFormat.outputPrefix, outputFormat.formatLine)
+        : null;
 
-      if (!values.length) {
+      if (!values.length && !warnings) {
         // Create a block even if there are no values.
         blocks.push(new BlockMetadata(node.id, node.type, null, sourceRange, node.state.attributes));
         continue;
       }
 
-      const {output, error} = makeOutput(values, outputFormat);
+      const made = values.length ? makeOutput(values, outputFormat) : {output: null, error: false};
+      const output = [warnings, made.output].filter((part) => part !== null).join("\n");
+      const {error} = made;
 
       // The range of line numbers of output lines.
       let outputRange = null;
@@ -216,6 +233,12 @@ export function createRuntime(initialCode, options = {}) {
     }
 
     dispatch(trimmed, effects);
+
+    // A language's errors and warnings may refer to lines of the code (as
+    // `(line:column)`), which writing output moves: split the new code, until
+    // the output stops changing.
+    const located = language.nodes && nodes.some((node) => node.error || node.warnings?.length);
+    if (located && trimmed.length && isRunning && !disposed) rerun(currentCode());
   }, 0);
 
   function setCode(newCode) {
@@ -238,7 +261,24 @@ export function createRuntime(initialCode, options = {}) {
     dispatcher.on("error", callback);
   }
 
+  // Whether a language's `nodes` has taken long enough (it may be compiling
+  // in a worker) that the editor says so.
+  let compiling = false;
+  let compilingTimer = null;
+  function setCompiling(value) {
+    clearTimeout(compilingTimer);
+    if (compiling === value) return;
+    compiling = value;
+    dispatcher.call("status", null, {compiling});
+  }
+
+  /** Calls `callback({compiling})` when a split starts or stops taking long. */
+  function onStatus(callback) {
+    dispatcher.on("status", callback);
+  }
+
   function destroy() {
+    setCompiling(false);
     disposed = true;
     isRunning = false;
     runtime.dispose();
@@ -272,21 +312,44 @@ export function createRuntime(initialCode, options = {}) {
     };
   }
 
+  // The language's top-level parts: cells of JavaScript (`cells`) or
+  // ready-made nodes (`nodes`, possibly as a promise). Shows the error a
+  // language throws, as a syntax error, and returns null.
   function split(code) {
     try {
-      return language.cells(code);
+      return language.nodes ? language.nodes(code) : language.cells(code);
     } catch (error) {
-      console.error(error);
-      // Display the syntax error at the appropriate location.
-      const from = language.errorOffset(code, error);
-      const changes = removeChanges(code);
-      const errorMsg =
-        addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
-      changes.push({from, insert: errorMsg});
-      dispatch(changes);
-      dispatcher.call("error", null, {source: "split", error});
+      splitError(code, error);
       return null;
     }
+  }
+
+  function splitError(code, error) {
+    console.error(error);
+    // Display the syntax error at the appropriate location.
+    const from = language.errorOffset(code, error);
+    const errorMsg =
+      addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
+    dispatch(
+      language.nodes ? nodesErrorChanges(code, from, errorMsg) : [...removeChanges(code), {from, insert: errorMsg}],
+    );
+    dispatcher.call("error", null, {source: "split", error});
+  }
+
+  // For a language of nodes, whose blocks compile separately, an error of
+  // the whole document (or a compiler failure) isn't about the other blocks:
+  // their output stays, and only error output (which may be from an earlier
+  // such error) is replaced by this one.
+  function nodesErrorChanges(code, from, errorMsg) {
+    const changes = removeChanges(code).map((c) => {
+      // Lines of output, each with its newline.
+      const lines = code.slice(c.from, c.to).match(/[^\n]*\n?/g);
+      const kept = lines.filter((line) => !line.startsWith(outputFormat.errorPrefix)).join("");
+      // The error goes above the output that is right above its line.
+      return {...c, insert: c.to === from ? errorMsg + kept : kept};
+    });
+    if (!changes.some((c) => c.to === from)) changes.push({from, insert: errorMsg});
+    return changes.map((c) => trimChange(code, c)).filter(Boolean);
   }
 
   function transpile(cell, writes) {
@@ -296,6 +359,71 @@ export function createRuntime(initialCode, options = {}) {
       console.error(error);
       return {body: cell, inputs: [], outputs: [], error};
     }
+  }
+
+  // A node is what the runtime defines Observable variables for:
+  // - `key`: its identity; a node with the same key as one in the previous
+  //   run keeps that node's variables and state
+  // - `start`, `end`: its range in the code
+  // - `inputs`, `outputs`: the names it reads and the names it defines
+  // - `hiddenOutputs`: names it defines for other nodes only (see ./languages/)
+  // - `error`: an error to show instead of running it
+  // - `definition(inputs)`: compiles its body into a function of `inputs`
+  // - `defines`, `reads`, `mutators`, `extraInputs`, `chainOutputs`, `waits`:
+  //   its part in promoted `let`s (see ./mutable.js)
+  const noMutables = {defines: [], reads: [], mutators: {}, extraInputs: [], chainOutputs: [], waits: {}};
+
+  // JavaScript cells -> nodes: find promoted `let`s, then let notebook-kit
+  // work out each cell's inputs and outputs.
+  function nodesOfCells(cells) {
+    const mutables = analyzeMutables(cells.map((cell) => cell.js));
+    return cells.map(({start, end, js}, i) => {
+      const mutable = mutables[i];
+      const {inputs, body, outputs, error = null} = transpile(js, mutable.writes);
+      return {
+        ...mutable,
+        start,
+        end,
+        inputs,
+        // A hidden output stays private to its cell.
+        outputs: outputs.filter((o) => !language.isHiddenOutput(o)),
+        hiddenOutputs: [],
+        error,
+        definition: (inputs) => safeEval(body, inputs, __setEcho__, compileCell),
+      };
+    });
+  }
+
+  // A language's nodes -> nodes: they already know their inputs and outputs,
+  // and their body is that of an async function of the inputs.
+  function nodesOfLanguage(nodes) {
+    return nodes.map(({key, start, end, inputs, outputs, hiddenOutputs = [], body, error = null, warnings = []}) => {
+      inputs = inputs.filter((i) => i !== "echo");
+      return {
+        ...noMutables,
+        // With its error's message, which may refer to lines that moved.
+        key: JSON.stringify([key, body, inputs, outputs, hiddenOutputs, error?.message ?? null]),
+        start,
+        end,
+        inputs,
+        outputs,
+        hiddenOutputs,
+        error,
+        warnings,
+        // A node that fails to compile shows why when it runs.
+        definition(inputs) {
+          const fail = (error) => () => {
+            throw error;
+          };
+          if (error) return fail(error);
+          try {
+            return compileWrapper(`(async function(${inputs}) {\n${body}\n})`, inputs, __setEcho__, compileCell);
+          } catch (error) {
+            return fail(error);
+          }
+        },
+      };
+    });
   }
 
   /**
@@ -356,9 +484,19 @@ export function createRuntime(initialCode, options = {}) {
     rerun(code);
   }
 
+  // The number of the latest split, and whether its parts are still being
+  // computed (a language's `nodes` can return a promise, e.g. when it
+  // compiles in a worker).
+  let splitId = 0;
+  let splitting = false;
+
   function rerun(code) {
     if (disposed) return;
-    if (code === prevCode) return refresh(code);
+    if (code === prevCode) {
+      // The current nodes are for an earlier code until the split ends.
+      if (!splitting) refresh(code);
+      return;
+    }
 
     prevCode = code;
     isRunning = true;
@@ -367,17 +505,41 @@ export function createRuntime(initialCode, options = {}) {
     // This allows buttons to be re-registered while detecting duplicates within the same execution
     buttonRegistry.startExecution();
 
-    const nodes = split(code);
-    if (!nodes) return;
+    const id = ++splitId;
+    const parts = split(code);
+    if (typeof parts?.then !== "function") {
+      splitting = false;
+      setCompiling(false);
+      if (parts) updateNodes(code, parts);
+      return;
+    }
+    // Only the latest split's parts are used: a newer run wins over an
+    // earlier one that ends later.
+    splitting = true;
+    clearTimeout(compilingTimer);
+    compilingTimer = setTimeout(() => setCompiling(true), COMPILING_DELAY);
+    const done = (use) => (result) => {
+      if (disposed || id !== splitId) return;
+      splitting = false;
+      setCompiling(false);
+      if (code === currentCode()) return use(code, result);
+      // The code changed while splitting, so the offsets are for the old
+      // code: split the new code instead (unless an edit stopped running).
+      prevCode = null;
+      if (isRunning) rerun(currentCode());
+    };
+    parts.then(done(updateNodes), done(splitError));
+  }
 
-    const mutables = analyzeMutables(nodes.map((node) => node.js));
-    nodes.forEach((node, i) => {
-      node.id = uid();
-      node.mutable = mutables[i];
-      node.transpiled = transpile(node.js, node.mutable.writes);
-    });
+  const currentCode = () => code;
 
-    const groups = group(nodes, (n) => n.mutable.key);
+  // Replaces the nodes with those of `parts` (of `code`), re-running only
+  // those that changed.
+  function updateNodes(code, parts) {
+    const nodes = language.nodes ? nodesOfLanguage(parts) : nodesOfCells(parts);
+    for (const node of nodes) node.id = uid();
+
+    const groups = group(nodes, (n) => n.key);
     const enter = [];
     const remove = [];
     const exit = new Set(nodesByKey.keys());
@@ -422,8 +584,8 @@ export function createRuntime(initialCode, options = {}) {
     // https://github.com/observablehq/notebook-kit/blob/02914e034fd21a50ebcdca08df57ef5773864125/src/runtime/define.ts#L33
     for (const node of enter) {
       const vid = node.id;
-      const {inputs, body, outputs, error = null} = node.transpiled;
-      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node.mutable;
+      const {inputs, outputs, hiddenOutputs, error} = node;
+      const {defines, reads, mutators: mutatorNames, extraInputs, chainOutputs, waits} = node;
       const state = {
         values: [],
         variables: [],
@@ -487,13 +649,12 @@ export function createRuntime(initialCode, options = {}) {
       // the cell when its variable starts over, and order it after the
       // previous writer.
       const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
-      const definition = trackInputs(safeEval(body, newInputs, __setEcho__, compileCell), reads);
+      const definition = trackInputs(node.definition(newInputs), reads);
       state.variables.push(v.define(vid, newInputs, definition));
 
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
       for (const o of outputs) {
-        if (language.isHiddenOutput(o)) continue;
         if (defines.includes(o)) {
           const mutator = mutatorNames[o];
           const create = (exports) => {
@@ -516,6 +677,11 @@ export function createRuntime(initialCode, options = {}) {
           state.variables.push(main.variable(true).define(o, [vid], (exports) => exports[o]));
         }
       }
+      // Hidden outputs aren't observed: they're computed only for the nodes
+      // that read them.
+      for (const o of hiddenOutputs) {
+        state.variables.push(main.variable().define(o, [vid], (exports) => exports[o]));
+      }
       for (const {name, index, variable} of chainOutputs) {
         state.variables.push(main.variable().define(variable, [mutatorNames[name]], (m) => m.settled(index)));
       }
@@ -528,5 +694,15 @@ export function createRuntime(initialCode, options = {}) {
     rerun(code);
   }
 
-  return {setCode, setIsRunning, run, onChanges, onError, destroy, isRunning: () => isRunning, buttonRegistry};
+  return {
+    setCode,
+    setIsRunning,
+    run,
+    onChanges,
+    onError,
+    onStatus,
+    destroy,
+    isRunning: () => isRunning,
+    buttonRegistry,
+  };
 }

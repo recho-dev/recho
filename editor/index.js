@@ -18,13 +18,13 @@ import {javascriptSupport} from "./languages/javascript.js";
  * @param {import("@codemirror/state").Extension[]} [options.extensions]
  * @param {object} [options.language] - The notebook's language (see
  *   ../runtime/languages/index.js), JavaScript by default.
- * @param {import("@codemirror/state").Extension[]} [options.languageSupport] -
+ * @param {import("@codemirror/state").Extension[] | ((runtimeRef: {current: any}) => import("@codemirror/state").Extension[])} [options.languageSupport] -
  *   Editor extensions for a language other than JavaScript (see
- *   ./languages/index.js).
+ *   ./languages/index.js), or a function of the runtime giving them.
  */
 export function createEditor(container, options) {
   const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
-  const dispatcher = d3Dispatch("userInput");
+  const dispatcher = d3Dispatch("userInput", "status");
   const runtimeRef = {current: null};
   const isJavaScript = language.id === "javascript";
 
@@ -34,8 +34,13 @@ export function createEditor(container, options) {
   myBasicSetup.splice(2, 0, blockIndicator);
 
   // JavaScript's support needs the runtime (for controls), so it is set up
-  // here; other languages bring theirs (see ./languages/index.js).
-  const languageExtensions = isJavaScript ? javascriptSupport(runtimeRef) : languageSupport;
+  // here; other languages bring theirs (see ./languages/index.js), as a
+  // function when they need the runtime too.
+  const languageExtensions = isJavaScript
+    ? javascriptSupport(runtimeRef)
+    : typeof languageSupport === "function"
+      ? languageSupport(runtimeRef)
+      : languageSupport;
 
   const state = EditorState.create({
     doc: code,
@@ -81,6 +86,9 @@ export function createEditor(container, options) {
 
     // Stop the runtime when there is an error.
     runtime.onError(stop);
+
+    // E.g. whether the language is taking long to compile.
+    runtime.onStatus((status) => dispatcher.call("status", null, status));
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);

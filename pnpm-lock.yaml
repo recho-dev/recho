@@ -47,6 +47,12 @@ importers:
       '@lezer/javascript':
         specifier: ^1.5.4
         version: 1.5.4
+      '@mlscript/recho':
+        specifier: 0.1.4
+        version: 0.1.4
+      '@mlscript/tree-sitter-mlscript':
+        specifier: 0.1.0
+        version: 0.1.0
       '@observablehq/notebook-kit':
         specifier: ^1.5.0
         version: 1.5.0(@types/markdown-it@14.1.2)(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)
@@ -149,6 +155,9 @@ importers:
       three:
         specifier: ^0.160.1
         version: 0.160.1
+      web-tree-sitter:
+        specifier: 0.26.9
+        version: 0.26.9
       wenyan:
         specifier: github:recho-dev/wenyan#master
         version: wenyanlang@https://codeload.github.com/recho-dev/wenyan/tar.gz/81e5c68f0b92ffb27343843f06f38fae8a984aa5
@@ -1137,6 +1146,18 @@ packages:
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
+
+  '@mlscript/recho@0.1.4':
+    resolution: {integrity: sha512-MyXNgDzSrhcKMzSp34opfY0DM4dEn8ppda6zbj1yw9mF5U31QENxQCktVlKtSk+Nhma/NZNrU1WqEPyRITXOmA==}
+    engines: {node: '>=18'}
+
+  '@mlscript/tree-sitter-mlscript@0.1.0':
+    resolution: {integrity: sha512-7M9Y4lbE8k0cIHD6FINIJ7Z0xvwIAMSKS29hISR+SFyMqBT+wu0E3spYcDZrqnRCvoa76K5LGk72jIV7Uma/XA==}
+    peerDependencies:
+      tree-sitter: ^0.25.0
+    peerDependenciesMeta:
+      tree-sitter:
+        optional: true
 
   '@next/env@15.5.9':
     resolution: {integrity: sha512-4GlTZ+EJM7WaW2HEZcyU317tIQDjkQIyENDLxYJfSWlfqguN+dHkZgyQTV/7ykvobU7yEH5gKvreNrH4B6QgIg==}
@@ -3184,6 +3205,14 @@ packages:
       sass:
         optional: true
 
+  node-addon-api@8.9.2:
+    resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
+    engines: {node: ^18 || ^20 || >= 21}
+
+  node-gyp-build@4.8.4:
+    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
+    hasBin: true
+
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
@@ -4042,6 +4071,9 @@ packages:
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
+
+  web-tree-sitter@0.26.9:
+    resolution: {integrity: sha512-YJwSHANl6XFgeEjB8nitgj0qZYt5gkIesJ4w2srS2wcLB4GUa4xcOkM0YaMsU6WNR53YVIkDSY7Ej4pf3IXtCA==}
 
   web-vitals@4.2.4:
     resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
@@ -5265,6 +5297,13 @@ snapshots:
       '@lezer/lr': 1.4.5
 
   '@marijn/find-cluster-break@1.0.2': {}
+
+  '@mlscript/recho@0.1.4': {}
+
+  '@mlscript/tree-sitter-mlscript@0.1.0':
+    dependencies:
+      node-addon-api: 8.9.2
+      node-gyp-build: 4.8.4
 
   '@next/env@15.5.9': {}
 
@@ -7502,6 +7541,10 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
+  node-addon-api@8.9.2: {}
+
+  node-gyp-build@4.8.4: {}
+
   node-releases@2.0.27: {}
 
   nofilter@3.1.0: {}
@@ -8483,6 +8526,8 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  web-tree-sitter@0.26.9: {}
 
   web-vitals@4.2.4: {}
 
