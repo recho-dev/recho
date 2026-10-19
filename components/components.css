@@ -761,7 +761,7 @@
     /* The reset zeroes the browser's centring margin. */
     margin: auto;
     padding: 0;
-    border: var(--border-width) solid var(--line);
+    border: var(--border-width) solid var(--border);
     border-radius: var(--radius-xl);
     background: var(--surface);
     color: var(--ink);
