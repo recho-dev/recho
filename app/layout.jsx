@@ -1,6 +1,7 @@
 import "./global.css";
 import {Nav} from "./Nav.jsx";
 import {Toaster} from "../components/Toast.jsx";
+import {ThemeSync} from "../components/ThemeSync.jsx";
 import {Analytics} from "@vercel/analytics/next";
 
 export const metadata = {
@@ -15,6 +16,7 @@ export default function Layout({children}) {
         <Nav />
         <main>{children}</main>
         <Toaster />
+        <ThemeSync />
         <Analytics
           scriptSrc="/_vercel/insights/script.js"
           viewEndpoint="/_vercel/insights/view"
