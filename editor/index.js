@@ -22,8 +22,7 @@ const rechoTheme = EditorView.theme({
   ".cm-cursor, .cm-dropCursor": {borderLeftColor: "var(--ink)"},
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
     {backgroundColor: "var(--selection)"},
-  // The gutter sits a step back from the code, so the code reads first.
-  ".cm-gutters": {backgroundColor: "var(--sunken)", color: "var(--ink-4)", border: "none"},
+  ".cm-gutters": {backgroundColor: "var(--surface)", color: "var(--ink-4)", border: "none"},
   // Folding stays on the keyboard (Ctrl-Shift-[); the gutter goes.
   // CodeMirror shows gutters with `!important`, so hiding one needs it too.
   ".cm-foldGutter": {display: "none !important"},
