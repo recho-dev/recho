@@ -6,6 +6,8 @@ import {Card} from "../../components/Card.jsx";
 import {LabelFilters, LANGUAGES} from "./LabelFilters.jsx";
 import {BASE_PATH, languageOf} from "../shared.js";
 
+const LANGUAGE_LABELS = {MLscript: "mlscript", Wenyan: "wenyan"};
+
 const languageName = (runtime) => {
   const value = languageOf(runtime);
   return LANGUAGES.find((l) => l.value === value)?.label ?? value;
@@ -14,9 +16,11 @@ const languageName = (runtime) => {
 export function ExamplesClient({examples, allLabels}) {
   const searchParams = useSearchParams();
   // Older links may carry several labels; a notebook with any of them shows.
-  const labels = searchParams.getAll("labels").filter((label) => label !== "All");
+  // MLscript and Wenyan used to be labels; those links now pick the language.
+  const rawLabels = searchParams.getAll("labels");
+  const labels = rawLabels.filter((label) => label !== "All" && !LANGUAGE_LABELS[label]);
   const label = labels.length === 0 ? "All" : labels.length === 1 ? labels[0] : null;
-  const language = searchParams.get("lang") ?? "all";
+  const language = searchParams.get("lang") ?? rawLabels.map((label) => LANGUAGE_LABELS[label]).find(Boolean) ?? "all";
 
   const shown = useMemo(
     () =>
