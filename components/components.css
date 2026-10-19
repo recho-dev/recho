@@ -756,7 +756,7 @@
   /* A native modal <dialog>: it traps focus, sits above everything and closes
      on Escape. It rises and scales in like a toast; the page dims behind it. */
   .dialog {
-    width: min(420px, calc(100vw - var(--space-6)));
+    width: min(440px, calc(100vw - var(--space-6)));
     max-width: none;
     /* The reset zeroes the browser's centring margin. */
     margin: auto;
@@ -809,8 +809,8 @@
   }
   .dialog-panel {
     display: grid;
-    gap: var(--space-2);
-    padding: var(--space-5);
+    gap: var(--space-3);
+    padding: var(--space-6);
   }
   .dialog-title {
     margin: 0;
@@ -827,7 +827,7 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--space-2);
-    margin-top: var(--space-3);
+    margin-top: var(--space-4);
   }
 
   /* ---------- Status text and motion helpers ---------- */
