@@ -13,6 +13,7 @@ export default defineConfig([
       "terminal/**/*.ts",
       "test/**/*.{js,ts,tsx}",
       "app/**/*.{js,jsx,ts,tsx}",
+      "components/**/*.{js,jsx}",
       "lib/**/*.{js,ts}",
     ],
     plugins: {
