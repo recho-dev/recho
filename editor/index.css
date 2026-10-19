@@ -200,14 +200,18 @@
     }
   }
 
-  /* Output recedes behind the code: a quiet //➜ prefix and quiet values. */
+  /* Output is drawn by widgets (blocks/output.ts), one row per line, with
+     the padding of a code line. */
+  .cm-output-widget > div {
+    padding: 0 var(--space-4) 0 6px;
+  }
+
+  /* Output recedes behind the code: a quiet //➜ prefix and quiet values.
+     Rows have a fixed height, so the line numbers beside them line up. */
   .cm-output-line {
+    height: 1.25em;
     line-height: 1.25;
     color: var(--out-value);
-
-    span {
-      color: inherit;
-    }
 
     .cm-output-line-prefix {
       color: var(--out-prefix);
@@ -218,11 +222,14 @@
      row, so glyphs on adjacent lines touch. */
   .cm-output-line.cm-compact-line,
   .cm-output-line.cm-art-line {
+    height: calc(1em * var(--lh-art));
     line-height: var(--lh-art);
   }
 
   /* Errors are red and wrap, so the whole message shows. */
   .cm-output-line.cm-error-line {
+    height: auto;
+    min-height: 1.25em;
     color: var(--error);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -238,6 +245,15 @@
 
     .cm-output-line-prefix {
       color: var(--warning);
+    }
+  }
+
+  /* An output widget's line numbers, one per row, as high as the rows. */
+  .cm-output-number {
+    height: calc(var(--fs-code) * 1.25);
+
+    &.cm-tight {
+      height: calc(var(--fs-code) * var(--lh-art));
     }
   }
 

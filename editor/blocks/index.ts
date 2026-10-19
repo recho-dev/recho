@@ -5,12 +5,12 @@ import {outputDecoration, outputLines} from "./output.ts";
 import {blockMetadataExtension} from "./state.ts";
 
 export const blockExtensions = [
-  // This view plugin tracks the output lines.
+  // This field tracks the output lines; the output widgets draw them.
   outputLines,
   outputDecoration,
   // This extension tracks the metdata of each block.
   blockMetadataExtension,
-  // This view plugin displays output lines in compact mode.
+  // This view plugin loads the typefaces blocks ask for.
   compactDecoration,
   // The block indicator gutter is not part of this list on purpose: it is
   // exported separately and spliced into the basic setup by editor/index.js,
