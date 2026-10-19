@@ -95,7 +95,7 @@
   --ink-3: var(--gray-10); /* quiet text and the //➜ prefix, at least 4.5:1 */
   --ink-4: var(--gray-9); /* line numbers */
   --marker: var(--gray-8); /* output marker at full emphasis */
-  --active-line: var(--gray-2);
+  --active-line: var(--fill-hover); /* translucent, so a selection behind it still shows */
   --scrollbar-thumb: var(--gray-7); /* custom scrollbars, never the OS default */
   --scrollbar-thumb-hover: var(--gray-8);
   --scrollbar-size: 10px;

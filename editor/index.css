@@ -256,9 +256,11 @@
   /* One continuous marker per output run, left of the code. Each row's
      segment overlaps its neighbours by 1px, so no seam shows at fractional
      line heights or any zoom. Only the run's ends are inset and rounded. */
-  .cm-blockIndicators {
+  /* The space before the code is padding, not margin, so the active line's
+     background reaches the code without a gap. */
+  .cm-blockIndicators .cm-gutterElement {
     width: var(--out-marker-width);
-    margin-right: var(--space-3);
+    padding-right: var(--space-3);
   }
 
   .cm-gutterElement .cm-block-indicator {
