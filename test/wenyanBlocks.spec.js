@@ -69,17 +69,21 @@ describe("wenyan blocks", () => {
 
 describe("block indicator", () => {
   it("repaints when blocks change without a text change", () => {
-    const doc = "夫三。示之。";
+    const output = "批曰。「「➜ 三」」。";
+    const doc = `${output}\n夫三。示之。`;
     const view = new EditorView({
       state: EditorState.create({doc, extensions: [blockIndicator, wenyanSupport()]}),
       parent: document.body,
     });
-    const block = (error) => new BlockMetadata("a", "", null, {from: 0, to: doc.length}, {}, error);
-    // The line's marker; the gutter's first element is a hidden spacer.
-    const marker = () => [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator")].at(-1)?.className;
+    const source = {from: output.length + 1, to: doc.length};
+    const block = (error) => new BlockMetadata("a", "", {from: 0, to: output.length}, source, {}, error);
+    // The output line's marker; the gutter's first element is a hidden spacer,
+    // and source lines have none.
+    const marker = () =>
+      [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator.head")].at(-1)?.className;
 
     view.dispatch({effects: blockMetadataEffect.of([block(false)])});
-    expect(marker()).toContain("source");
+    expect(marker()).toContain("output");
     // Same text, but the block now has an error, as after a failing re-run.
     view.dispatch({effects: blockMetadataEffect.of([block(true)])});
     expect(marker()).toContain("error");

@@ -13,26 +13,18 @@ export class BlockIndicator extends GutterMarker {
   }
 }
 
-const indicatorMarkers = {
-  output: {
-    head: new BlockIndicator("cm-block-indicator output head"),
-    tail: new BlockIndicator("cm-block-indicator output tail"),
-    sole: new BlockIndicator("cm-block-indicator output head tail"),
-    body: new BlockIndicator("cm-block-indicator output"),
-  },
-  source: {
-    head: new BlockIndicator("cm-block-indicator source head"),
-    tail: new BlockIndicator("cm-block-indicator source tail"),
-    sole: new BlockIndicator("cm-block-indicator source head tail"),
-    body: new BlockIndicator("cm-block-indicator source"),
-  },
-  error: {
-    head: new BlockIndicator("cm-block-indicator error head"),
-    tail: new BlockIndicator("cm-block-indicator error tail"),
-    sole: new BlockIndicator("cm-block-indicator error head tail"),
-    body: new BlockIndicator("cm-block-indicator error"),
-  },
-};
+// One continuous marker per output run: the output lines of a block (those
+// before its source) get a marker, `head` and `tail` at the run's ends. The
+// source lines get none.
+const markers = (kind: string) => ({
+  head: new BlockIndicator(`cm-block-indicator ${kind} head`),
+  tail: new BlockIndicator(`cm-block-indicator ${kind} tail`),
+  sole: new BlockIndicator(`cm-block-indicator ${kind} head tail`),
+  body: new BlockIndicator(`cm-block-indicator ${kind}`),
+});
+
+const indicatorMarkers = {output: markers("output"), error: markers("error")};
+const spacer = new BlockIndicator("cm-block-indicator");
 
 export const blockIndicator = gutter({
   class: "cm-blockIndicators",
@@ -61,27 +53,24 @@ export const blockIndicator = gutter({
     const block = blocks[index];
     const currentLine = view.state.doc.lineAt(line.from).number;
 
-    // Determine the positional relationship between the current line and the block.
+    // Only the block's output lines, before its source, have a marker.
     const sourceFirstLine = view.state.doc.lineAt(block.source.from).number;
-    const group = block.error
-      ? indicatorMarkers.error
-      : currentLine < sourceFirstLine
-        ? indicatorMarkers.output
-        : indicatorMarkers.source;
+    if (currentLine >= sourceFirstLine) return null;
+    const group = block.error ? indicatorMarkers.error : indicatorMarkers.output;
 
     // Determine the gutter marker to use.
-    const blockFirstLine = view.state.doc.lineAt(block.from).number;
-    const blockLastLine = view.state.doc.lineAt(block.to).number;
-    if (blockFirstLine === currentLine) {
-      return blockLastLine === currentLine ? group.sole : group.head;
-    } else if (blockLastLine === currentLine) {
+    const outputFirstLine = view.state.doc.lineAt(block.from).number;
+    const outputLastLine = sourceFirstLine - 1;
+    if (outputFirstLine === currentLine) {
+      return outputLastLine === currentLine ? group.sole : group.head;
+    } else if (outputLastLine === currentLine) {
       return group.tail;
     } else {
       return group.body;
     }
   },
   initialSpacer() {
-    return indicatorMarkers.source.body;
+    return spacer;
   },
 });
 

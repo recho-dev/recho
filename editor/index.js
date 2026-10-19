@@ -1,7 +1,7 @@
 import {EditorView, basicSetup} from "codemirror";
 import {EditorState, Transaction} from "@codemirror/state";
 import {keymap} from "@codemirror/view";
-import {githubLightInit} from "@uiw/codemirror-theme-github";
+import {HighlightStyle, syntaxHighlighting} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
 import {indentWithTab} from "@codemirror/commands";
 import {createRuntime} from "../runtime/index.js";
@@ -9,6 +9,92 @@ import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import {blockIndicator} from "./blocks";
 import {javascriptSupport} from "./languages/javascript.js";
+
+/**
+ * The editor's look, from the tokens in app/tokens.css. CodeMirror scopes a
+ * theme above its base theme, so these win without `!important`.
+ */
+const rechoTheme = EditorView.theme({
+  "&": {fontSize: "var(--fs-code)", color: "var(--ink)", backgroundColor: "var(--surface)"},
+  ".cm-scroller": {fontFamily: "var(--font-mono)", lineHeight: "var(--lh-code)"},
+  ".cm-content": {whiteSpace: "pre", padding: "var(--space-2) 0", caretColor: "var(--ink)"},
+  ".cm-line": {wordWrap: "normal", paddingRight: "var(--space-4)"},
+  ".cm-cursor, .cm-dropCursor": {borderLeftColor: "var(--ink)"},
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
+    {backgroundColor: "var(--selection)"},
+  ".cm-gutters": {backgroundColor: "var(--surface)", color: "var(--ink-4)", border: "none"},
+  // Folding stays on the keyboard (Ctrl-Shift-[); the gutter goes.
+  // CodeMirror shows gutters with `!important`, so hiding one needs it too.
+  ".cm-foldGutter": {display: "none !important"},
+  ".cm-lineNumbers .cm-gutterElement": {
+    minWidth: "calc(2ch + var(--space-3) * 2)",
+    padding: "0 var(--space-3)",
+    fontSize: "var(--fs-gutter)",
+    fontVariantNumeric: "tabular-nums",
+  },
+  // The active line shows only while the editor has focus.
+  ".cm-activeLine, .cm-activeLineGutter": {backgroundColor: "var(--clear)"},
+  "&.cm-focused .cm-activeLine, &.cm-focused .cm-activeLineGutter": {backgroundColor: "var(--active-line)"},
+  "&.cm-focused .cm-activeLineGutter": {color: "var(--ink-2)"},
+  "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {backgroundColor: "var(--fill-pressed)"},
+  ".cm-selectionMatch": {backgroundColor: "var(--fill-hover)"},
+  ".cm-searchMatch": {backgroundColor: "var(--warning-tint)", outline: "1px solid var(--warning-marker)"},
+  ".cm-tooltip": {
+    backgroundColor: "var(--surface)",
+    color: "var(--ink)",
+    border: "var(--border-width) solid var(--line)",
+    borderRadius: "var(--radius-md)",
+    boxShadow: "var(--shadow-3)",
+    overflow: "hidden",
+  },
+  ".cm-tooltip-autocomplete > ul > li": {padding: "1px var(--space-2)"},
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": {backgroundColor: "var(--selection)", color: "var(--ink)"},
+  ".cm-completionDetail, .cm-completionMatchedText": {color: "var(--ink-3)"},
+  ".cm-panels": {backgroundColor: "var(--sunken)", color: "var(--ink)"},
+  ".cm-panels.cm-panels-bottom": {borderTop: "var(--border-width) solid var(--line)"},
+  ".cm-textfield": {
+    backgroundColor: "var(--surface)",
+    border: "var(--border-width) solid var(--border)",
+    borderRadius: "var(--radius-sm)",
+  },
+  ".cm-button": {
+    backgroundImage: "none",
+    backgroundColor: "var(--surface)",
+    border: "var(--border-width) solid var(--border)",
+    borderRadius: "var(--radius-sm)",
+  },
+});
+
+/** Syntax colours: one lightness, separated by hue (see --syn-* in app/tokens.css). */
+const rechoHighlightStyle = HighlightStyle.define([
+  {
+    tag: [t.keyword, t.controlKeyword, t.moduleKeyword, t.definitionKeyword, t.operatorKeyword, t.modifier, t.self],
+    color: "var(--syn-keyword)",
+  },
+  {tag: [t.string, t.special(t.string), t.regexp, t.escape], color: "var(--syn-string)"},
+  {tag: [t.number, t.bool, t.null, t.atom, t.constant(t.variableName)], color: "var(--syn-number)"},
+  {
+    tag: [
+      t.function(t.variableName),
+      t.function(t.propertyName),
+      t.function(t.definition(t.variableName)),
+      t.className,
+      t.typeName,
+      t.namespace,
+      t.macroName,
+    ],
+    color: "var(--syn-function)",
+  },
+  {tag: [t.propertyName, t.definition(t.propertyName)], color: "var(--syn-property)"},
+  {tag: [t.operator, t.punctuation, t.separator, t.bracket, t.derefOperator], color: "var(--syn-operator)"},
+  {tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "var(--syn-comment)"},
+  {tag: [t.meta, t.annotation, t.tagName], color: "var(--syn-tag)"},
+  {tag: [t.variableName, t.definition(t.variableName), t.standard(t.variableName)], color: "var(--ink)"},
+  {tag: t.invalid, color: "var(--error)"},
+  {tag: t.link, textDecoration: "underline"},
+  {tag: t.emphasis, fontStyle: "italic"},
+  {tag: t.strong, fontWeight: "bold"},
+]);
 
 /**
  * @param {HTMLElement} container
@@ -46,18 +132,9 @@ export function createEditor(container, options) {
     doc: code,
     extensions: [
       myBasicSetup,
-      githubLightInit({
-        styles: [
-          {tag: [t.variableName], color: "#1f2328"},
-          {tag: [t.function(t.variableName)], color: "#6f42c1"},
-        ],
-      }),
+      rechoTheme,
+      syntaxHighlighting(rechoHighlightStyle),
       EditorView.lineWrapping,
-      EditorView.theme({
-        "&": {fontSize: "14px", fontFamily: "monospace"},
-        ".cm-content": {whiteSpace: "pre"},
-        ".cm-line": {wordWrap: "normal"},
-      }),
       EditorView.updateListener.of(onChange),
       keymap.of([
         {

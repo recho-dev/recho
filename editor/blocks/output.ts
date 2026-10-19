@@ -53,8 +53,16 @@ export const outputLinesField = StateField.define<OutputLine[]>({
 export const outputLines = outputLinesField.extension;
 
 const highlight = Decoration.line({attributes: {class: "cm-output-line"}});
+const artHighlight = Decoration.line({attributes: {class: "cm-output-line cm-art-line"}});
 const errorHighlight = Decoration.line({attributes: {class: "cm-output-line cm-error-line"}});
 const warningHighlight = Decoration.line({attributes: {class: "cm-output-line cm-warning-line"}});
+// The `//➜` (or `//✗`) at the start of a line, quieter than the output after it.
+const prefixMark = Decoration.mark({class: "cm-output-line-prefix"});
+
+// Box drawing and block elements: a run of output with them is ASCII art.
+const ART = /[\u2500-\u259F]/;
+// The marks that end an output line's prefix, e.g. `//➜` or wenyan's `批曰。「「➜`.
+const PREFIX_END = /^.{0,8}?[➜✗]/u;
 
 export const outputDecoration = ViewPlugin.fromClass(
   class {
@@ -66,22 +74,33 @@ export const outputDecoration = ViewPlugin.fromClass(
 
     constructor(view: EditorView) {
       const outputLines = view.state.field(outputLinesField);
-      this.#decorations = this.createDecorations(outputLines);
+      this.#decorations = this.createDecorations(outputLines, view.state);
     }
 
     update(update: ViewUpdate) {
       const newOutputLines = update.state.field(outputLinesField);
       // A possible optimization would be to only update the changed lines.
-      this.#decorations = this.createDecorations(newOutputLines);
+      this.#decorations = this.createDecorations(newOutputLines, update.state);
     }
 
-    createDecorations(lines: OutputLine[]) {
+    createDecorations(lines: OutputLine[], state: EditorState) {
       const builder = new RangeSetBuilder<Decoration>();
-      // Add output line decorations
+      const {doc} = state;
+      // Runs of output on consecutive lines with box drawing are set as art.
+      const art = new Set<number>();
+      for (let i = 0; i < lines.length; ) {
+        let j = i + 1;
+        while (j < lines.length && doc.lineAt(lines[j].from).number === doc.lineAt(lines[j - 1].from).number + 1) j++;
+        const run = lines.slice(i, j).filter(({type}) => type === "output");
+        if (run.some(({from}) => ART.test(doc.lineAt(from).text))) run.forEach(({from}) => art.add(from));
+        i = j;
+      }
       for (const {from, type} of lines) {
-        if (type === "output") builder.add(from, from, highlight);
+        if (type === "output") builder.add(from, from, art.has(from) ? artHighlight : highlight);
         else if (type === "error") builder.add(from, from, errorHighlight);
         else if (type === "warning") builder.add(from, from, warningHighlight);
+        const prefix = doc.lineAt(from).text.match(PREFIX_END);
+        if (prefix) builder.add(from, from + prefix[0].length, prefixMark);
       }
       return builder.finish();
     }
