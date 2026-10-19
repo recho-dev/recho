@@ -30,7 +30,7 @@ export default async function Page({params}) {
   const body = post.body ?? [];
 
   return (
-    <div className="page news-view">
+    <div className="page news-page">
       <NewsRendered />
       <article className="article">
         <NewsLink className="back" href="/news" kind="close" slug={post.slug}>

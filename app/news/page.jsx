@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function Page() {
   return (
-    <div className="page reading news-view">
+    <div className="page reading news-page">
       <NewsRendered />
       <div className="ex-head">
         <h1 className="page-title">News</h1>
@@ -25,7 +25,7 @@ export default function Page() {
                 <h2>{item.title}</h2>
                 <p>{item.summary}</p>
               </div>
-              <img className="cover" src={`${BASE_PATH}/news/${item.image}`} alt="" loading="lazy" />
+              <img className="cover" src={`${BASE_PATH}/news/${item.image}`} alt="" />
             </NewsLink>
           </li>
         ))}
