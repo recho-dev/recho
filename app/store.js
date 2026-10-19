@@ -3,10 +3,13 @@ function emitChange(listeners) {
 }
 
 let count = 0;
+let nextRuntime = undefined;
 const counterListeners = new Set();
 
 export const countStore = {
-  increment() {
+  /** Starts a new notebook, in `runtime` if given (e.g. from the New menu). */
+  increment(runtime) {
+    nextRuntime = runtime;
     count++;
     emitChange(counterListeners);
   },
@@ -19,6 +22,12 @@ export const countStore = {
   },
   getServerSnapshot() {
     return 0;
+  },
+  /** The runtime asked for the next new notebook, once. */
+  takeRuntime() {
+    const runtime = nextRuntime;
+    nextRuntime = undefined;
+    return runtime;
   },
 };
 

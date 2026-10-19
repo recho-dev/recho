@@ -22,21 +22,21 @@ export function LoadingBar({loading, label}) {
   return (
     <div
       className={cn(
-        "absolute inset-0 z-1 flex flex-col items-center justify-center gap-3 bg-white transition-opacity duration-300",
+        "absolute inset-0 z-1 flex flex-col items-center justify-center gap-3 bg-surface transition-opacity duration-300",
         // Fade out once the full bar has been seen.
         !loading && "pointer-events-none opacity-0 delay-200",
       )}
     >
-      {label && <p className={cn("text-sm text-gray-500")}>{label}</p>}
+      {label && <p className={cn("status")}>{label}</p>}
       <div
-        className={cn("h-1 w-56 overflow-hidden rounded-full bg-gray-100")}
+        className={cn("h-1 w-56 overflow-hidden rounded-[var(--radius-full)] bg-sunken")}
         role="progressbar"
         aria-label={label}
         aria-busy={loading}
       >
         <div
           className={cn(
-            "h-full rounded-full bg-gray-800",
+            "h-full rounded-[var(--radius-full)] bg-ink-3",
             loading ? "w-2/5 animate-loading-slide" : "w-full transition-[width] duration-200",
           )}
           style={{willChange: "transform"}}

@@ -1,20 +1,18 @@
 "use client";
 import {useEffect, useRef, useState} from "react";
-import {Play, Square, RefreshCcw, Copy} from "lucide-react";
-import {Tooltip} from "react-tooltip";
+import {Square, Copy} from "lucide-react";
 import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
-import {cn} from "./cn.js";
+import {cn} from "../components/cn.js";
+import {Button} from "../components/Button.jsx";
+import {useShortcut} from "../components/Kbd.jsx";
+import {toast} from "../components/Toast.jsx";
 import {LoadingBar} from "./LoadingBar.jsx";
 import {languageOf} from "./shared.js";
 
 // How the loading indicator names the languages that load on demand.
 const LANGUAGE_NAMES = {mlscript: "MLscript", wenyan: "wenyan"};
-
-const styles = {
-  iconButton: "w-4 h-4 hover:scale-110 transition-transform duration-100",
-};
 
 function debounce(fn, delay = 0) {
   let timeout;
@@ -25,9 +23,7 @@ function debounce(fn, delay = 0) {
 }
 
 const onDefaultError = debounce(() => {
-  setTimeout(() => {
-    alert("Something unexpected happened. Please check the console for details.");
-  }, 100);
+  toast("Something unexpected happened. Please check the console for details.", {error: true});
 }, 0);
 
 export function Editor({
@@ -37,6 +33,7 @@ export function Editor({
   onBeforeEachRun = () => {},
   autoRun = true,
   toolBarStart = null,
+  status = null,
   pinToolbar = true,
   onDuplicate = null,
   onError = onDefaultError,
@@ -129,68 +126,36 @@ export function Editor({
     editorRef.current?.stop();
   }
 
-  function onRerun() {
-    setNeedRerun(false);
-    editorRef.current?.stop();
-    editorRef.current?.run();
-  }
-
-  function metaKey() {
-    return typeof navigator !== "undefined" || navigator.userAgent.includes("Mac") ? "cmd" : "ctrl";
-  }
+  const shortcut = useShortcut("S");
+  // Edits stop the outputs updating until the next run.
+  const shownStatus = compiling ? "Compiling…" : (status ?? (needRerun ? "Edited" : null));
 
   return (
-    <div className={cn("w-full border border-gray-200 rounded-md")}>
-      <div
-        className={cn(
-          "flex justify-between items-center p-2 border-b border-gray-200 bg-gray-100",
-          pinToolbar && "sticky top-0 z-10",
-        )}
-      >
-        {toolBarStart}
-        <div className={cn("flex items-center gap-3")}>
-          {compiling && (
-            <span role="status" className={cn("text-xs text-gray-500")}>
-              Compiling…
+    <div className="editor-frame">
+      <div className={cn("toolbar", pinToolbar && "pinned")} role="toolbar" aria-label="Notebook">
+        <div className="toolbar-start">{toolBarStart}</div>
+        {shownStatus && (
+          <>
+            <span key={shownStatus} role="status" className="status swap-in hide-sm">
+              {shownStatus}
             </span>
-          )}
-          <button
-            onClick={onRun}
-            data-tooltip-id="action-tooltip"
-            data-tooltip-content={`Run Updated Code (${metaKey()}+s)`}
-            data-tooltip-place="bottom"
-          >
-            <Play className={cn(styles.iconButton, needRerun && "fill-black")} />
-          </button>
-          <button
-            onClick={onRerun}
-            data-tooltip-id="action-tooltip"
-            data-tooltip-content="Re-run Notebook"
-            data-tooltip-place="bottom"
-          >
-            <RefreshCcw className={cn(styles.iconButton)} />
-          </button>
-          <button
-            onClick={onStop}
-            data-tooltip-id="action-tooltip"
-            data-tooltip-content="Stop Updating"
-            data-tooltip-place="bottom"
-          >
-            <Square className={cn(styles.iconButton)} />
-          </button>
-          {onDuplicate && (
-            <button
-              onClick={onDuplicate}
-              data-tooltip-id="action-tooltip"
-              data-tooltip-content="Duplicate Notebook"
-              data-tooltip-place="bottom"
-            >
-              <Copy className={cn(styles.iconButton)} />
-            </button>
-          )}
-        </div>
+            <span className="tb-sep hide-sm" aria-hidden="true" />
+          </>
+        )}
+        <Button variant="ghost" icon tip="Stop updating" onClick={onStop}>
+          <Square className="ic" size={12} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+        </Button>
+        {onDuplicate && (
+          <Button variant="ghost" onClick={onDuplicate} tip="Duplicate notebook">
+            <Copy className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
+            <span className="lbl">Duplicate</span>
+          </Button>
+        )}
+        <Button variant="primary" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
+          Run <span className="kbd-in hide-sm">{shortcut}</span>
+        </Button>
       </div>
-      <div className={cn("relative")}>
+      <div className="editor-body">
         {loading.parts.length > 0 && !loadError && (
           <LoadingBar
             loading={loading.remaining.length > 0}
@@ -198,16 +163,13 @@ export function Editor({
           />
         )}
         {loadError && (
-          <div className={cn("p-4 text-sm")}>
-            <p className={cn("text-red-700")}>Couldn&apos;t load this notebook&apos;s language: {loadError.message}</p>
-            <button
-              onClick={() => setLoadAttempt((n) => n + 1)}
-              className={cn("mt-2 px-2 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-100")}
-            >
+          <div className="load-error">
+            <p className="status err">Couldn&apos;t load this notebook&apos;s language: {loadError.message}</p>
+            <Button className="mt-2" onClick={() => setLoadAttempt((n) => n + 1)}>
               Retry
-            </button>
+            </Button>
             {/* The code, read-only, so that it can still be read or copied. */}
-            <pre className={cn("mt-4 font-mono text-gray-700 overflow-x-auto")}>{initialCode}</pre>
+            <pre>{initialCode}</pre>
           </div>
         )}
         <div
@@ -219,10 +181,9 @@ export function Editor({
             loading.remaining.length > 0 ? "min-h-80" : "min-h-0",
           )}
         >
-          <pre className={cn("text-sm hidden")}>{initialCode}</pre>
+          <pre className="hidden">{initialCode}</pre>
         </div>
       </div>
-      <Tooltip id="action-tooltip" className={cn("z-999")} />
     </div>
   );
 }

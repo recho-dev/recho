@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import {getFirebase} from "./firebase.js";
 import {flushPendingSave, uploadLocalNotebooks} from "./api.js";
+import {toast} from "../components/Toast.jsx";
 
 const PROVIDERS = {github: GithubAuthProvider, google: GoogleAuthProvider};
 
@@ -60,7 +61,7 @@ export const authStore = {
     } catch (error) {
       if (error.code !== "auth/popup-closed-by-user" && error.code !== "auth/cancelled-popup-request") {
         console.error(error);
-        alert(`Failed to log in: ${error.message}`);
+        toast(`Failed to log in: ${error.message}`, {error: true});
       }
       resolveLoginWaiters(null);
     } finally {

@@ -1,6 +1,6 @@
 import "./global.css";
 import {Nav} from "./Nav.jsx";
-import {cn} from "./cn.js";
+import {Toaster} from "../components/Toast.jsx";
 import {Analytics} from "@vercel/analytics/next";
 
 export const metadata = {
@@ -11,9 +11,10 @@ export const metadata = {
 export default function Layout({children}) {
   return (
     <html lang="en">
-      <body className={cn("text-sm")}>
+      <body>
         <Nav />
         <main>{children}</main>
+        <Toaster />
         <Analytics
           scriptSrc="/_vercel/insights/script.js"
           viewEndpoint="/_vercel/insights/view"

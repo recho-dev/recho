@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Pencil, Lock, Globe} from "lucide-react";
+import {Lock, Globe} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {
   getNotebookById,
@@ -21,6 +21,10 @@ import {
 import {isDirtyStore, countStore} from "./store.js";
 import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
+import {Button} from "../components/Button.jsx";
+import {Input} from "../components/Input.jsx";
+import {Listbox} from "../components/Listbox.jsx";
+import {toast} from "../components/Toast.jsx";
 import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH, RUNTIMES} from "./shared.js";
 
@@ -35,7 +39,6 @@ export function EditorPage({id: initialId}) {
   const router = useRouter();
   const [notebook, setNotebook] = useState(UNSET);
   const [notebookList, setNotebookList] = useState([]);
-  const [showInput, setShowInput] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
@@ -81,7 +84,7 @@ export function EditorPage({id: initialId}) {
       isDirtyStore.setDirty(false);
     } catch (error) {
       console.error(error);
-      alert(`Failed to save notebook: ${error.message}`);
+      toast(`Failed to save notebook: ${error.message}`, {error: true});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notebook, isOthers]);
@@ -97,7 +100,7 @@ export function EditorPage({id: initialId}) {
   // This effect is triggered when the count changes,
   // which happens when user clicks the "New" nav link.
   useEffect(() => {
-    if (!isAdded) loadNotebook(createNotebook());
+    if (!isAdded) loadNotebook(createNotebook(countStore.takeRuntime()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
@@ -163,22 +166,23 @@ export function EditorPage({id: initialId}) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onSave]);
 
-  useEffect(() => {
-    if (showInput) titleRef.current.focus();
-  }, [showInput]);
-
   if (loadError) {
     return (
-      <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>
-        Failed to load notebook.{" "}
-        <button className={cn("text-blue-500 hover:underline")} onClick={() => setReloadKey((key) => key + 1)}>
-          Retry
-        </button>
+      <div className={cn("page editor-page")}>
+        <div className={cn("empty")}>
+          <p>Failed to load notebook.</p>
+          <Button onClick={() => setReloadKey((key) => key + 1)}>Retry</Button>
+        </div>
       </div>
     );
   }
 
-  if (notebook === UNSET) return <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>Loading...</div>;
+  if (notebook === UNSET)
+    return (
+      <div className={cn("page editor-page")}>
+        <p className={cn("status")}>Loading…</p>
+      </div>
+    );
 
   if (!notebook) return notFound();
 
@@ -199,14 +203,8 @@ export function EditorPage({id: initialId}) {
     else isDirtyStore.setDirty(true);
   }
 
-  function onRename() {
-    setShowInput(true);
-    setTitle(notebook.title);
-  }
-
   // Only submit rename when blur with valid title.
   function onTitleBlur() {
-    setShowInput(false);
     // The title can't be empty.
     if (!title) return setTitle(notebook.title);
     const newNotebook = {...notebook, title};
@@ -251,7 +249,7 @@ export function EditorPage({id: initialId}) {
     } catch (error) {
       console.error(error);
       setNotebook((current) => ({...current, visibility: notebook.visibility}));
-      alert(`Failed to change visibility: ${error.message}`);
+      toast(`Failed to change visibility: ${error.message}`, {error: true});
       return;
     }
     if (visibility !== PUBLIC) return;
@@ -272,64 +270,40 @@ export function EditorPage({id: initialId}) {
       router.push(`/works/${duplicated.id}`);
     } catch (error) {
       console.error(error);
-      alert(`Failed to duplicate notebook: ${error.message}`);
+      toast(`Failed to duplicate notebook: ${error.message}`, {error: true});
     }
   }
+
+  const languages = [
+    {value: RUNTIMES.javascript, label: "JavaScript"},
+    {value: RUNTIMES.wenyan, label: "文言 wenyan"},
+    {value: RUNTIMES.mlscript, label: "MLscript"},
+  ];
 
   return (
     <div>
       {!isAdded && notebookList.length > 0 && (
-        <div className={cn("flex h-[72px] bg-gray-100 p-2 w-full border-b border-gray-200")}>
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2 h-full max-w-screen-lg lg:mx-auto mx-4 w-full hidden md:flex",
-            )}
-          >
+        <nav className={cn("recent")} aria-label="Your notebooks">
+          <div className={cn("recent-in")}>
             {notebookList.map((notebook) => (
-              <div key={notebook.id} className={cn("flex items-start flex-col gap-1")}>
-                <SafeLink
-                  href={`/works/${notebook.id}`}
-                  className={cn(
-                    "font-semibold hover:underline text-blue-500 whitespace-nowrap line-clamp-1 max-w-[150px] text-ellipsis",
-                  )}
-                >
+              <div key={notebook.id} className={cn("recent-item hide-sm")}>
+                <SafeLink href={`/works/${notebook.id}`} className={cn("recent-title")}>
                   {notebook.title}
                 </SafeLink>
-                <span
-                  className={cn("text-xs text-gray-500 line-clamp-1 whitespace-nowrap max-w-[150px] text-ellipsis")}
-                >
-                  Created {new Date(notebook.created).toLocaleDateString()}
-                </span>
+                <span className={cn("status")}>Created {new Date(notebook.created).toLocaleDateString()}</span>
               </div>
             ))}
-            <SafeLink href="/works" className={cn("font-semibold text-blue-500 hover:underline")}>
+            <span className={cn("spacer")} />
+            <Button as={SafeLink} variant="ghost" href="/works">
               View your notebooks
-            </SafeLink>
+            </Button>
           </div>
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2 h-full max-w-screen-lg lg:mx-auto mx-4 w-full md:hidden",
-            )}
-          >
-            <SafeLink
-              href="/works"
-              className={cn(
-                "font-medium w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-center hover:bg-gray-200",
-              )}
-            >
-              View your notebooks
-            </SafeLink>
-          </div>
-        </div>
+        </nav>
       )}
       {!isAdded && notebookList.length === 0 && (
-        <div className={cn("flex items-center justify-center h-[72px] mt-6 mb-10 lg:mb-0")}>
-          <p className={cn("text-3xl text-gray-800 font-light text-center mx-10")}>
-            Explore code and art with instant feedback.
-          </p>
-        </div>
+        <p className={cn("tagline")}>Explore code and art with instant feedback.</p>
       )}
-      <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4 editor-page")}>
+      <div className={cn("page editor-page")}>
         <Editor
           initialCode={initialCode}
           runtime={notebook.runtime}
@@ -338,64 +312,52 @@ export function EditorPage({id: initialId}) {
           onBeforeEachRun={onBeforeEachRun}
           autoRun={autoRun}
           onDuplicate={isAdded ? onDuplicate : null}
+          status={isAdded && isOthers ? "View only" : null}
           toolBarStart={
-            <div className={cn("flex items-center gap-2")}>
-              {!isAdded && (
-                <select
-                  aria-label="Language"
-                  value={notebook.runtime}
-                  onChange={(e) => onChangeRuntime(e.target.value)}
-                  className={cn("border border-gray-300 rounded-md px-2 py-1 text-sm bg-white")}
-                >
-                  <option value={RUNTIMES.javascript}>JavaScript</option>
-                  <option value={RUNTIMES.wenyan}>文言 wenyan</option>
-                  <option value={RUNTIMES.mlscript}>MLscript</option>
-                </select>
-              )}
-              {!isAdded && (
-                <button
-                  onClick={onSave}
-                  className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-                >
-                  Create
-                </button>
-              )}
-              {!showInput && isAdded && !isOthers && (
-                <button onClick={onRename}>
-                  <Pencil className="w-4 h-4" />
-                </button>
-              )}
-              {showInput || !isAdded ? (
-                <input
-                  type="text"
+            <>
+              {isOthers ? (
+                <h1 className={cn("tb-title")}>{notebook.title}</h1>
+              ) : (
+                <Input
+                  plain
+                  aria-label="Notebook title"
+                  autoComplete="off"
                   value={title}
                   onChange={onTitleChange}
                   onBlur={onTitleBlur}
                   onKeyDown={onTitleKeyDown}
                   ref={titleRef}
-                  className={cn("border border-gray-200 rounded-md px-3 py-1 text-sm bg-white")}
                 />
-              ) : (
-                <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
               )}
+              {!isAdded && (
+                <Listbox
+                  label="Language"
+                  ghost
+                  options={languages}
+                  value={notebook.runtime}
+                  onChange={onChangeRuntime}
+                />
+              )}
+              {!isAdded && <Button onClick={onSave}>Create</Button>}
               {canSave && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={onToggleVisibility}
                   title={
                     isPublic
                       ? "Anyone with the link can view. Click to make private."
                       : "Only you can view. Click to make public."
                   }
-                  className={cn(
-                    "inline-flex items-center gap-1 border border-gray-200 rounded-md px-2 py-1 text-xs hover:bg-gray-100",
-                  )}
                 >
-                  {isPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {isPublic ? (
+                    <Globe className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
+                  ) : (
+                    <Lock className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
+                  )}
                   {linkCopied ? "Link copied" : isPublic ? "Public" : "Private"}
-                </button>
+                </Button>
               )}
-              {isAdded && isOthers && <span className={cn("text-xs text-gray-500")}>View only</span>}
-            </div>
+            </>
           }
         />
       </div>

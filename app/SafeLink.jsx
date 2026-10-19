@@ -4,7 +4,7 @@ import {useRouter} from "next/navigation";
 import {isDirtyStore, countStore} from "./store.js";
 import Link from "next/link";
 
-export function SafeLink({href, children, className, onClick, ...props}) {
+export function SafeLink({href, children, className, onClick, newRuntime, ...props}) {
   const router = useRouter();
   const isDirty = useSyncExternalStore(
     isDirtyStore.subscribe,
@@ -19,7 +19,7 @@ export function SafeLink({href, children, className, onClick, ...props}) {
       if (!confirmLeave) return;
     }
     isDirtyStore.setDirty(false);
-    if (href === "/") countStore.increment();
+    if (href === "/") countStore.increment(newRuntime);
     router.push(href);
     onClick?.();
   };
