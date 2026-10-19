@@ -17,6 +17,8 @@
   --space-unit: 4px;
   --shadow-opacity: 1; /* multiplier on shadow alpha */
   --shadow-blur: 1; /* multiplier on shadow offset and blur */
+  --shadow-hue: 50; /* shadows take a warm brown, not the grey hue */
+  --shadow-chroma: 0.045;
   --fs-ui: 14px;
   --fs-code: 13.5px;
   --fw-label: 500;
@@ -53,9 +55,9 @@
   --hairline-alpha: 0.1;
   --hairline-strong-alpha: 0.17;
   --fill-alpha: 0.05;
-  --shadow-l: 0.2;
-  --shadow-near-alpha: 0.06;
-  --shadow-far-alpha: 0.09;
+  --shadow-l: 0.36;
+  --shadow-near-alpha: 0.08;
+  --shadow-far-alpha: 0.11;
 
   /* ---- Grey scale ------------------------------------------------------ */
   /* 0 raised surface, 1 page, 2 sunken, 3-6 fills, 7-8 borders and markers,
@@ -179,18 +181,22 @@
 
   /* ---- Shadow: raised things only -------------------------------------- */
   --shadow-near: oklch(
-    var(--shadow-l) var(--gray-chroma) var(--gray-hue) / calc(var(--shadow-near-alpha) * var(--shadow-opacity))
+    var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / calc(var(--shadow-near-alpha) * var(--shadow-opacity))
   );
   --shadow-far: oklch(
-    var(--shadow-l) var(--gray-chroma) var(--gray-hue) / calc(var(--shadow-far-alpha) * var(--shadow-opacity))
+    var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / calc(var(--shadow-far-alpha) * var(--shadow-opacity))
   );
+  /* A tight contact layer plus soft, wide layers pulled in by negative
+     spread, so the shadow pools under the surface instead of ringing it. */
   --shadow-1: 0 1px calc(2px * var(--shadow-blur)) var(--shadow-near); /* resting: selected segment */
   --shadow-2:
-    0 1px calc(2px * var(--shadow-blur)) var(--shadow-near),
-    0 calc(4px * var(--shadow-blur)) calc(14px * var(--shadow-blur)) var(--shadow-far); /* editor, card hover */
+    0 1px 1px var(--shadow-near),
+    0 calc(3px * var(--shadow-blur)) calc(8px * var(--shadow-blur)) calc(-2px * var(--shadow-blur)) var(--shadow-near),
+    0 calc(14px * var(--shadow-blur)) calc(32px * var(--shadow-blur)) calc(-10px * var(--shadow-blur)) var(--shadow-far); /* editor, card hover */
   --shadow-3:
-    0 calc(2px * var(--shadow-blur)) calc(6px * var(--shadow-blur)) var(--shadow-near),
-    0 calc(12px * var(--shadow-blur)) calc(32px * var(--shadow-blur)) var(--shadow-far); /* menus, popovers, toasts */
+    0 1px 2px var(--shadow-near),
+    0 calc(6px * var(--shadow-blur)) calc(14px * var(--shadow-blur)) calc(-4px * var(--shadow-blur)) var(--shadow-near),
+    0 calc(20px * var(--shadow-blur)) calc(44px * var(--shadow-blur)) calc(-12px * var(--shadow-blur)) var(--shadow-far); /* menus, popovers, toasts */
 
   /* ---- Type ------------------------------------------------------------ */
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -273,7 +279,7 @@
     --hairline-alpha: 0.12;
     --hairline-strong-alpha: 0.2;
     --fill-alpha: 0.06;
-    --shadow-l: 0;
+    --shadow-l: 0.08;
     --shadow-near-alpha: 0.3;
     --shadow-far-alpha: 0.45;
     color-scheme: dark;
@@ -307,7 +313,7 @@
   --hairline-alpha: 0.12;
   --hairline-strong-alpha: 0.2;
   --fill-alpha: 0.06;
-  --shadow-l: 0;
+  --shadow-l: 0.08;
   --shadow-near-alpha: 0.3;
   --shadow-far-alpha: 0.45;
   color-scheme: dark;
