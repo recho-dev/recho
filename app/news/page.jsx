@@ -1,6 +1,7 @@
-import {cn} from "../cn.js";
 import {BASE_PATH} from "../shared.js";
-import {news} from "./data.js";
+import {sortedNews} from "./data.js";
+import {NewsLink, NewsRendered} from "./NewsLink.jsx";
+import {PostMeta} from "./PostMeta.jsx";
 
 export const metadata = {
   title: "News | Recho Notebook",
@@ -8,23 +9,27 @@ export const metadata = {
 };
 
 export default function Page() {
-  const items = [...news].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-
   return (
-    <div className={cn("page news")}>
-      <h1 className={cn("page-title")}>News</h1>
-      {items.map((item) => (
-        <article key={item.title}>
-          <a href={item.link} target="_blank" rel="noreferrer">
-            <h2>{item.title}</h2>
-          </a>
-          <p className={cn("status")}>
-            {item.author} · {item.publishedAt}
-          </p>
-          <p>{item.summary}</p>
-          <img src={`${BASE_PATH}/news/${item.image}`} alt={item.title} />
-        </article>
-      ))}
+    <div className="page reading news-view">
+      <NewsRendered />
+      <div className="ex-head">
+        <h1 className="page-title">News</h1>
+        <span className="status">{sortedNews.length} posts</span>
+      </div>
+      <ul className="news-list">
+        {sortedNews.map((item) => (
+          <li key={item.slug}>
+            <NewsLink className="post" href={`/news/${item.slug}`} kind="open" slug={item.slug} data-slug={item.slug}>
+              <div>
+                <PostMeta item={item} />
+                <h2>{item.title}</h2>
+                <p>{item.summary}</p>
+              </div>
+              <img className="cover" src={`${BASE_PATH}/news/${item.image}`} alt="" loading="lazy" />
+            </NewsLink>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
