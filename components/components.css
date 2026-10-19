@@ -1246,9 +1246,20 @@
     white-space: nowrap;
   }
   .card .s {
-    display: block;
+    display: flex;
+    gap: var(--space-2);
     font-size: var(--fs-xs);
     color: var(--ink-3);
+  }
+  .card .s-main {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card .s-aside {
+    flex: none;
   }
   .card .snap {
     width: 100%;

@@ -3,8 +3,13 @@
 import {useMemo} from "react";
 import {useSearchParams} from "next/navigation";
 import {Card} from "../../components/Card.jsx";
-import {LabelFilters} from "./LabelFilters.jsx";
+import {LabelFilters, LANGUAGES} from "./LabelFilters.jsx";
 import {BASE_PATH, languageOf} from "../shared.js";
+
+const languageName = (runtime) => {
+  const value = languageOf(runtime);
+  return LANGUAGES.find((l) => l.value === value)?.label ?? value;
+};
 
 export function ExamplesClient({examples, allLabels}) {
   const searchParams = useSearchParams();
@@ -44,6 +49,8 @@ export function ExamplesClient({examples, allLabels}) {
               href={`/examples/${example.slug}`}
               title={example.title}
               subtitle={`${example.author} · ${example.created}`}
+              // With every language shown, each card says which one it is.
+              aside={language === "all" ? languageName(example.runtime) : null}
               thumbnail={
                 example.snap ? (
                   <div className="snap" style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}} />
