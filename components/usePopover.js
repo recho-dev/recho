@@ -9,12 +9,15 @@ export function usePopover({onClose} = {}) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const triggerRef = useRef(null);
+  // The latest onClose, so the listeners subscribe once per opening.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
     const close = () => {
       setOpen(false);
-      onClose?.();
+      onCloseRef.current?.();
     };
     const onPointerDown = (e) => ref.current && !ref.current.contains(e.target) && close();
     const onKeyDown = (e) => {
@@ -28,7 +31,7 @@ export function usePopover({onClose} = {}) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return {open, setOpen, ref, triggerRef};
 }

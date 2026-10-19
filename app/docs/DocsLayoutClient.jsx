@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {usePathname} from "next/navigation";
 import {ChevronDown} from "lucide-react";
 import {Sidebar} from "../Sidebar.js";
@@ -22,6 +22,9 @@ export function DocsLayoutClient({navStructure, docsMap, children}) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const slug = pathname.split("/").pop();
+
+  // Close the mobile nav when the page changes (a link, Back or Forward).
+  useEffect(() => setNavOpen(false), [pathname]);
 
   return (
     <div className="page wide">

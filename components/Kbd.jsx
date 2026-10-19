@@ -13,11 +13,12 @@ export function isMac() {
 
 /**
  * The label of a shortcut with the platform's modifier: "⌘S" on a Mac,
- * "Ctrl+S" elsewhere. It reads the platform after mounting, so the server
- * render and the first client render agree.
+ * "Ctrl+S" elsewhere. It is null until the page mounts, as the server can't
+ * tell the platform, so no wrong hint shows first.
  */
 export function useShortcut(key) {
-  const [mac, setMac] = useState(true);
+  const [mac, setMac] = useState(null);
   useEffect(() => setMac(isMac()), []);
+  if (mac === null) return null;
   return mac ? `⌘${key}` : `Ctrl+${key}`;
 }

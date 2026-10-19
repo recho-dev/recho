@@ -6,7 +6,7 @@ import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "../components/cn.js";
 import {Button} from "../components/Button.jsx";
-import {useShortcut} from "../components/Kbd.jsx";
+import {isMac, useShortcut} from "../components/Kbd.jsx";
 import {toast} from "../components/Toast.jsx";
 import {LoadingBar} from "./LoadingBar.jsx";
 import {languageOf} from "./shared.js";
@@ -103,8 +103,12 @@ export function Editor({
   }, [initialCode, runtime, loadAttempt]);
 
   useEffect(() => {
+    // ⌘S on a Mac, Ctrl+S elsewhere, as the Run button's hint says. It also
+    // reaches here when the editor's own Mod-s binding runs the code, so the
+    // "Edited" status clears either way.
     const onKeyDown = (e) => {
-      if (e.metaKey && e.key === "s") {
+      if ((isMac() ? e.metaKey : e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
         setNeedRerun(false);
         editorRef.current?.run(false);
       }
@@ -152,7 +156,7 @@ export function Editor({
           </Button>
         )}
         <Button variant="primary" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
-          Run <span className="kbd-in hide-sm">{shortcut}</span>
+          Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
         </Button>
       </div>
       <div className="editor-body">

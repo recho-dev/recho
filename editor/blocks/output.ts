@@ -78,7 +78,9 @@ export const outputDecoration = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
+      // The output lines only change with the document (see outputLinesField).
       const newOutputLines = update.state.field(outputLinesField);
+      if (!update.docChanged && newOutputLines === update.startState.field(outputLinesField)) return;
       // A possible optimization would be to only update the changed lines.
       this.#decorations = this.createDecorations(newOutputLines, update.state);
     }

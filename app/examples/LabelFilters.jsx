@@ -1,5 +1,6 @@
 "use client";
 
+import {useMemo} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Segmented} from "../../components/Segmented.jsx";
 import {Listbox} from "../../components/Listbox.jsx";
@@ -15,6 +16,7 @@ const LANGUAGES = [
 export function LabelFilters({allLabels, label, language}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const labelOptions = useMemo(() => ["All", ...allLabels].map((value) => ({value, label: value})), [allLabels]);
 
   function update(key, value, fallback) {
     const params = new URLSearchParams(searchParams.toString());
@@ -28,7 +30,7 @@ export function LabelFilters({allLabels, label, language}) {
     <>
       <Segmented
         label="Filter by label"
-        options={["All", ...allLabels].map((value) => ({value, label: value}))}
+        options={labelOptions}
         value={label}
         onChange={(value) => update("labels", value, "All")}
       />

@@ -25,6 +25,7 @@ import {Button} from "../components/Button.jsx";
 import {Input} from "../components/Input.jsx";
 import {Listbox} from "../components/Listbox.jsx";
 import {toast} from "../components/Toast.jsx";
+import {isMac} from "../components/Kbd.jsx";
 import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH, RUNTIMES} from "./shared.js";
 
@@ -100,7 +101,7 @@ export function EditorPage({id: initialId}) {
   // This effect is triggered when the count changes,
   // which happens when user clicks the "New" nav link.
   useEffect(() => {
-    if (!isAdded) loadNotebook(createNotebook(countStore.takeRuntime()));
+    if (!isAdded) loadNotebook(createNotebook(countStore.runtimeFor(count)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
@@ -160,7 +161,7 @@ export function EditorPage({id: initialId}) {
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.metaKey && e.key === "s") onSave();
+      if ((isMac() ? e.metaKey : e.ctrlKey) && e.key === "s") onSave();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -207,6 +208,8 @@ export function EditorPage({id: initialId}) {
   function onTitleBlur() {
     // The title can't be empty.
     if (!title) return setTitle(notebook.title);
+    // Focusing and leaving the field changes nothing.
+    if (title === notebook.title) return;
     const newNotebook = {...notebook, title};
     setNotebook(newNotebook);
     if (canSave) saveNotebookDebounced(newNotebook);
@@ -218,10 +221,8 @@ export function EditorPage({id: initialId}) {
   }
 
   function onTitleKeyDown(e) {
-    if (e.key === "Enter") {
-      onTitleBlur();
-      titleRef.current.blur();
-    }
+    // Leaving the field commits the title.
+    if (e.key === "Enter") titleRef.current.blur();
   }
 
   // If long-running code is detected, disable auto run next time

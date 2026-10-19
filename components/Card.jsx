@@ -8,7 +8,8 @@ export function Card({href, title, subtitle, thumbnail, actions = null}) {
   return (
     <div className={actions ? "card has-actions" : "card"}>
       <Link href={href} className="card-link">
-        <span className="thumb" aria-hidden="true">
+        {/* Inert, so the code inside (Shiki's <pre tabindex="0">) is no tab stop. */}
+        <span className="thumb" aria-hidden="true" inert>
           {thumbnail}
         </span>
         <span className="t">{title}</span>
