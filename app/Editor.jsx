@@ -133,6 +133,8 @@ export function Editor({
   const shortcut = useShortcut("S");
   // Edits stop the outputs updating until the next run.
   const shownStatus = compiling ? "Compiling…" : (status ?? (needRerun ? "Edited" : null));
+  // The dot's colour: busy while compiling, waiting while edits haven't run.
+  const statusState = compiling ? "busy" : !status && needRerun ? "waiting" : null;
 
   return (
     <div className="editor-frame">
@@ -140,7 +142,12 @@ export function Editor({
         <div className="toolbar-start">{toolBarStart}</div>
         {shownStatus && (
           <>
-            <span key={shownStatus} role="status" className="status swap-in hide-sm">
+            <span
+              key={shownStatus}
+              role="status"
+              className="status swap-in hide-sm"
+              data-state={statusState ?? undefined}
+            >
               {shownStatus}
             </span>
             <span className="tb-sep hide-sm" aria-hidden="true" />

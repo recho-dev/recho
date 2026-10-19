@@ -753,6 +753,40 @@
   .status.warn {
     color: var(--warning);
   }
+  /* Run state: a small dot carries the colour, the words stay quiet. */
+  .status[data-state]::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    vertical-align: 1px;
+    border-radius: var(--radius-full);
+    background: var(--status-dot, var(--gray-6));
+    transition: background-color var(--duration-hover);
+  }
+  .status[data-state="ok"] {
+    --status-dot: var(--success-marker);
+  }
+  .status[data-state="busy"] {
+    --status-dot: var(--accent);
+  }
+  .status[data-state="waiting"] {
+    --status-dot: var(--warning-marker);
+  }
+  .status[data-state="busy"]::before {
+    animation: status-pulse calc(1.2s / var(--motion-speed)) ease-in-out infinite;
+  }
+  @keyframes status-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .status[data-state="busy"]::before {
+      animation: none;
+    }
+  }
   /* Status text swaps in place, and new content fades in and rises. */
   .swap-in {
     display: inline-block;
