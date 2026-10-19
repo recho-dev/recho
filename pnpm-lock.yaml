@@ -68,6 +68,9 @@ importers:
       acorn-walk:
         specifier: ^8.3.4
         version: 8.3.4
+      chalk:
+        specifier: ^5.6.2
+        version: 5.6.2
       cheerio:
         specifier: ^1.1.2
         version: 1.1.2
@@ -210,6 +213,9 @@ importers:
       lucide-react:
         specifier: ^0.542.0
         version: 0.542.0(react@19.2.3)
+      playwright-core:
+        specifier: ^1.64.1
+        version: 1.64.1
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -3359,6 +3365,11 @@ packages:
   pkg-conf@4.0.0:
     resolution: {integrity: sha512-7dmgi4UY4qk+4mj5Cd8v/GExPo0K+SlY+hulOSdfZ/T6jVH6//y7NtzZo5WrfhDBxuQ0jCa7fLZmNaNh7EWL/w==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  playwright-core@1.64.1:
+    resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   plur@5.1.0:
     resolution: {integrity: sha512-VP/72JeXqak2KiOzjgKtQen5y3IZHn+9GOuLDafPv0eXa47xq0At93XahYBs26MsifCQ4enGKwbjBTKgb9QJXg==}
@@ -7648,6 +7659,8 @@ snapshots:
     dependencies:
       find-up: 6.3.0
       load-json-file: 7.0.1
+
+  playwright-core@1.64.1: {}
 
   plur@5.1.0:
     dependencies:

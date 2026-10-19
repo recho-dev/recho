@@ -48,6 +48,7 @@
     "test:js": "TZ=America/New_York vitest",
     "test:fuzz": "TZ=America/New_York FUZZ_SEEDS=${FUZZ_SEEDS:-60} FUZZ_STEPS=${FUZZ_STEPS:-250} vitest run blocks/update.spec.ts",
     "perf": "node test/perf/tui-perf.mjs",
+    "perf:output": "node test/perf/output-perf.mjs",
     "test:format": "prettier --check editor runtime terminal test app components",
     "test:lint": "eslint",
     "test:typecheck": "tsc --noEmit"
@@ -69,6 +70,7 @@
     "globals": "^16.5.0",
     "immutable": "^5.1.4",
     "lucide-react": "^0.542.0",
+    "playwright-core": "^1.64.1",
     "postcss": "^8.5.6",
     "prettier": "^3.7.4",
     "react-inspector": "^9.0.0",
@@ -101,6 +103,7 @@
     "@observablehq/runtime": "^6.0.0",
     "acorn": "^8.15.0",
     "acorn-walk": "^8.3.4",
+    "chalk": "^5.6.2",
     "cheerio": "^1.1.2",
     "codemirror": "^6.0.2",
     "compromise": "^14.16.0",
