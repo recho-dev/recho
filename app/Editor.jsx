@@ -153,8 +153,9 @@ export function Editor({
             <span className="tb-sep hide-sm" aria-hidden="true" />
           </>
         )}
-        <Button variant="ghost" icon tip="Stop updating" onClick={onStop}>
-          <Square className="ic" size={12} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+        <Button tip="Stop updating" onClick={onStop}>
+          <Square className="ic" size={10} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+          <span className="lbl">Stop</span>
         </Button>
         {onDuplicate && (
           <Button variant="ghost" onClick={onDuplicate} tip="Duplicate notebook">
