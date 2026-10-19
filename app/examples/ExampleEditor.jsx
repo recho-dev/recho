@@ -1,7 +1,8 @@
 "use client";
 import {useRouter} from "next/navigation";
 import {Editor} from "../Editor.jsx";
-import {cn} from "../cn.js";
+import {Button} from "../../components/Button.jsx";
+import {toast} from "../../components/Toast.jsx";
 import {duplicateNotebook, addNotebook} from "../api.js";
 import {ensureUser} from "../auth.js";
 
@@ -22,7 +23,7 @@ export function ExampleEditor({example, initialCode}) {
       router.push(`/works/${duplicated.id}`);
     } catch (error) {
       console.error(error);
-      alert(`Failed to duplicate notebook: ${error.message}`);
+      toast(`Failed to duplicate notebook: ${error.message}`, {error: true});
     }
   }
 
@@ -34,16 +35,16 @@ export function ExampleEditor({example, initialCode}) {
       onDuplicate={onDuplicate}
       toolBarStart={
         example.pull_request && (
-          <div className={cn("flex items-center")} key={example.slug}>
-            <a
-              href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
-              target="_blank"
-              rel="noreferrer"
-              className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-            >
-              Comment
-            </a>
-          </div>
+          <Button
+            as="a"
+            variant="ghost"
+            key={example.slug}
+            href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Comment
+          </Button>
         )
       }
     />

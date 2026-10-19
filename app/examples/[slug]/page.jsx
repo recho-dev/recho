@@ -23,10 +23,8 @@ export default async function Page({params}) {
   if (!example) notFound();
   const initialCode = removeMeta(example);
   return (
-    <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4")}>
-      <div className={cn("mb-6")}>
-        <Meta example={example} />
-      </div>
+    <div className={cn("page")}>
+      <Meta example={example} />
       <ExampleEditor example={example} initialCode={initialCode} />
     </div>
   );

@@ -1,69 +1,44 @@
 "use client";
 
 import {useRouter, useSearchParams} from "next/navigation";
-import {cn} from "../cn.js";
+import {Segmented} from "../../components/Segmented.jsx";
+import {Listbox} from "../../components/Listbox.jsx";
 
-export function LabelFilters({allLabels}) {
+const LANGUAGES = [
+  {value: "all", label: "All languages"},
+  {value: "javascript", label: "JavaScript"},
+  {value: "wenyan", label: "文言 wenyan"},
+  {value: "mlscript", label: "MLscript"},
+];
+
+/** The label filter and language switcher of the examples page, kept in the URL. */
+export function LabelFilters({allLabels, label, language}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get selected labels from URL searchParams
-  const currentLabels = searchParams.getAll("labels");
-  const selectedLabels = currentLabels.length > 0 ? currentLabels : [];
-
-  function toggleLabel(label) {
+  function update(key, value, fallback) {
     const params = new URLSearchParams(searchParams.toString());
-    const currentLabels = params.getAll("labels");
-
-    if (label === "All") {
-      // If "All" is clicked, clear all labels
-      params.delete("labels");
-    } else {
-      // Remove "All" if it exists
-      const filteredLabels = currentLabels.filter((l) => l !== "All");
-
-      // Toggle the clicked label
-      if (filteredLabels.includes(label)) {
-        // Remove the label
-        const newLabels = filteredLabels.filter((l) => l !== label);
-        if (newLabels.length === 0) {
-          // If no labels remain, show all (remove params)
-          params.delete("labels");
-        } else {
-          params.delete("labels");
-          newLabels.forEach((l) => params.append("labels", l));
-        }
-      } else {
-        // Add the label
-        params.delete("labels");
-        [...filteredLabels, label].forEach((l) => params.append("labels", l));
-      }
-    }
-
-    router.push(`/examples?${params.toString()}`);
+    if (value === fallback) params.delete(key);
+    else params.set(key, value);
+    const query = params.toString();
+    router.push(query ? `/examples?${query}` : "/examples", {scroll: false});
   }
 
-  const isAllSelected = selectedLabels.length === 0 || selectedLabels.includes("All");
-  const isLabelSelected = (label) => selectedLabels.includes(label);
-  const getLabelStyle = (selected) =>
-    cn(
-      "px-3 py-1 rounded-full text-xs font-medium transition-colors",
-      selected ? "bg-green-700 text-white" : "bg-green-100 text-green-700 hover:bg-green-700 hover:text-white",
-    );
-
   return (
-    <div className={cn("flex flex-wrap gap-1.5 items-center border-b border-gray-200 pb-4 border-dashed")}>
-      <button onClick={() => toggleLabel("All")} className={getLabelStyle(isAllSelected)}>
-        All
-      </button>
-      {allLabels.map((label) => {
-        const selected = isLabelSelected(label);
-        return (
-          <button key={label} onClick={() => toggleLabel(label)} className={getLabelStyle(selected)}>
-            {label}
-          </button>
-        );
-      })}
-    </div>
+    <>
+      <Segmented
+        label="Filter by label"
+        options={["All", ...allLabels].map((value) => ({value, label: value}))}
+        value={label}
+        onChange={(value) => update("labels", value, "All")}
+      />
+      <Listbox
+        label="Notebook language"
+        options={LANGUAGES}
+        value={language}
+        align="right"
+        onChange={(value) => update("lang", value, "all")}
+      />
+    </>
   );
 }

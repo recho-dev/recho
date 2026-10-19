@@ -1,4 +1,5 @@
 import {codeToHtml} from "shiki";
+import {codeTheme} from "./codeTheme.js";
 import {useState, useEffect} from "react";
 import {Thumbnail} from "./Thumbnail.jsx";
 
@@ -25,7 +26,7 @@ function mlscriptHighlighter() {
 
 function highlight(code, lang) {
   if (lang === "mlscript") return mlscriptHighlighter().then((highlight) => highlight(code));
-  return codeToHtml(code, {lang, theme: "github-light"});
+  return codeToHtml(code, {lang, theme: codeTheme});
 }
 
 export function ThumbnailClient({code, outputStartLine = null, lang = "javascript"}) {
@@ -35,5 +36,13 @@ export function ThumbnailClient({code, outputStartLine = null, lang = "javascrip
       setHtml(html);
     });
   }, [code, lang]);
-  return <>{html ? <Thumbnail html={html} outputStartLine={outputStartLine} /> : <div>Rendering...</div>}</>;
+  return (
+    <>
+      {html ? (
+        <Thumbnail html={html} outputStartLine={outputStartLine} />
+      ) : (
+        <div className="thumb-code status">Rendering…</div>
+      )}
+    </>
+  );
 }
