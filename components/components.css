@@ -51,6 +51,20 @@
     background: var(--gray-4);
     color: var(--ink-4);
   }
+  /* Confirms an action that loses work. Only inside a dialog. Quiet like a
+     secondary button: the red is in the label, not a fill. */
+  .btn-danger {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--error);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--error-tint);
+    border-color: color-mix(in oklch, var(--error), var(--border) 70%);
+  }
+  .btn-danger:active:not(:disabled) {
+    background: color-mix(in oklch, var(--error-tint), var(--error) 10%);
+  }
   .btn-secondary {
     background: var(--surface);
     border-color: var(--border);
@@ -738,6 +752,84 @@
     }
   }
 
+  /* ---------- Dialog ---------- */
+  /* A native modal <dialog>: it traps focus, sits above everything and closes
+     on Escape. It rises and scales in like a toast; the page dims behind it. */
+  .dialog {
+    width: min(420px, calc(100vw - var(--space-6)));
+    max-width: none;
+    /* The reset zeroes the browser's centring margin. */
+    margin: auto;
+    padding: 0;
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-3);
+    opacity: 0;
+    translate: 0 var(--motion-distance-sm);
+    scale: var(--motion-scale-in);
+    transition:
+      opacity var(--duration-fast) var(--ease-exit),
+      translate var(--duration-fast) var(--ease-exit),
+      scale var(--duration-fast) var(--ease-exit),
+      overlay var(--duration-fast) allow-discrete,
+      display var(--duration-fast) allow-discrete;
+  }
+  .dialog[open] {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-enter);
+  }
+  @starting-style {
+    .dialog[open] {
+      opacity: 0;
+      translate: 0 var(--motion-distance-sm);
+      scale: var(--motion-scale-in);
+    }
+  }
+  .dialog::backdrop {
+    background: var(--scrim);
+    opacity: 0;
+    transition:
+      opacity var(--duration-fast) var(--ease-exit),
+      overlay var(--duration-fast) allow-discrete,
+      display var(--duration-fast) allow-discrete;
+  }
+  .dialog[open]::backdrop {
+    opacity: 1;
+    transition-duration: var(--duration-base);
+  }
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  .dialog-panel {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-5) var(--space-4);
+  }
+  .dialog-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-heading);
+    line-height: var(--lh-ui);
+  }
+  .dialog-message {
+    margin: 0;
+    color: var(--ink-2);
+    line-height: var(--lh-prose);
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
   /* ---------- Status text and motion helpers ---------- */
   .status {
     font-size: var(--fs-xs);
@@ -797,6 +889,13 @@
   }
   .fade-in {
     animation: fade-in var(--duration-fast) var(--ease-swap) backwards;
+  }
+  /* A filter change: the new cards rise and fade in one after another,
+     25ms apart and capped at the 12th card, so a long list still settles fast.
+     With reduced motion the rise is 0 and only the fade is left. */
+  .card-grid.reveal > li {
+    animation: enter var(--duration-base) var(--ease-enter) backwards;
+    animation-delay: calc(min(var(--i, 0), 12) * 25ms / var(--motion-speed));
   }
   @keyframes enter {
     from {

@@ -58,6 +58,7 @@
   --shadow-l: 0.36;
   --shadow-near-alpha: 0.08;
   --shadow-far-alpha: 0.11;
+  --scrim-alpha: 0.18;
 
   /* ---- Grey scale ------------------------------------------------------ */
   /* 0 raised surface, 1 page, 2 sunken, 3-6 fills, 7-8 borders and markers,
@@ -180,6 +181,8 @@
   --focus-ring: var(--focus-width) solid var(--focus);
 
   /* ---- Shadow: raised things only -------------------------------------- */
+  /* Behind a modal dialog: the page dims in the shadow colour. */
+  --scrim: oklch(var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / var(--scrim-alpha));
   --shadow-near: oklch(
     var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / calc(var(--shadow-near-alpha) * var(--shadow-opacity))
   );
@@ -282,6 +285,7 @@
     --shadow-l: 0.08;
     --shadow-near-alpha: 0.3;
     --shadow-far-alpha: 0.45;
+    --scrim-alpha: 0.5;
     color-scheme: dark;
   }
 }
@@ -316,6 +320,7 @@
   --shadow-l: 0.08;
   --shadow-near-alpha: 0.3;
   --shadow-far-alpha: 0.45;
+  --scrim-alpha: 0.5;
   color-scheme: dark;
 }
 

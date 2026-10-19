@@ -19,6 +19,7 @@ import {
   PUBLIC,
 } from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
+import {confirmDialog} from "../components/Dialog.jsx";
 import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
 import {Button} from "../components/Button.jsx";
@@ -190,8 +191,17 @@ export function EditorPage({id: initialId}) {
   const isPublic = notebook.visibility === PUBLIC;
 
   // A new notebook starts over in the chosen language.
-  function onChangeRuntime(runtime) {
-    if (isDirtyStore.getSnapshot() && !confirm("Discard your changes and start a new notebook in this language?"))
+  async function onChangeRuntime(runtime) {
+    if (
+      isDirtyStore.getSnapshot() &&
+      !(await confirmDialog({
+        title: "Start a new notebook?",
+        message: "Switching the language starts a new notebook, and your changes will be lost.",
+        confirmLabel: "Discard and switch",
+        cancelLabel: "Keep editing",
+        danger: true,
+      }))
+    )
       return;
     isDirtyStore.setDirty(false);
     loadNotebook(createNotebook(runtime));

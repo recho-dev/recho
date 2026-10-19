@@ -36,10 +36,10 @@ export function ExamplesClient({examples, allLabels}) {
         <LabelFilters allLabels={allLabels} label={label} language={language} />
       </div>
       {shown.length === 0 && <p className="status">No examples match these filters yet.</p>}
-      {/* The new grid fades in when a filter changes. Cards don't move to new places. */}
-      <ul key={`${labels.join(",")}:${language}`} className="card-grid fade-in">
-        {shown.map((example) => (
-          <li key={example.slug}>
+      {/* The new grid is remounted when a filter changes, so its cards play the reveal. */}
+      <ul key={`${labels.join(",")}:${language}`} className="card-grid reveal">
+        {shown.map((example, i) => (
+          <li key={example.slug} style={{"--i": i}}>
             <Card
               href={`/examples/${example.slug}`}
               title={example.title}

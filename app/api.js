@@ -3,6 +3,7 @@ import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, write
 import {getFirebase} from "./firebase.js";
 import {predicates, objects} from "friendly-words";
 import {RUNTIMES, languageOf} from "./shared.js";
+import {confirmDialog} from "../components/Dialog.jsx";
 
 const LEGACY_FILE_NAME = "obs-files";
 
@@ -226,7 +227,13 @@ export async function getNotebookById(id) {
 }
 
 export async function deleteNotebook(id) {
-  if (!confirm("Are you sure you want to delete this notebook?")) return false;
+  const ok = await confirmDialog({
+    title: "Delete this notebook?",
+    message: "This can't be undone.",
+    confirmLabel: "Delete",
+    danger: true,
+  });
+  if (!ok) return false;
   requireUser();
   await deleteDoc(notebookDoc(id));
   // Also delete a local copy that failed to upload, so it doesn't reappear.
