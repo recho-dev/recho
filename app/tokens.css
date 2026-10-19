@@ -217,7 +217,7 @@
   --fs-lg: calc(var(--fs-ui) * 1.214); /* 17: h2 */
   --fs-xl: calc(var(--fs-ui) * 1.5); /* 21: page title */
   --fs-code-sm: calc(var(--fs-code) * 0.926); /* 12.5: inline code */
-  --fs-gutter: calc(var(--fs-code) * 0.85); /* 11.5: line numbers */
+  --fs-gutter: var(--fs-code); /* line numbers, the same size as the code */
   --fs-thumb: 9.5px; /* card thumbnails: code excerpt */
   --fw-body: 400;
   --lh-code: var(--line-height);
