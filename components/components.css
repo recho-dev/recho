@@ -810,7 +810,7 @@
   .dialog-panel {
     display: grid;
     gap: var(--space-2);
-    padding: var(--space-5) var(--space-5) var(--space-4);
+    padding: var(--space-5);
   }
   .dialog-title {
     margin: 0;
