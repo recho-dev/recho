@@ -5,7 +5,7 @@ import {useRouter, useSearchParams} from "next/navigation";
 import {Segmented} from "../../components/Segmented.jsx";
 import {Listbox} from "../../components/Listbox.jsx";
 
-const LANGUAGES = [
+export const LANGUAGES = [
   {value: "all", label: "All languages"},
   {value: "javascript", label: "JavaScript"},
   {value: "wenyan", label: "文言 wenyan"},
