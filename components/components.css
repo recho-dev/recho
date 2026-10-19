@@ -897,6 +897,19 @@
     animation: enter var(--duration-base) var(--ease-enter) backwards;
     animation-delay: calc(min(var(--i, 0), 12) * 25ms / var(--motion-speed));
   }
+  /* Switching docs: the old page fades out on top while the new one plays
+     its own .enter underneath. Same-looking parts (header, sidebar) don't move. */
+  :root.docs-switch::view-transition-old(root) {
+    animation: fade-out var(--duration-fast) var(--ease-exit) both;
+  }
+  :root.docs-switch::view-transition-new(root) {
+    animation: none;
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
   @keyframes enter {
     from {
       opacity: 0;
