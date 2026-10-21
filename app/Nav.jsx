@@ -5,7 +5,7 @@ import {useState, useEffect, useRef, useSyncExternalStore} from "react";
 import {SafeLink} from "./SafeLink.jsx";
 import {cn} from "./cn.js";
 import {authStore} from "./auth.js";
-import {Plus, Share, Github, Menu, FolderCode, LogIn, CircleUser} from "lucide-react";
+import {Plus, Github, Menu, FolderCode, LogIn, CircleUser} from "lucide-react";
 import {Tooltip} from "react-tooltip";
 
 const styles = {
@@ -27,14 +27,6 @@ export function Nav() {
   const dropdownRef = useRef(null);
   const authMenuRef = useRef(null);
   const auth = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
-
-  function handleUpload(e) {
-    e.preventDefault();
-    const confirm = window.confirm(
-      `Make a Pull Request to share your notebook to Examples!\n- Input the filename\n- Copy the code\n- Click the "Commit changes" button`,
-    );
-    if (confirm) window.open("https://github.com/recho-dev/notebook/new/main/app/examples", "_blank");
-  }
 
   function isSelected(path) {
     return pathname.startsWith(path);
@@ -67,8 +59,8 @@ export function Nav() {
           <SafeLink href="/docs" className={cn(styles.link, isSelected("/docs") && styles.selectedLink, "ml-3")}>
             Docs
           </SafeLink>
-          <SafeLink href="/examples" className={cn(styles.link, isSelected("/examples") && styles.selectedLink)}>
-            Examples
+          <SafeLink href="/explore" className={cn(styles.link, isSelected("/explore") && styles.selectedLink)}>
+            Explore
           </SafeLink>
           <SafeLink href="/news" className={cn(styles.link, isSelected("/news") && styles.selectedLink)}>
             News
@@ -93,11 +85,11 @@ export function Nav() {
                 Docs
               </SafeLink>
               <SafeLink
-                href="/examples"
-                className={cn(styles.dropdownItem, isSelected("/examples") && styles.dropdownItemSelected)}
+                href="/explore"
+                className={cn(styles.dropdownItem, isSelected("/explore") && styles.dropdownItemSelected)}
                 onClick={() => setDropdownOpen(false)}
               >
-                Examples
+                Explore
               </SafeLink>
               <SafeLink
                 href="/news"
@@ -129,17 +121,6 @@ export function Nav() {
           <FolderCode className={cn(styles.linkIcon)} />
         </SafeLink>
 
-        <a
-          href="https://github.com/recho-dev/notebook/new/main/app/examples"
-          onClick={handleUpload}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(styles.link)}
-          data-tooltip-id="nav-tooltip"
-          data-tooltip-content="Share to Examples"
-        >
-          <Share className={cn(styles.linkIcon)} />
-        </a>
         <a
           href="https://github.com/recho-dev/notebook"
           target="_blank"

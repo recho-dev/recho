@@ -6,8 +6,8 @@ import {ExamplesClient} from "./ExamplesClient.jsx";
 import {exampleThumbnail} from "./thumbnails.js";
 
 export const metadata = {
-  title: "Examples | Recho",
-  description: "Examples | Recho",
+  title: "Explore | Recho",
+  description: "Explore | Recho",
 };
 
 // Cache examples at module level - Node.js module cache ensures this only runs once per process

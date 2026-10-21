@@ -43,6 +43,11 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: "/examples/:path*",
+        destination: "/explore/:path*",
+        permanent: true,
+      },
+      {
         source: "/multiples",
         destination: "https://recho-multiples.vercel.app/",
         permanent: true,

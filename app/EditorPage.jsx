@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Pencil, Lock, Globe} from "lucide-react";
+import {Pencil, Lock, Globe, Link} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {
   getNotebookById,
@@ -16,6 +16,7 @@ import {
   markRunning,
   clearRunning,
   PRIVATE,
+  UNLISTED,
   PUBLIC,
 } from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
@@ -25,6 +26,12 @@ import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH, RUNTIMES} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
+
+const VISIBILITIES = {
+  [PRIVATE]: {label: "Private", Icon: Lock, description: "Only you can view."},
+  [UNLISTED]: {label: "Unlisted", Icon: Link, description: "Anyone with the link can view."},
+  [PUBLIC]: {label: "Public", Icon: Globe, description: "Anyone can view, and it's listed on Explore."},
+};
 
 // Local and new notebooks have no owner yet, so they belong to whoever is editing.
 function isOwnedBy(notebook, uid) {
@@ -182,7 +189,7 @@ export function EditorPage({id: initialId}) {
 
   if (!notebook) return notFound();
 
-  const isPublic = notebook.visibility === PUBLIC;
+  const visibility = VISIBILITIES[notebook.visibility] ?? VISIBILITIES[PRIVATE];
 
   // A new notebook starts over in the chosen language.
   function onChangeRuntime(runtime) {
@@ -239,8 +246,7 @@ export function EditorPage({id: initialId}) {
     }, 100);
   }
 
-  async function onToggleVisibility() {
-    const visibility = isPublic ? PRIVATE : PUBLIC;
+  async function onChangeVisibility(visibility) {
     const newNotebook = {...notebook, visibility};
     setNotebook(newNotebook);
     clearTimeout(linkCopiedTimer.current);
@@ -254,7 +260,7 @@ export function EditorPage({id: initialId}) {
       alert(`Failed to change visibility: ${error.message}`);
       return;
     }
-    if (visibility !== PUBLIC) return;
+    if (visibility === PRIVATE) return;
     try {
       await navigator.clipboard.writeText(window.location.href);
       setLinkCopied(true);
@@ -379,20 +385,27 @@ export function EditorPage({id: initialId}) {
                 <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
               )}
               {canSave && (
-                <button
-                  onClick={onToggleVisibility}
-                  title={
-                    isPublic
-                      ? "Anyone with the link can view. Click to make private."
-                      : "Only you can view. Click to make public."
-                  }
+                <label
+                  title={visibility.description}
                   className={cn(
                     "inline-flex items-center gap-1 border border-gray-200 rounded-md px-2 py-1 text-xs hover:bg-gray-100",
                   )}
                 >
-                  {isPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                  {linkCopied ? "Link copied" : isPublic ? "Public" : "Private"}
-                </button>
+                  <visibility.Icon className="w-3 h-3" />
+                  <select
+                    aria-label="Visibility"
+                    value={notebook.visibility}
+                    onChange={(e) => onChangeVisibility(e.target.value)}
+                    className={cn("bg-transparent outline-none cursor-pointer")}
+                  >
+                    {Object.entries(VISIBILITIES).map(([value, {label}]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  {linkCopied && <span className={cn("text-gray-500")}>Link copied</span>}
+                </label>
               )}
               {isAdded && isOthers && <span className={cn("text-xs text-gray-500")}>View only</span>}
             </div>

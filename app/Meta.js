@@ -14,7 +14,7 @@ export function Meta({example}) {
           <div className={cn("flex items-center gap-2 ellipsis line-clamp-1")}>
             <span>{example.author}</span>
             <span> / </span>
-            <Link href={`/examples/${example.slug}`} className={cn("text-blue-500 hover:underline font-semibold")}>
+            <Link href={`/explore/${example.slug}`} className={cn("text-blue-500 hover:underline font-semibold")}>
               <span>{example.title}</span>
             </Link>
           </div>

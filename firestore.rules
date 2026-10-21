@@ -5,15 +5,16 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    // Notebooks are stored by id. Public notebooks can be read by anyone with
-    // the link. Only the owner can read private notebooks or write any of them.
+    // Notebooks are stored by id. Unlisted and public notebooks can be read by
+    // anyone with the link, and public ones are listed on the Explore page.
+    // Only the owner can read private notebooks or write any of them.
     match /notebooks/{notebookId} {
       function isValid() {
         return isUser(request.resource.data.ownerId)
-          && request.resource.data.visibility in ["private", "public"];
+          && request.resource.data.visibility in ["private", "unlisted", "public"];
       }
 
-      allow read: if resource.data.visibility == "public" || isUser(resource.data.ownerId);
+      allow read: if resource.data.visibility in ["unlisted", "public"] || isUser(resource.data.ownerId);
       allow create: if isValid();
       allow update: if isUser(resource.data.ownerId) && isValid();
       allow delete: if isUser(resource.data.ownerId);
