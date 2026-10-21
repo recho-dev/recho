@@ -1,5 +1,5 @@
 import objectInspector from "object-inspect";
-import {hasEscape, hasSGR, normalize, truncate} from "../../lib/ansi.js";
+import {hasEscape, hasSGR, normalize, stripAnsi, truncate} from "../../lib/ansi.js";
 
 function isMultiline(value) {
   const isString = typeof value === "string";
@@ -40,7 +40,8 @@ function inspector(value, {limit = 200, quote = "double", indent = null} = {}) {
   if (!quote) quote = "double";
   const string = objectInspector(value, {indent, quoteStyle: quote});
   // An error isn't cut short, but wrapped: its message is all the user has.
-  if (value instanceof Error) return wrap(string, limit);
+  // Its colours are dropped, so no escape (or half of one) reaches the code.
+  if (value instanceof Error) return wrap(stripAnsi(string), limit);
   if (string.length > limit) return string.slice(0, limit) + "…";
   return string;
 }

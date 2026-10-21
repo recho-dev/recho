@@ -1,7 +1,16 @@
-import {Decoration, EditorView, GutterMarker, WidgetType, lineNumberWidgetMarker} from "@codemirror/view";
+import {
+  Decoration,
+  EditorView,
+  GutterMarker,
+  ViewPlugin,
+  WidgetType,
+  lineNumberWidgetMarker,
+  type ViewUpdate,
+} from "@codemirror/view";
 import {syntaxTree} from "@codemirror/language";
 import {Facet, StateField, type EditorState, type Extension, type Range} from "@codemirror/state";
-import {markLineType} from "../../lib/blocks/detect.ts";
+import {ART, PREFIX_END, markLineType} from "../../lib/blocks/detect.ts";
+import {findLinks, linkTitle} from "../commentLink.js";
 import {parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
 import {blockMetadataField} from "./state.ts";
 import {createTypefaceStyle} from "./fonts.ts";
@@ -53,11 +62,6 @@ export const outputLinesField = StateField.define<OutputLine[]>({
   },
 });
 
-// Box drawing and block elements: a run of output with them is ASCII art.
-const ART = /[─-▟]/;
-// The marks that end an output line's prefix, e.g. `//➜` or wenyan's `批曰。「「➜`.
-const PREFIX_END = /^.{0,8}?[➜✗]/u;
-
 /** One row of an output widget: a line of output and how it is set. */
 type Row = {
   text: string;
@@ -83,26 +87,62 @@ function isTight(row: Row) {
   return row.className.includes("cm-art-line") || row.className.includes("cm-compact-line");
 }
 
-// The class and inline style each span was last given, so a redraw only
-// touches what changed.
-type Span = HTMLSpanElement & {rechoClass?: string; rechoStyle?: string};
+// The class, inline style and link each span was last given, so a redraw
+// only touches what changed.
+type Span = HTMLSpanElement & {rechoClass?: string; rechoStyle?: string; rechoUrl?: string};
+
+type Part = {className: string; style: string; text: string; url: string};
 
 /**
- * Draws a row as spans: the prefix, then one span per SGR style. The row's
- * existing spans are reused, so an animation frame that changes a few
- * characters changes a few text nodes, not the whole row.
+ * The parts of a row's text after its prefix: one per SGR style, split
+ * further where http(s) links start and end, so links open with Cmd/Ctrl +
+ * Click like links in comments (see ../commentLink.js).
+ */
+function textParts(text: string): Part[] {
+  const runs = parse(text);
+  const links = findLinks(runs.map((run) => run.text).join(""));
+  const parts: Part[] = [];
+  let offset = 0;
+  for (const run of runs) {
+    const style = styleToCss(run.style);
+    const end = offset + run.text.length;
+    let at = offset;
+    while (at < end) {
+      const link = links.find((l) => l.to > at && l.from < end);
+      if (!link || link.from >= end) {
+        parts.push({className: "", style, text: run.text.slice(at - offset), url: ""});
+        break;
+      }
+      if (link.from > at)
+        parts.push({className: "", style, text: run.text.slice(at - offset, link.from - offset), url: ""});
+      const to = Math.min(link.to, end);
+      const from = Math.max(link.from, at);
+      parts.push({
+        className: "cm-comment-link",
+        style,
+        text: run.text.slice(from - offset, to - offset),
+        url: link.url,
+      });
+      at = to;
+    }
+    offset = end;
+  }
+  return parts;
+}
+
+/**
+ * Draws a row as spans: the prefix, then one span per SGR style (and link).
+ * The row's existing spans are reused, so an animation frame that changes a
+ * few characters changes a few text nodes, not the whole row.
  */
 function renderRow(row: Row, element: HTMLElement) {
   if (element.className !== row.className) element.className = row.className;
   if (element.style.cssText !== row.font) element.style.cssText = row.font;
   const prefix = row.text.match(PREFIX_END);
-  const parts: [className: string, style: string, text: string][] = [];
-  if (prefix) parts.push(["cm-output-line-prefix", "", prefix[0]]);
-  for (const {text, style} of parse(prefix ? row.text.slice(prefix[0].length) : row.text)) {
-    parts.push(["", styleToCss(style), text]);
-  }
+  const parts = textParts(prefix ? row.text.slice(prefix[0].length) : row.text);
+  if (prefix) parts.unshift({className: "cm-output-line-prefix", style: "", text: prefix[0], url: ""});
   let child = element.firstChild as Span | null;
-  for (const [className, style, text] of parts) {
+  for (const {className, style, text, url} of parts) {
     let span = child;
     if (span === null) {
       span = document.createElement("span");
@@ -110,6 +150,16 @@ function renderRow(row: Row, element: HTMLElement) {
     }
     if (span.rechoClass !== className) span.className = span.rechoClass = className;
     if (span.rechoStyle !== style) span.style.cssText = span.rechoStyle = style;
+    if ((span.rechoUrl ?? "") !== url) {
+      span.rechoUrl = url;
+      if (url) {
+        span.setAttribute("data-url", url);
+        span.title = linkTitle;
+      } else {
+        span.removeAttribute("data-url");
+        span.removeAttribute("title");
+      }
+    }
     if (span.textContent !== text) span.textContent = text;
     child = span.nextSibling as Span | null;
   }
@@ -130,10 +180,7 @@ const renderedRows = new WeakMap<HTMLElement, Row[]>();
  * escapes in the document never show.
  */
 export class OutputWidget extends WidgetType {
-  constructor(
-    readonly rows: Row[],
-    readonly lineNumber: number,
-  ) {
+  constructor(readonly rows: Row[]) {
     super();
   }
 
@@ -170,6 +217,12 @@ export class OutputWidget extends WidgetType {
       }
     }
     renderedRows.set(dom, rows);
+  }
+
+  // Mouse events on links reach the editor's link handler (../commentLink.js);
+  // the rest stay with the widget, e.g. to select its text.
+  ignoreEvent(event: Event) {
+    return !(event.target instanceof Element && event.target.closest(".cm-comment-link"));
   }
 
   get estimatedHeight() {
@@ -222,7 +275,7 @@ function createWidgets(state: EditorState) {
       return {text: line.text, className, font: fonts.get(line.from) ?? ""};
     });
     const last = run[run.length - 1].line;
-    const widget = new OutputWidget(rows, first.number);
+    const widget = new OutputWidget(rows);
     widgets.push(Decoration.replace({widget, block: true}).range(first.from, last.to));
   }
   return Decoration.set(widgets);
@@ -238,7 +291,11 @@ export const outputWidgetField = StateField.define({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-/** The line numbers next to an output widget, one per row, each as high as its row. */
+/**
+ * The line numbers next to an output widget, one per row, each as high as
+ * its row. Its line is worked out from where the widget is, not stored on the
+ * widget, so the numbers follow lines inserted above unchanged output.
+ */
 class OutputLineNumbers extends GutterMarker {
   constructor(
     readonly first: number,
@@ -258,6 +315,8 @@ class OutputLineNumbers extends GutterMarker {
   // One element: the gutter removes a marker by removing its first node.
   toDOM() {
     const numbers = document.createElement("div");
+    numbers.className = "cm-output-numbers";
+    numbers.dataset.line = String(this.first);
     this.tight.forEach((tight, i) => {
       const div = document.createElement("div");
       div.className = tight ? "cm-output-number cm-tight" : "cm-output-number";
@@ -268,8 +327,61 @@ class OutputLineNumbers extends GutterMarker {
   }
 }
 
-const outputLineNumbers = lineNumberWidgetMarker.of((_view, widget) =>
-  widget instanceof OutputWidget ? new OutputLineNumbers(widget.lineNumber, widget.rows.map(isTight)) : null,
+const outputLineNumbers = lineNumberWidgetMarker.of((view, widget, block) =>
+  widget instanceof OutputWidget
+    ? new OutputLineNumbers(view.state.doc.lineAt(block.from).number, widget.rows.map(isTight))
+    : null,
+);
+
+/**
+ * Rows have fixed heights, except error rows, which wrap. When a widget has
+ * error rows, its line numbers take the rows' measured heights, so the
+ * numbers below a wrapped error stay next to their rows.
+ */
+const wrappedLineNumbers = ViewPlugin.fromClass(
+  class {
+    constructor(readonly view: EditorView) {
+      this.schedule();
+    }
+
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.geometryChanged || update.viewportChanged || update.heightChanged) {
+        this.schedule();
+      }
+    }
+
+    schedule() {
+      if (!this.view.contentDOM.querySelector(".cm-output-widget .cm-error-line")) return;
+      this.view.requestMeasure({
+        key: this,
+        read: (view) => this.read(view),
+        write: (rows, view) => this.write(rows, view),
+      });
+    }
+
+    read(view: EditorView) {
+      const widgets: {line: number; heights: number[]}[] = [];
+      for (const dom of Array.from(view.contentDOM.querySelectorAll<HTMLElement>(".cm-output-widget"))) {
+        if (!dom.querySelector(".cm-error-line")) continue;
+        const line = view.state.doc.lineAt(view.posAtDOM(dom)).number;
+        const heights = Array.from(dom.children, (row: Element) => row.getBoundingClientRect().height / view.scaleY);
+        widgets.push({line, heights});
+      }
+      return widgets;
+    }
+
+    write(widgets: {line: number; heights: number[]}[], view: EditorView) {
+      for (const {line, heights} of widgets) {
+        const numbers = view.dom.querySelector(`.cm-output-numbers[data-line="${line}"]`);
+        if (!numbers || numbers.children.length !== heights.length) continue;
+        heights.forEach((height, i) => {
+          const number = numbers.children[i] as HTMLElement;
+          const value = `${height}px`;
+          if (number.style.height !== value) number.style.height = value;
+        });
+      }
+    }
+  },
 );
 
 // Copied output is plain text: its colours stay in the editor.
@@ -278,4 +390,4 @@ const plainCopy = EditorView.clipboardOutputFilter.of((text) => stripAnsi(text))
 export const outputLines = outputLinesField.extension;
 
 /** Output drawn as widgets, with their line numbers, copied without colours. */
-export const outputDecoration: Extension = [outputWidgetField, outputLineNumbers, plainCopy];
+export const outputDecoration: Extension = [outputWidgetField, outputLineNumbers, wrappedLineNumbers, plainCopy];

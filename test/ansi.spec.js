@@ -94,6 +94,13 @@ describe("makeOutput with SGR", () => {
     expect(line.endsWith("\x1b[39m…")).toBe(true);
   });
 
+  it("shows errors without escapes, even long ones", () => {
+    const {output, error} = makeOutput([{options: {}, values: [new Error(red("boom ".repeat(50)))]}]);
+    expect(error).toBe(true);
+    expect(output).not.toMatch(/\x1b/);
+    expect(output).toContain("//✗ [Error: boom boom");
+  });
+
   it("aligns tables with coloured cells", () => {
     const {output} = makeOutput([
       {options: {key: "a"}, values: [red("RED")]},

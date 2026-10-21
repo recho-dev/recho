@@ -248,12 +248,15 @@
     }
   }
 
-  /* An output widget's line numbers, one per row, as high as the rows. */
+  /* An output widget's line numbers, one per row, as high as the rows and
+     on the same baseline. */
   .cm-output-number {
     height: calc(var(--fs-code) * 1.25);
+    line-height: calc(var(--fs-code) * 1.25);
 
     &.cm-tight {
       height: calc(var(--fs-code) * var(--lh-art));
+      line-height: calc(var(--fs-code) * var(--lh-art));
     }
   }
 
@@ -325,8 +328,14 @@
     cursor: pointer;
   }
 
-  .cm-comment-link.cmd-clickable:hover > span {
+  .cm-comment-link.cmd-clickable:hover > span,
+  .cm-output-line .cm-comment-link.cmd-clickable:hover {
     color: var(--accent-text) !important;
+  }
+
+  /* A link in output keeps the output's colour (or its own), underlined. */
+  .cm-output-line .cm-comment-link {
+    color: inherit;
   }
 }
 

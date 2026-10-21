@@ -1,14 +1,11 @@
 import {load} from "cheerio";
 import {OUTPUT_MARK, ERROR_MARK} from "../runtime/constant.js";
 import {hasEscape, parse, styleToCss} from "../lib/ansi.js";
+import {ART, PREFIX_END} from "../lib/blocks/detect.ts";
 
 // Output lines in JavaScript and MLscript (//➜) and wenyan (批曰。「「➜) notebooks.
 const OUTPUT = [`//${OUTPUT_MARK}`, `批曰。「「${OUTPUT_MARK}`];
 const ERROR = `//${ERROR_MARK}`;
-// Box drawing and block elements: runs with them are ASCII art, set solid.
-const ART = /[─-▟]/;
-// The marks that end an output line's prefix, e.g. `//➜` or wenyan's `批曰。「「➜`.
-const PREFIX_END = /^.{0,8}?[➜✗]/u;
 
 function removeEmptyLines(string) {
   const [first, ...rest] = string.split("\n").filter((line) => line.trim() !== "");
@@ -17,11 +14,6 @@ function removeEmptyLines(string) {
   return first + "\n" + rest.join("\n");
 }
 
-/**
- * Marks the output lines of Shiki's HTML like the editor does: `out` (and
- * `err` for errors) on each, `first` and `last` at the ends of a run, so the
- * run gets one continuous marker, and `art` on runs with box drawing.
- */
 /**
  * Draws an output line with SGR codes like the editor does: the prefix, then
  * one span per style. Styled spans are marked `ansi`, so the quiet output
@@ -41,6 +33,11 @@ function colorOutput($, line) {
   }
 }
 
+/**
+ * Marks the output lines of Shiki's HTML like the editor does: `out` (and
+ * `err` for errors) on each, `first` and `last` at the ends of a run, so the
+ * run gets one continuous marker, and `art` on runs with box drawing.
+ */
 function markOutput($, lines) {
   const type = (line) => {
     const text = $(line).text();
