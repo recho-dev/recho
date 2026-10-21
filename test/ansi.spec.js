@@ -68,8 +68,25 @@ describe("lib/ansi", () => {
     expect(styleToCss(DEFAULT_STYLE)).toBe("");
     const [run] = parse("\x1b[1;3;4;9;31;42mx");
     expect(styleToCss(run.style)).toBe(
-      "color:var(--ansi-red);background-color:var(--ansi-green);font-weight:bold;font-style:italic;text-decoration:underline line-through;",
+      "color:var(--ansi-red);background-color:var(--ansi-green);display:inline-block;vertical-align:top;font-weight:bold;font-style:italic;text-decoration:underline line-through;",
     );
+  });
+
+  it("fills the row height behind a background and picks ink for it", () => {
+    const [palette] = parse("\x1b[41mx");
+    expect(styleToCss(palette.style)).toBe(
+      "color:var(--ink);color:oklch(from var(--ansi-red) clamp(0.2, calc((0.62 - l) * 1000), 0.98) 0.005 70);" +
+        "background-color:var(--ansi-red);display:inline-block;vertical-align:top;",
+    );
+    const [rgb] = parse("\x1b[48;2;245;197;66mx");
+    expect(styleToCss(rgb.style)).toContain("oklch(from #f5c542 ");
+    // A colour of its own wins, with palette black and white as real ink.
+    const [own] = parse("\x1b[44;31mx");
+    expect(styleToCss(own.style)).toMatch(/^color:var\(--ansi-red\);background-color/);
+    const [white] = parse("\x1b[44;37mx");
+    expect(styleToCss(white.style)).toMatch(/^color:oklch\(0\.9 0\.005 70\);background-color/);
+    const [plainWhite] = parse("\x1b[37mx");
+    expect(styleToCss(plainWhite.style)).toBe("color:var(--ansi-white);");
   });
 });
 
