@@ -33,7 +33,7 @@ export function createEditor(container, options) {
   // language's extensions set up; without it, it shows nothing.
   myBasicSetup.splice(2, 0, blockIndicator);
   // Each block's play button goes right after the line numbers.
-  myBasicSetup.splice(1, 0, runButtonGutter(runCell));
+  myBasicSetup.splice(1, 0, runButtonGutter(runCells));
 
   // JavaScript's support needs the runtime (for controls), so it is set up
   // here; other languages bring theirs (see ./languages/index.js), as a
@@ -167,15 +167,15 @@ export function createEditor(container, options) {
     }
   }
 
-  /** Run the block whose source contains `pos` again, with the blocks that read it. */
-  function runCell(pos) {
+  /** Run the blocks whose source contains one of `positions` again, with the blocks that read them. */
+  function runCells(positions) {
     try {
       // A new runtime runs every block anyway.
       if (!runtimeRef.current) {
         initRuntime();
         runtimeRef.current.run();
       } else {
-        runtimeRef.current.runCell(pos);
+        runtimeRef.current.runCells(positions);
       }
     } catch (error) {
       console.error(error);
