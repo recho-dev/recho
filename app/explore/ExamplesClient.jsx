@@ -13,13 +13,17 @@ const cardFrame = cn("w-full pt-[62.5%] relative border border-gray-200 rounded-
 export function ExamplesClient({examples}) {
   const searchParams = useSearchParams();
   const [notebooks, setNotebooks] = useState([]);
+  const [notebooksError, setNotebooksError] = useState(false);
 
   // Public notebooks are listed alongside the bundled examples.
   useEffect(() => {
     let cancelled = false;
     getPublicNotebooks()
       .then((notebooks) => !cancelled && setNotebooks(notebooks))
-      .catch((error) => console.error("Failed to load public notebooks", error));
+      .catch((error) => {
+        console.error("Failed to load public notebooks", error);
+        if (!cancelled) setNotebooksError(true);
+      });
     return () => (cancelled = true);
   }, []);
 
@@ -43,35 +47,42 @@ export function ExamplesClient({examples}) {
       ...filteredExamples.map((example) => ({key: `example-${example.slug}`, created: example.created, example})),
       ...(showNotebooks ? notebooks : []).map((notebook) => ({
         key: `notebook-${notebook.id}`,
-        created: notebook.created,
+        created: notebook.listed,
         notebook,
       })),
     ].sort((a, b) => new Date(b.created) - new Date(a.created));
   }, [examples, notebooks, selectedLabels]);
 
   return (
-    <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>
-      {cards.map(({key, example, notebook}) =>
-        notebook ? (
-          <NotebookCard key={key} notebook={notebook} frameClassName={cardFrame} />
-        ) : (
-          <div key={key}>
-            <Meta example={example} />
-            <div className={cardFrame}>
-              <div className={cn("absolute inset-0 px-3")}>
-                {example.snap ? (
-                  <div
-                    className={cn("w-full h-full bg-cover bg-center")}
-                    style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}}
-                  />
-                ) : (
-                  <div dangerouslySetInnerHTML={{__html: example.thumbnail}} className={cn("w-full h-full")} />
-                )}
+    <>
+      {notebooksError && (
+        <p className={cn("mt-6 text-sm text-gray-500")}>
+          Community notebooks could not be loaded. Showing examples only.
+        </p>
+      )}
+      <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>
+        {cards.map(({key, example, notebook}) =>
+          notebook ? (
+            <NotebookCard key={key} notebook={notebook} frameClassName={cardFrame} />
+          ) : (
+            <div key={key}>
+              <Meta example={example} />
+              <div className={cardFrame}>
+                <div className={cn("absolute inset-0 px-3")}>
+                  {example.snap ? (
+                    <div
+                      className={cn("w-full h-full bg-cover bg-center")}
+                      style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}}
+                    />
+                  ) : (
+                    <div dangerouslySetInnerHTML={{__html: example.thumbnail}} className={cn("w-full h-full")} />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ),
-      )}
-    </div>
+          ),
+        )}
+      </div>
+    </>
   );
 }

@@ -248,6 +248,8 @@ export function EditorPage({id: initialId}) {
 
   async function onChangeVisibility(visibility) {
     const newNotebook = {...notebook, visibility};
+    // Explore lists notebooks by when they were made public.
+    if (visibility === PUBLIC) newNotebook.published = new Date().toISOString();
     setNotebook(newNotebook);
     clearTimeout(linkCopiedTimer.current);
     setLinkCopied(false);

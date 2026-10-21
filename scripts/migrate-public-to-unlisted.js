@@ -9,7 +9,13 @@
  * 1. firebase deploy --only firestore:rules
  * 2. node scripts/migrate-public-to-unlisted.js --dry-run
  * 3. node scripts/migrate-public-to-unlisted.js
- * 4. Deploy the app.
+ * 4. Run it again right before deploying the app, and keep that gap short.
+ * 5. Deploy the app.
+ *
+ * Until the app is deployed, the live editor only knows private and public:
+ * it shows unlisted notebooks as Private, and its toggle writes "public",
+ * which the new app lists on Explore. Running the script again just before
+ * the deploy catches those. It is safe to run any number of times.
  *
  * Credentials come from Application Default Credentials, e.g.
  * `gcloud auth application-default login` or GOOGLE_APPLICATION_CREDENTIALS
