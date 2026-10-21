@@ -135,8 +135,9 @@
     "wenyan": "github:recho-dev/wenyan#master"
   },
   "pnpm": {
-    "neverBuiltDependencies": [
-      "@mlscript/tree-sitter-mlscript"
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
     ]
   }
 }
