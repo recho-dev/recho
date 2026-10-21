@@ -104,6 +104,13 @@ export function createEditor(container, options) {
       effects,
       annotations: [Transaction.remote.of(true)],
     });
+    // Measure the new lines now rather than at the next frame. Until then the
+    // editor lays them out at an estimated height, and output lines are
+    // shorter than code lines, so with output changing every frame (e.g. an
+    // animation) the gutters below would sit off from the text most of the
+    // time: their buttons lose hover and miss presses. `measure` is internal
+    // to CodeMirror, so this falls back to its usual scheduling without it.
+    if (changes.length) view.measure?.();
   }
 
   function onChange(update) {
