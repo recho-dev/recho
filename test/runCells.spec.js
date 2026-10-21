@@ -35,18 +35,17 @@ const code = `const a = ++globalThis.__a;\n\necho(a);\n\necho(++globalThis.__c);
 describe("runCells", () => {
   let notebook;
 
+  // Counters that cells increment, to tell their runs apart.
+  const counters = ["__a", "__b", "__c", "__t"];
+
   beforeEach(() => {
-    globalThis.__a = 0;
-    globalThis.__c = 0;
+    for (const name of counters) globalThis[name] = 0;
   });
 
   afterEach(async () => {
     notebook?.runtime.destroy();
     notebook = null;
-    delete globalThis.__a;
-    delete globalThis.__c;
-    delete globalThis.__t;
-    delete globalThis.__b;
+    for (const name of counters) delete globalThis[name];
     await wait(0);
   });
 
@@ -101,7 +100,6 @@ describe("runCells", () => {
   });
 
   it("ignores echoes from the cell's previous run", async () => {
-    globalThis.__t = 0;
     notebook = start(`{\n  const id = ++globalThis.__t;\n  setTimeout(() => echo(id), 100);\n}`);
     await wait(50);
     // The first run's timer fires after this run starts.
@@ -111,7 +109,6 @@ describe("runCells", () => {
   });
 
   it("keeps the cell to run while output moves it during an async split", async () => {
-    globalThis.__b = 0;
     notebook = start(
       `t | | setTimeout(() => echo("late"), 150); return {t: 1}\nb | | return {b: ++globalThis.__b}\n | b | echo(b)`,
       {

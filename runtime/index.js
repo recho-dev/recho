@@ -137,6 +137,10 @@ export function createRuntime(initialCode, options = {}) {
   // as run, so later writers and readers don't wait on it forever.
   const writers = new Map();
 
+  // Positions of cells to run again once the nodes match the code (see
+  // runCells).
+  let runAt = [];
+
   const trackInputs = (fn, inputs) => {
     const reads = new Set(inputs);
     return function (...args) {
@@ -723,10 +727,6 @@ export function createRuntime(initialCode, options = {}) {
     refresh(code);
   }
 
-  // Positions of cells to run again once the nodes match the code (see
-  // runCells).
-  let runAt = [];
-
   // Runs the cells at `runAt` again, except those that just entered (and so
   // run anyway) and positions with no cell (e.g. it was deleted).
   function forcePending(entered = []) {
@@ -736,7 +736,7 @@ export function createRuntime(initialCode, options = {}) {
     const nodes = Array.from(nodesByKey.values()).flat(Infinity);
     for (const node of nodes) {
       if (entered.includes(node)) continue;
-      if (positions.some((pos) => node.start <= pos && pos < node.end)) node.state.force?.();
+      if (positions.some((pos) => node.start <= pos && pos < node.end)) node.state.force();
     }
   }
 

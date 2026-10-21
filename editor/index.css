@@ -159,11 +159,6 @@
     }
   }
 
-  .cm-runButtons .cm-gutterElement {
-    display: flex;
-    align-items: center;
-  }
-
   .cm-run-button {
     display: flex;
     align-items: center;

@@ -2,22 +2,19 @@ import {GutterMarker, gutter, type BlockInfo, type EditorView} from "@codemirror
 import {BlockMetadata} from "./BlockMetadata.ts";
 import {blockMetadataField} from "./state.ts";
 
+/** A play button for `count` blocks; with none, it only keeps the gutter's width. */
 class RunButtonMarker extends GutterMarker {
-  constructor(
-    private visible: boolean,
-    private count = 1,
-  ) {
+  constructor(private count: number) {
     super();
   }
   eq(other: RunButtonMarker) {
-    return other.visible === this.visible && other.count === this.count;
+    return other.count === this.count;
   }
   toDOM() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cm-run-button";
-    if (!this.visible) {
-      // The spacer only keeps the gutter's width.
+    if (!this.count) {
       button.style.visibility = "hidden";
       button.tabIndex = -1;
       button.setAttribute("aria-hidden", "true");
@@ -32,9 +29,8 @@ class RunButtonMarker extends GutterMarker {
   }
 }
 
-const spacer = new RunButtonMarker(false);
-const runButtons = [spacer, new RunButtonMarker(true, 1)];
-const runButton = (count: number) => (runButtons[count] ??= new RunButtonMarker(true, count));
+const markers: RunButtonMarker[] = [];
+const marker = (count: number) => (markers[count] ??= new RunButtonMarker(count));
 
 /**
  * The blocks whose source starts on the given line. A block's source starts
@@ -73,47 +69,40 @@ function lineAtY(view: EditorView, clientY: number): BlockInfo | null {
   return view.lineBlockAt(view.posAtDOM(line));
 }
 
-const positionsOf = (blocks: BlockMetadata[]) => blocks.map((block) => block.source.from);
-
-const runButtonOf = (event: Event) =>
-  event.target instanceof Element ? event.target.closest<HTMLElement>(".cm-run-button") : null;
-
 /**
  * A gutter with a play button on each line where a block's source starts,
  * which calls `onRun` with the positions of those blocks' sources.
  */
 export function runButtonGutter(onRun: (positions: number[]) => void) {
+  const runOn = (view: EditorView, line: BlockInfo | null) => {
+    const blocks = line ? blocksStartingOn(view, line) : [];
+    if (blocks.length) onRun(blocks.map((block) => block.source.from));
+  };
   return gutter({
     class: "cm-runButtons",
     lineMarkerChange: (update) =>
       update.startState.field(blockMetadataField, false) !== update.state.field(blockMetadataField, false),
     lineMarker(view, line) {
       const count = blocksStartingOn(view, line).length;
-      return count ? runButton(count) : null;
+      return count ? marker(count) : null;
     },
-    initialSpacer() {
-      return spacer;
-    },
+    initialSpacer: () => marker(0),
     domEventHandlers: {
-      // A press anywhere in the gutter, beside a line where blocks start, as
-      // the button may not be under the pointer (see lineAtY). Handling it
-      // also keeps the editor from moving the cursor.
-      mousedown(view, _line, e) {
-        const event = e as MouseEvent;
-        if (event.button !== 0) return false;
-        const line = lineAtY(view, event.clientY);
-        const blocks = line ? blocksStartingOn(view, line) : [];
-        if (blocks.length) onRun(positionsOf(blocks));
+      // A press anywhere in the gutter runs the blocks starting beside it,
+      // as the button may not be under the pointer (see lineAtY). Handling
+      // it also keeps the editor from moving the cursor.
+      mousedown(view, _line, event) {
+        if ((event as MouseEvent).button !== 0) return false;
+        runOn(view, lineAtY(view, (event as MouseEvent).clientY));
         return true;
       },
-      // Enter or Space on the focused button. `line` is found from where the
-      // button is, by the height map that places it, so they agree. (A
-      // click from the mouse has already run on its press.)
-      click(view, line, e) {
-        const event = e as MouseEvent;
-        if (!runButtonOf(event) || event.detail !== 0) return false;
-        const blocks = blocksStartingOn(view, line);
-        if (blocks.length) onRun(positionsOf(blocks));
+      // Enter or Space on the focused button (a click from the mouse has
+      // run on its press). `line` is found from where the button is, by the
+      // height map that places it, so they agree.
+      click(view, line, event) {
+        const fromKeyboard = (event as MouseEvent).detail === 0;
+        if (!fromKeyboard || !(event.target as Element).closest?.(".cm-run-button")) return false;
+        runOn(view, line);
         return true;
       },
     },

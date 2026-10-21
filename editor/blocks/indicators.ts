@@ -85,7 +85,7 @@ export const blockIndicator = gutter({
   },
 });
 
-export function findEnclosingBlock(blocks: BlockMetadata[], pos: number): number | null {
+function findEnclosingBlock(blocks: BlockMetadata[], pos: number): number | null {
   let left = 0;
   let right = blocks.length - 1;
 
