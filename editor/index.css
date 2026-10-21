@@ -159,6 +159,28 @@
     }
   }
 
+  .cm-runButtons .cm-gutterElement {
+    display: flex;
+    align-items: center;
+  }
+
+  .cm-run-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 100%;
+    color: #6e7781;
+    opacity: 0.35;
+    cursor: pointer;
+    transition: opacity 0.1s ease-in-out;
+
+    &:hover {
+      opacity: 1;
+      color: #1f2328;
+    }
+  }
+
   .cm-blockIndicators {
     padding-left: 0.25rem;
 

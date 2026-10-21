@@ -325,6 +325,8 @@ export function createRuntime(initialCode, options = {}) {
   }
 
   function splitError(code, error) {
+    // The code doesn't split, so there is no cell to run again.
+    forceAt = null;
     console.error(error);
     // Display the syntax error at the appropriate location.
     const from = language.errorOffset(code, error);
@@ -494,7 +496,10 @@ export function createRuntime(initialCode, options = {}) {
     if (disposed) return;
     if (code === prevCode) {
       // The current nodes are for an earlier code until the split ends.
-      if (!splitting) refresh(code);
+      if (!splitting) {
+        forcePending();
+        refresh(code);
+      }
       return;
     }
 
@@ -525,6 +530,8 @@ export function createRuntime(initialCode, options = {}) {
       if (code === currentCode()) return use(code, result);
       // The code changed while splitting, so the offsets are for the old
       // code: split the new code instead (unless an edit stopped running).
+      // A cell to run by position is lost, since the position moved.
+      forceAt = null;
       prevCode = null;
       if (isRunning) rerun(currentCode());
     };
@@ -616,8 +623,9 @@ export function createRuntime(initialCode, options = {}) {
         const __echo__ = (value, ...args) => {
           if (version < echoVersion) throw new Error("stale echo");
           else if (state.variables[0] !== v) throw new Error("stale echo");
-          else if (version > echoVersion) clear(state);
+          else if (version > echoVersion || state.forced) clear(state);
           echoVersion = version;
+          state.forced = false;
           echo(state, {...options}, value, ...args);
           return args.length ? [value, ...args] : value;
         };
@@ -651,6 +659,14 @@ export function createRuntime(initialCode, options = {}) {
       const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
       const definition = trackInputs(node.definition(newInputs), reads);
       state.variables.push(v.define(vid, newInputs, definition));
+      // Defining the cell again makes the runtime run it, and the cells that
+      // read it, again (see runCell). Its echo stays, so it is disposed of as
+      // when it is replaced, and its next call replaces the old output.
+      state.force = () => {
+        vd._value?.__dispose__?.();
+        state.forced = true;
+        v.define(vid, newInputs, definition);
+      };
 
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
@@ -687,10 +703,36 @@ export function createRuntime(initialCode, options = {}) {
       }
     }
 
+    forcePending(enter);
     refresh(code);
   }
 
+  // The position of a cell to run again once the nodes match the code (see
+  // runCell).
+  let forceAt = null;
+
+  // Runs the cell at `forceAt` again, unless it just entered (and so runs
+  // anyway) or there is no cell there (e.g. it was deleted).
+  function forcePending(entered = []) {
+    if (forceAt === null) return;
+    const pos = forceAt;
+    forceAt = null;
+    const nodes = Array.from(nodesByKey.values()).flat(Infinity);
+    const node = nodes.find((n) => n.start <= pos && pos < n.end);
+    if (node && !entered.includes(node)) node.state.force?.();
+  }
+
   function run() {
+    rerun(code);
+  }
+
+  /**
+   * Runs the code, as `run` does, and then the cell whose source contains
+   * `pos` again, even if unchanged, along with the cells that read it.
+   */
+  function runCell(pos) {
+    isRunning = true;
+    forceAt = pos;
     rerun(code);
   }
 
@@ -698,6 +740,7 @@ export function createRuntime(initialCode, options = {}) {
     setCode,
     setIsRunning,
     run,
+    runCell,
     onChanges,
     onError,
     onStatus,

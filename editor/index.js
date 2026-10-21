@@ -7,7 +7,7 @@ import {indentWithTab} from "@codemirror/commands";
 import {createRuntime} from "../runtime/index.js";
 import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
-import {blockIndicator} from "./blocks";
+import {blockIndicator, runButtonGutter} from "./blocks";
 import {javascriptSupport} from "./languages/javascript.js";
 
 /**
@@ -24,7 +24,7 @@ import {javascriptSupport} from "./languages/javascript.js";
  */
 export function createEditor(container, options) {
   const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
-  const dispatcher = d3Dispatch("userInput", "status");
+  const dispatcher = d3Dispatch("userInput", "status", "run");
   const runtimeRef = {current: null};
   const isJavaScript = language.id === "javascript";
 
@@ -32,6 +32,8 @@ export function createEditor(container, options) {
   // The block indicator shows the blocks in blockMetadataField, which each
   // language's extensions set up; without it, it shows nothing.
   myBasicSetup.splice(2, 0, blockIndicator);
+  // Each block's play button goes right after the line numbers.
+  myBasicSetup.splice(1, 0, runButtonGutter(runCell));
 
   // JavaScript's support needs the runtime (for controls), so it is set up
   // here; other languages bring theirs (see ./languages/index.js), as a
@@ -163,6 +165,23 @@ export function createEditor(container, options) {
       console.error(error);
       onError?.(error);
     }
+  }
+
+  /** Run the block whose source contains `pos` again, with the blocks that read it. */
+  function runCell(pos) {
+    try {
+      // A new runtime runs every block anyway.
+      if (!runtimeRef.current) {
+        initRuntime();
+        runtimeRef.current.run();
+      } else {
+        runtimeRef.current.runCell(pos);
+      }
+    } catch (error) {
+      console.error(error);
+      onError?.(error);
+    }
+    dispatcher.call("run");
   }
 
   return {
