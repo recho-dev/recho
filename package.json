@@ -133,5 +133,11 @@
     "three": "^0.160.1",
     "web-tree-sitter": "0.26.9",
     "wenyan": "github:recho-dev/wenyan#master"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   }
 }
