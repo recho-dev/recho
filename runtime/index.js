@@ -633,11 +633,12 @@ export function createRuntime(initialCode, options = {}) {
       // Create echo variable for every node to support internal echo calls.
       // This ensures echo functionality works even when not explicitly used in code,
       // such as `add(1, 2)`, because the evaluated code may call echo internally.
-      let echoVersion = -1;
+      // The echo of the latest run; calls to earlier ones (e.g. from a timer
+      // of a previous run) are stale.
+      let echoGeneration = 0;
       // How many times the cell has been run on its own (see runCells). The
       // echo reads it, so running the cell again makes a new echo, as when an
-      // input changes: the old echo is disposed of, and calls to it (e.g.
-      // from a timer of the previous run) are stale.
+      // input changes: the old echo is disposed of, and calls to it are stale.
       const runs = `${vid}:runs`;
       let runCount = 0;
       const vr = main.variable().define(runs, [], runCount);
@@ -645,12 +646,14 @@ export function createRuntime(initialCode, options = {}) {
       const echoInputs = ["invalidation", ...inputs.filter((i) => i !== "echo" && i !== "invalidation"), runs];
       vd.define(echoInputs, (invalidation) => {
         const options = {};
-        const version = v._version; // Capture version on input change.
+        const generation = ++echoGeneration;
+        // The previous run's output stays until this run echoes.
+        let cleared = false;
         const __echo__ = (value, ...args) => {
-          if (version < echoVersion) throw new Error("stale echo");
+          if (generation !== echoGeneration) throw new Error("stale echo");
           else if (state.variables[0] !== v) throw new Error("stale echo");
-          else if (version > echoVersion) clear(state);
-          echoVersion = version;
+          else if (!cleared) clear(state);
+          cleared = true;
           echo(state, {...options}, value, ...args);
           return args.length ? [value, ...args] : value;
         };

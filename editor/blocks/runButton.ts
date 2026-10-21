@@ -62,9 +62,11 @@ function blocksStartingOn(view: EditorView, line: BlockInfo): BlockMetadata[] {
  * while the content is where it was drawn.
  */
 function lineAtY(view: EditorView, clientY: number): BlockInfo | null {
-  const content = view.contentDOM.getBoundingClientRect();
-  const target = view.root.elementFromPoint(content.left + 1, clientY);
-  const line = target?.closest(".cm-line");
+  // Just right of the gutters, which stay put (they are sticky) when the
+  // content scrolls horizontally under them.
+  const gutters = view.dom.querySelector(".cm-gutters")?.getBoundingClientRect();
+  const x = Math.max(gutters?.right ?? 0, view.contentDOM.getBoundingClientRect().left) + 1;
+  const line = view.root.elementFromPoint(x, clientY)?.closest(".cm-line");
   if (!line || !view.contentDOM.contains(line)) return null;
   return view.lineBlockAt(view.posAtDOM(line));
 }
@@ -89,11 +91,12 @@ export function runButtonGutter(onRun: (positions: number[]) => void) {
     initialSpacer: () => marker(0),
     domEventHandlers: {
       // A press anywhere in the gutter runs the blocks starting beside it,
-      // as the button may not be under the pointer (see lineAtY). Handling
-      // it also keeps the editor from moving the cursor.
-      mousedown(view, _line, event) {
+      // as the button may not be under the pointer (see lineAtY); `line`,
+      // from the height map, is only a fallback. Handling it also keeps the
+      // editor from moving the cursor.
+      mousedown(view, line, event) {
         if ((event as MouseEvent).button !== 0) return false;
-        runOn(view, lineAtY(view, (event as MouseEvent).clientY));
+        runOn(view, lineAtY(view, (event as MouseEvent).clientY) ?? line);
         return true;
       },
       // Enter or Space on the focused button (a click from the mouse has

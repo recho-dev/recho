@@ -100,12 +100,17 @@ describe("runCells", () => {
   });
 
   it("ignores echoes from the cell's previous run", async () => {
-    notebook = start(`{\n  const id = ++globalThis.__t;\n  setTimeout(() => echo(id), 100);\n}`);
+    // A stale echo throws, which the timer catches.
+    const cell = `{\n  const id = ++globalThis.__t;\n  setTimeout(() => {\n    try {\n      echo(id);\n    } catch {}\n  }, 100);\n}`;
+    notebook = start(cell);
     await wait(50);
-    // The first run's timer fires after this run starts.
+    // Runs again before the first run's timer fires.
     notebook.runCells("{");
-    await wait(250);
-    expect(notebook.doc()).toBe(`//➜ 2\n{\n  const id = ++globalThis.__t;\n  setTimeout(() => echo(id), 100);\n}`);
+    // After the first run's timer, before this run's.
+    await wait(80);
+    expect(notebook.doc()).toBe(cell);
+    await wait(150);
+    expect(notebook.doc()).toBe(`//➜ 2\n${cell}`);
   });
 
   it("keeps the cell to run while output moves it during an async split", async () => {
