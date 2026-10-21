@@ -1,9 +1,9 @@
 "use client";
 import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
-import {Trash, Globe} from "lucide-react";
+import {Trash, Globe, Link as LinkIcon} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
-import {getNotebooks, deleteNotebook, PUBLIC} from "../api.js";
+import {getNotebooks, deleteNotebook, PUBLIC, UNLISTED} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange, highlightLanguage} from "../shared.js";
 import {cn} from "../cn.js";
@@ -92,6 +92,9 @@ export default function Page() {
                   </Link>
                   {notebook.visibility === PUBLIC && (
                     <Globe className={cn("w-3 h-3 text-gray-500 flex-shrink-0")} aria-label="Public" />
+                  )}
+                  {notebook.visibility === UNLISTED && (
+                    <LinkIcon className={cn("w-3 h-3 text-gray-500 flex-shrink-0")} aria-label="Unlisted" />
                   )}
                 </div>
                 <div className={cn("text-sm text-gray-500")}>

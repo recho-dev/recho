@@ -152,7 +152,7 @@ function map(x, d0, d1, r0, r1) {
  * - [1] https://luyu.computer/
  * - [2] https://recho.dev/
  * - [3] https://github.com/observablehq/notebook-kit
- * - [4] https://recho.dev/examples/mandelbrot-set
+ * - [4] https://recho.dev/explore/mandelbrot-set
  * - [5] https://en.wikipedia.org/wiki/Mandelbrot_set
  * - [6] https://recho.dev/docs/getting-started
  */

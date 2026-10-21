@@ -40,7 +40,7 @@ export function LabelFilters({allLabels}) {
       }
     }
 
-    router.push(`/examples?${params.toString()}`);
+    router.push(`/explore?${params.toString()}`);
   }
 
   const isAllSelected = selectedLabels.length === 0 || selectedLabels.includes("All");
