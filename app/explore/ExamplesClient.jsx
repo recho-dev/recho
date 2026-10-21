@@ -4,7 +4,7 @@ import {useEffect, useMemo, useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {Meta} from "../Meta.js";
 import {cn} from "../cn.js";
-import {BASE_PATH} from "../shared.js";
+import {BASE_PATH, COMMUNITY_LABEL} from "../shared.js";
 import {getPublicNotebooks} from "../api.js";
 import {NotebookCard} from "./NotebookCard.jsx";
 
@@ -29,8 +29,7 @@ export function ExamplesClient({examples}) {
     return labels.length > 0 ? labels : [];
   }, [searchParams]);
 
-  // Filter examples based on selected labels. Notebooks have no labels, so
-  // they are only shown when no label is selected.
+  // Filter examples based on selected labels. Public notebooks are labeled Community.
   const cards = useMemo(() => {
     const showAll = selectedLabels.length === 0 || selectedLabels.includes("All");
     const filteredExamples = showAll
@@ -39,9 +38,10 @@ export function ExamplesClient({examples}) {
           if (!example.label || !Array.isArray(example.label)) return false;
           return selectedLabels.some((selectedLabel) => example.label.includes(selectedLabel));
         });
+    const showNotebooks = showAll || selectedLabels.includes(COMMUNITY_LABEL);
     return [
       ...filteredExamples.map((example) => ({key: `example-${example.slug}`, created: example.created, example})),
-      ...(showAll ? notebooks : []).map((notebook) => ({
+      ...(showNotebooks ? notebooks : []).map((notebook) => ({
         key: `notebook-${notebook.id}`,
         created: notebook.created,
         notebook,

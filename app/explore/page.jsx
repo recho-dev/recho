@@ -1,6 +1,7 @@
 import {Suspense} from "react";
 import {getAllJSExamples} from "../utils.js";
 import {cn} from "../cn.js";
+import {COMMUNITY_LABEL} from "../shared.js";
 import {LabelFilters} from "./LabelFilters.jsx";
 import {ExamplesClient} from "./ExamplesClient.jsx";
 import {exampleThumbnail} from "./thumbnails.js";
@@ -30,7 +31,8 @@ const allLabels = (() => {
       example.label.forEach((label) => labelSet.add(label));
     }
   });
-  return Array.from(labelSet).sort();
+  // Public notebooks are labeled Community; it comes first, before the examples' labels.
+  return [COMMUNITY_LABEL, ...Array.from(labelSet).sort()];
 })();
 
 export default async function Page() {
