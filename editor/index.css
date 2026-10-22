@@ -302,7 +302,7 @@
     height: calc(100% + 1px);
 
     &.output {
-      background: var(--success-marker);
+      background: var(--out-success-marker);
     }
 
     &.source {

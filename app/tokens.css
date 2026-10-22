@@ -116,6 +116,7 @@
   --out-marker: color-mix(in oklch, var(--gray-7), var(--marker) calc(var(--out-emphasis) * 100%)); /* gutter bar */
   --out-marker-width: 2px;
   --out-marker-inset: 1.5px; /* how far a marker's ends stop short of their line's edge */
+  --out-success-marker: color-mix(in oklab, var(--success-marker), var(--out-marker) 50%); /* green, half way to grey */
 
   /* ---- Accent: interaction only ---------------------------------------- */
   --accent: oklch(var(--accent-l) var(--accent-chroma) var(--accent-hue));
