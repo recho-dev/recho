@@ -6,13 +6,12 @@ import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
 import {cn} from "../components/cn.js";
 import {Button} from "../components/Button.jsx";
-import {isMac, useShortcut} from "../components/Kbd.jsx";
+import {isMac, useShortcut} from "../components/shortcut.js";
 import {toast} from "../components/Toast.jsx";
 import {LoadingBar} from "./LoadingBar.jsx";
-import {languageOf} from "./shared.js";
+import {languageOf, languageName} from "./shared.js";
 
 // How the loading indicator names the languages that load on demand.
-const LANGUAGE_NAMES = {mlscript: "MLscript", wenyan: "wenyan"};
 
 function debounce(fn, delay = 0) {
   let timeout;
@@ -145,11 +144,11 @@ export function Editor({
   return (
     <div className="editor-frame">
       <div className={cn("toolbar", pinToolbar && "pinned")} role="toolbar" aria-label="Notebook">
-        <Button variant="primary" className="tb-run" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
+        <Button variant="primary" className="tb-action" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
           <Play className="ic" size={12} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
         </Button>
-        <Button className="tb-run" tip="Stop updating" onClick={onStop}>
+        <Button className="tb-action" tip="Stop updating" onClick={onStop}>
           <Square className="ic" size={9} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           <span className="lbl">Stop</span>
         </Button>
@@ -165,7 +164,7 @@ export function Editor({
         {loading.parts.length > 0 && !loadError && (
           <LoadingBar
             loading={loading.remaining.length > 0}
-            label={`Loading ${LANGUAGE_NAMES[languageOf(runtime)] ?? languageOf(runtime)} ${(loading.remaining.length ? loading.remaining : loading.parts).join(" and ")}…`}
+            label={`Loading ${languageName(runtime)} ${(loading.remaining.length ? loading.remaining : loading.parts).join(" and ")}…`}
           />
         )}
         {loadError && (

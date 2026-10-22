@@ -20,6 +20,19 @@ export function languageOf(runtime = RUNTIMES.javascript) {
   return runtime.split("@")[0];
 }
 
+/** The languages a notebook can be written in, in menu order. */
+export const LANGUAGES = [
+  {value: "javascript", runtime: RUNTIMES.javascript, label: "JavaScript"},
+  {value: "wenyan", runtime: RUNTIMES.wenyan, label: "文言 wenyan"},
+  {value: "mlscript", runtime: RUNTIMES.mlscript, label: "MLscript"},
+];
+
+/** A language's name, from a language or runtime: "wenyan@0.1.0" → "文言 wenyan". */
+export function languageName(runtime) {
+  const value = languageOf(runtime);
+  return LANGUAGES.find((language) => language.value === value)?.label ?? value;
+}
+
 /** A notebook's file extension, by language. */
 const EXTENSIONS = {javascript: ".js", wenyan: ".wy", mlscript: ".mls"};
 

@@ -1,6 +1,6 @@
 "use client";
 import {useEffect, useRef} from "react";
-import {cn} from "./cn.js";
+import {cn} from "../components/cn.js";
 
 /**
  * A notebook's title, edited in place like a heading in a document. Enter or
@@ -43,17 +43,20 @@ export function NotebookTitle({value, onChange, focusKey = null}) {
     }
   }
 
+  // The heading keeps its role; the editable text box sits inside it.
   return (
-    <h1
-      ref={ref}
-      className={cn("page-title title-edit")}
-      contentEditable="plaintext-only"
-      suppressContentEditableWarning
-      role="textbox"
-      aria-label="Notebook title"
-      spellCheck={false}
-      onBlur={onBlur}
-      onKeyDown={onKeyDown}
-    />
+    <h1 className={cn("page-title")}>
+      <span
+        ref={ref}
+        className={cn("title-edit")}
+        contentEditable="plaintext-only"
+        suppressContentEditableWarning
+        role="textbox"
+        aria-label="Notebook title"
+        spellCheck={false}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+      />
+    </h1>
   );
 }

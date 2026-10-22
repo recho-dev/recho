@@ -3,17 +3,13 @@
 import {useEffect, useMemo, useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {Card} from "../../components/Card.jsx";
-import {LabelFilters, LANGUAGES} from "./LabelFilters.jsx";
-import {BASE_PATH, COMMUNITY_LABEL, languageOf} from "../shared.js";
+import {LabelFilters} from "./LabelFilters.jsx";
+import {Thumbnail} from "../Thumbnail.jsx";
+import {COMMUNITY_LABEL, languageOf, languageName} from "../shared.js";
 import {getPublicNotebooks} from "../api.js";
 import {NotebookCard} from "./NotebookCard.jsx";
 
 const LANGUAGE_LABELS = {MLscript: "mlscript", Wenyan: "wenyan"};
-
-const languageName = (runtime) => {
-  const value = languageOf(runtime);
-  return LANGUAGES.find((l) => l.value === value)?.label ?? value;
-};
 
 export function ExamplesClient({examples, allLabels}) {
   const searchParams = useSearchParams();
@@ -82,13 +78,7 @@ export function ExamplesClient({examples, allLabels}) {
                 subtitle={`${example.author} · ${example.created}`}
                 // With every language shown, each card says which one it is.
                 aside={language === "all" ? languageName(example.runtime) : null}
-                thumbnail={
-                  example.snap ? (
-                    <div className="snap" style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}} />
-                  ) : (
-                    <div className="thumb-code" dangerouslySetInnerHTML={{__html: example.thumbnail}} />
-                  )
-                }
+                thumbnail={<Thumbnail snap={example.snap} excerpt={example.thumbnail} />}
               />
             )}
           </li>

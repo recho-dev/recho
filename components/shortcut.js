@@ -1,11 +1,6 @@
 "use client";
 import {useEffect, useState} from "react";
 
-/** A key or shortcut, e.g. <Kbd>⌘S</Kbd>. */
-export function Kbd({children}) {
-  return <kbd className="kbd">{children}</kbd>;
-}
-
 /** Whether the page runs on a Mac, where shortcuts use ⌘ rather than Ctrl. */
 export function isMac() {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
