@@ -1,5 +1,5 @@
 // How each way an MLscript notebook can fail shows in the document.
-import {it, expect, describe, afterEach, beforeAll, vi} from "vitest";
+import {it, expect, describe, afterEach, beforeAll, vi, beforeEach} from "vitest";
 import {EditorState} from "@codemirror/state";
 import {createRuntime} from "../runtime/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
@@ -71,6 +71,15 @@ const unshowable = () =>
     },
   );
 
+// Tests here break notebooks on purpose, and the runtime logs every error it
+// shows. Keep those logs out of the test output.
+beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("MLscript errors", () => {
   let notebook;
   const run = (code, language) => (notebook = start(code, language));
@@ -78,8 +87,8 @@ describe("MLscript errors", () => {
     notebook?.runtime.destroy();
     notebook = null;
     delete globalThis.__unshowable__;
-    vi.restoreAllMocks();
     await wait(0);
+    vi.restoreAllMocks();
   });
 
   describe("compile errors", () => {
@@ -193,7 +202,6 @@ describe("MLscript errors", () => {
     it("shows a failure to set up the session at the top, keeping the output, and doesn't repeat it", async () => {
       const compiler = compilerWith((source) => (source ? sessionFailure : null));
       const language = await createMLscript(latestOnly(compiler));
-      vi.spyOn(console, "error").mockImplementation(() => {});
       const shown = `//✗ [Error: The MLscript compiler couldn't start: Couldn't load the standard library]\n//➜ 1\necho(1)\n`;
       run(`//➜ 1\necho(1)\n`, language);
       await wait();
@@ -212,7 +220,6 @@ describe("MLscript errors", () => {
         if (source && crashes-- > 0) throw new TypeError("scala.MatchError: boom (of class X)");
       });
       const language = await createMLscript(latestOnly(compiler));
-      vi.spyOn(console, "error").mockImplementation(() => {});
       run(`//➜ 2\necho(a + 1)\n\nlet a = 1\n`, language);
       await wait();
       expect(notebook.doc()).toBe(
@@ -333,7 +340,6 @@ describe("MLscript errors", () => {
 
   describe("imports", () => {
     it("shows an unknown standard library module at its import, and at its uses", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       run(`import "std/Nope.mls"\n\nlet a = 1\n\necho(a)\n\nlet x = Nope.f\n`);
       await wait(600);
       expect(notebook.doc()).toBe(
@@ -352,7 +358,6 @@ describe("MLscript errors", () => {
 
   describe("runtime and display errors", () => {
     it("shows a value that can't be shown as an error, and the rest of the notebook", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       globalThis.__unshowable__ = unshowable();
       run(`echo(globalThis.__unshowable__)\n\necho(1 + 1)\n`);
       await wait();
@@ -362,7 +367,6 @@ describe("MLscript errors", () => {
     });
 
     it("shows a value that can't be shown in JavaScript as an error too", () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       expect(makeOutput([{values: [unshowable()]}])).toEqual({
         output: "//✗ [Error: Couldn't show this value: trap]",
         error: true,
@@ -370,7 +374,6 @@ describe("MLscript errors", () => {
     });
 
     it("shows a runtime error at its block, like JavaScript", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       run(`fun f() = throw Error("boom")\n\nlet y = f()\n\necho(2)\n`);
       await wait();
       expect(notebook.doc()).toBe(
@@ -379,7 +382,6 @@ describe("MLscript errors", () => {
     });
 
     it("shows a multi-line error message without padding", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       run(`throw Error("one\\nlonger line two\\nthree")\n`);
       await wait();
       expect(notebook.doc()).toBe(
@@ -388,7 +390,6 @@ describe("MLscript errors", () => {
     });
 
     it("wraps a long error message instead of cutting it short", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
       const message = "word ".repeat(50).trim();
       run(`throw Error("${message}")\n`);
       await wait();
