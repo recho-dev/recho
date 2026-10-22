@@ -4,6 +4,7 @@ import {BASE_PATH} from "../../shared.js";
 import {news, sortedNews, formatDate} from "../data.js";
 import {NewsLink, NewsRendered} from "../NewsLink.jsx";
 import {PostMeta, Dot} from "../PostMeta.jsx";
+import {Button} from "../../../components/Button.jsx";
 
 function find(slug) {
   return news.find((item) => item.slug === slug);
@@ -18,7 +19,7 @@ export async function generateMetadata({params}) {
   const post = find(slug);
   if (!post) notFound();
   return {
-    title: `${post.title} | Recho Notebook`,
+    title: `${post.title} | Recho`,
     description: post.summary,
   };
 }
@@ -63,10 +64,10 @@ export default async function Page({params}) {
         ) : (
           <div className="read-on">
             <p>The full post is on Medium.</p>
-            <a className="btn btn-primary" href={post.link} target="_blank" rel="noreferrer">
+            <Button as="a" variant="primary" href={post.link} target="_blank" rel="noreferrer">
               Read on Medium
               <ArrowUpRight size={14} aria-hidden="true" />
-            </a>
+            </Button>
           </div>
         )}
         <section className="more" aria-labelledby="more-news">

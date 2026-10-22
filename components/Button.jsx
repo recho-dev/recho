@@ -3,7 +3,8 @@ import {cn} from "./cn.js";
 
 /**
  * A button in one of the shared variants: "primary" (one per view, Run),
- * "secondary", or "ghost" (toolbar and header actions). `icon` makes it square
+ * "secondary", "ghost" (toolbar and header actions), or "danger" (a
+ * destructive confirm). `icon` makes it square
  * for an icon alone, and `tip` gives it a tooltip and, if it has no other
  * name, its accessible name. Pass `as` to render a link with the same look.
  */
