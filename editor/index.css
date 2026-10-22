@@ -271,10 +271,19 @@
       opacity var(--duration-hover),
       color var(--duration-hover);
 
+    /* An outline at rest; it fills in when it's about to act. */
+    & svg {
+      transition: fill var(--duration-hover);
+    }
+
     &:hover,
     &:focus-visible {
       opacity: 1;
       color: var(--ink);
+
+      & svg {
+        fill: currentColor;
+      }
     }
 
     &:focus-visible {
