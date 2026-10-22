@@ -21,8 +21,11 @@ class RunButtonMarker extends GutterMarker {
       return button;
     }
     const label = this.count > 1 ? `Run ${this.count} cells` : "Run cell";
-    button.title = label;
     button.setAttribute("aria-label", label);
+    // The page's tooltip (components.css), opening toward the code, since
+    // the gutter is at the editor's left edge.
+    button.dataset.tip = label;
+    button.dataset.tipAlign = "left";
     button.innerHTML =
       '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
     return button;
