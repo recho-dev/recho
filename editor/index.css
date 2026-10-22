@@ -283,7 +283,8 @@
     }
   }
 
-  /* One continuous marker per output run, left of the code. Each row's
+  /* One continuous marker per run, left of the code: green beside the output
+     of a block that ran, red along a block that failed. Each row's
      segment overlaps its neighbours by 1px, so no seam shows at fractional
      line heights or any zoom. Only the run's ends are inset and rounded. */
   /* The space before the code is padding, not margin, so the active line's
@@ -300,7 +301,7 @@
     height: calc(100% + 2px);
 
     &.output {
-      background: var(--out-marker);
+      background: var(--success-marker);
     }
 
     &.error {
