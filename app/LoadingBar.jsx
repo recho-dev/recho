@@ -1,6 +1,6 @@
 "use client";
 import {useEffect, useState} from "react";
-import {cn} from "./cn.js";
+import {cn} from "../components/cn.js";
 
 /**
  * A label and a progress bar centred over the area of the editor, while

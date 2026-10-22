@@ -1,15 +1,14 @@
 "use client";
 
-import {useMemo} from "react";
+import {useLayoutEffect, useMemo, useRef, useState} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Segmented} from "../../components/Segmented.jsx";
 import {Listbox} from "../../components/Listbox.jsx";
+import {LANGUAGES} from "../shared.js";
 
-export const LANGUAGES = [
+const LANGUAGE_OPTIONS = [
   {value: "all", label: "All languages"},
-  {value: "javascript", label: "JavaScript"},
-  {value: "wenyan", label: "文言 wenyan"},
-  {value: "mlscript", label: "MLscript"},
+  ...LANGUAGES.map(({value, label}) => ({value, label})),
 ];
 
 /** The label filter and language switcher of the Explore page, kept in the URL. */
@@ -22,6 +21,34 @@ export function LabelFilters({allLabels, label, language}) {
     [labelOptions],
   );
 
+  // Whether the label segments fit on one row; null until measured, when the
+  // stylesheet's breakpoint decides. The segments stay in the page, out of
+  // sight, while the select shows, so they can still be measured.
+  const filtersRef = useRef(null);
+  const labelsRef = useRef(null);
+  const [fits, setFits] = useState(null);
+
+  useLayoutEffect(() => {
+    const row = filtersRef.current?.parentElement;
+    const seg = labelsRef.current?.querySelector(".seg");
+    if (!row || !seg) return;
+    const measure = () => {
+      const style = getComputedStyle(seg);
+      const buttons = [...seg.querySelectorAll("button")];
+      const width =
+        buttons.reduce((sum, button) => sum + button.getBoundingClientRect().width, 0) +
+        (buttons.length - 1) * parseFloat(style.columnGap || 0) +
+        parseFloat(style.paddingLeft) +
+        parseFloat(style.paddingRight);
+      setFits(width <= row.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    document.fonts?.ready.then(measure);
+    return () => observer.disconnect();
+  }, [labelOptions]);
+
   function update(key, value, fallback) {
     const params = new URLSearchParams(searchParams.toString());
     if (value === fallback) params.delete(key);
@@ -31,10 +58,10 @@ export function LabelFilters({allLabels, label, language}) {
   }
 
   return (
-    <div className="ex-filters">
+    <div ref={filtersRef} className="ex-filters" data-fit={fits === null ? undefined : fits ? "yes" : "no"}>
       {/* The labels are a row of segments, or a select where that row would
-          wrap; CSS shows one of the two. */}
-      <div className="ex-labels">
+          wrap. */}
+      <div ref={labelsRef} className="ex-labels" inert={fits === false} aria-hidden={fits === false || undefined}>
         <Segmented
           label="Filter by label"
           options={labelOptions}
@@ -52,7 +79,7 @@ export function LabelFilters({allLabels, label, language}) {
       </div>
       <Listbox
         label="Notebook language"
-        options={LANGUAGES}
+        options={LANGUAGE_OPTIONS}
         value={language}
         align="right"
         onChange={(value) => update("lang", value, "all")}

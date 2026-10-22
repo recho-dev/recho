@@ -2,6 +2,7 @@ import {codeToHtml} from "shiki";
 import {codeTheme} from "./codeTheme.js";
 import {useState, useEffect} from "react";
 import {Thumbnail} from "./Thumbnail.jsx";
+import {thumbnailHtml} from "./thumbnailHtml.js";
 
 let mlscript = null;
 
@@ -39,7 +40,7 @@ export function ThumbnailClient({code, outputStartLine = null, lang = "javascrip
   return (
     <>
       {html ? (
-        <Thumbnail html={html} outputStartLine={outputStartLine} />
+        <Thumbnail excerpt={thumbnailHtml(html, outputStartLine)} />
       ) : (
         <div className="thumb-code status">Rendering…</div>
       )}

@@ -57,7 +57,7 @@ export function Listbox({label, options, value, onChange, ghost = false, align =
       <button
         ref={triggerRef}
         type="button"
-        className={cn("btn picker", ghost && "ghost")}
+        className={cn("btn picker", ghost && "btn-ghost")}
         aria-label={`${label}: ${current?.label}`}
         aria-haspopup="listbox"
         aria-expanded={open}

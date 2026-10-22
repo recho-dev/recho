@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import {SafeLink} from "./SafeLink.jsx";
 import {authStore} from "./auth.js";
-import {RUNTIMES} from "./shared.js";
+import {LANGUAGES} from "./shared.js";
 import {Button} from "../components/Button.jsx";
 import {Menu, MenuItem, MenuLabel, MenuSeparator} from "../components/Menu.jsx";
 import {ThemeSwitch} from "../components/ThemeSwitch.jsx";
@@ -25,12 +25,6 @@ const PAGES = [
   {href: "/explore", label: "Explore", Icon: LayoutGrid},
   {href: "/docs", label: "Docs", Icon: BookOpen},
   {href: "/news", label: "News", Icon: Newspaper},
-];
-
-const NEW_NOTEBOOKS = [
-  {runtime: RUNTIMES.javascript, label: "JavaScript"},
-  {runtime: RUNTIMES.wenyan, label: "文言 wenyan"},
-  {runtime: RUNTIMES.mlscript, label: "MLscript"},
 ];
 
 const icon = {size: 16, strokeWidth: 1.75, className: "ic", "aria-hidden": true};
@@ -75,7 +69,7 @@ export function Nav() {
             </>
           }
         >
-          {NEW_NOTEBOOKS.map(({runtime, label}) => (
+          {LANGUAGES.map(({runtime, label}) => (
             <MenuItem as={SafeLink} key={runtime} href="/" newRuntime={runtime}>
               {label}
             </MenuItem>
