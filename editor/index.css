@@ -253,6 +253,14 @@
     }
   }
 
+  /* Lets the play button's tooltip out of its gutter, which CodeMirror's base
+     theme clips, and above the gutters to its right. */
+  .cm-gutter.cm-runButtons {
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+  }
+
   /* A cell's play button, in the gutter: quiet until hovered or focused. */
   .cm-run-button {
     display: flex;
