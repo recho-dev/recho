@@ -10,7 +10,7 @@ import {usePopover, onArrowKeys} from "./usePopover.js";
  *
  * @param {object} props
  * @param {string} props.label - The accessible name.
- * @param {{value: string, label: string}[]} props.options
+ * @param {{value: string, label: string, hint?: string}[]} props.options - `hint` is a short note at the right of an option.
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.ghost] - No border, for toolbars.
@@ -78,6 +78,7 @@ export function Listbox({label, options, value, onChange, ghost = false, align =
           >
             <Check className="ic tick" size={14} strokeWidth={1.75} aria-hidden="true" />
             {option.label}
+            {option.hint && <span className="hint">{option.hint}</span>}
           </button>
         ))}
       </div>

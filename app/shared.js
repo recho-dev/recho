@@ -2,6 +2,9 @@ import {OUTPUT_MARK} from "../runtime/constant.js";
 
 export const BASE_PATH = "";
 
+/** The Explore label of public notebooks. */
+export const COMMUNITY_LABEL = "Community";
+
 // Output lines in JavaScript and MLscript (//➜) and wenyan (批曰。「「➜) notebooks.
 const OUTPUT_PREFIXES = [`//${OUTPUT_MARK}`, `批曰。「「${OUTPUT_MARK}`];
 
@@ -65,17 +68,6 @@ export function findFirstOutputRange(content) {
     endLine = lines.length;
   }
   return {startLine, endLine};
-}
-
-/**
- * The name shown on a user's notebooks: their display name, or the part of
- * their email before the @. Never the full email, since public notebooks
- * show it to anyone with the link.
- */
-export function ownerNameOf(user) {
-  const name = user?.displayName?.trim();
-  if (name) return name;
-  return user?.email?.split("@")[0] || null;
 }
 
 /** The line under a notebook's title: who made it, when, and whether it's view only. */

@@ -18,6 +18,7 @@ import {
   clearRunning,
   PRIVATE,
   PUBLIC,
+  VISIBILITIES,
 } from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
 import {confirmDialog} from "../components/Dialog.jsx";
@@ -25,10 +26,9 @@ import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
 import {Button} from "../components/Button.jsx";
 import {Listbox} from "../components/Listbox.jsx";
-import {Switch} from "../components/Switch.jsx";
 import {toast} from "../components/Toast.jsx";
 import {isMac} from "../components/Kbd.jsx";
-import {BASE_PATH, RUNTIMES, fileNameOf, notebookDetails, ownerNameOf} from "./shared.js";
+import {BASE_PATH, RUNTIMES, fileNameOf, notebookDetails} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -45,10 +45,8 @@ export function EditorPage({id: initialId}) {
   const [initialCode, setInitialCode] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [linkCopied, setLinkCopied] = useState(false);
   // Bumped to focus and select the title, for a notebook made from the New menu.
   const [titleFocus, setTitleFocus] = useState(null);
-  const linkCopiedTimer = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
     isDirtyStore.subscribe,
@@ -135,8 +133,6 @@ export function EditorPage({id: initialId}) {
   // Save pending changes when leaving the page.
   useEffect(() => () => flushPendingSave(), []);
 
-  useEffect(() => () => clearTimeout(linkCopiedTimer.current), []);
-
   useEffect(() => {
     // Use setTimeout to avoid changing to default title.
     setTimeout(() => {
@@ -180,8 +176,6 @@ export function EditorPage({id: initialId}) {
     );
 
   if (!notebook) return notFound();
-
-  const isPublic = notebook.visibility === PUBLIC;
 
   // A new notebook starts over in the chosen language.
   async function onChangeRuntime(runtime) {
@@ -227,12 +221,11 @@ export function EditorPage({id: initialId}) {
     }, 100);
   }
 
-  async function onToggleVisibility() {
-    const visibility = isPublic ? PRIVATE : PUBLIC;
+  async function onChangeVisibility(visibility) {
     const newNotebook = {...notebook, visibility};
+    // Explore lists notebooks by when they were made public.
+    if (visibility === PUBLIC) newNotebook.published = new Date().toISOString();
     setNotebook(newNotebook);
-    clearTimeout(linkCopiedTimer.current);
-    setLinkCopied(false);
     try {
       // Save right away so the link works as soon as it's copied.
       await saveNotebook(newNotebook);
@@ -242,11 +235,10 @@ export function EditorPage({id: initialId}) {
       toast(`Failed to change visibility: ${error.message}`, {error: true});
       return;
     }
-    if (visibility !== PUBLIC) return;
+    if (visibility === PRIVATE) return;
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+      toast("Link copied");
     } catch (error) {
       console.error("Failed to copy link", error);
     }
@@ -270,9 +262,9 @@ export function EditorPage({id: initialId}) {
     {value: RUNTIMES.mlscript, label: "MLscript"},
   ];
 
-  // Your own notebooks show your current name. Others' show the name saved
-  // with the notebook, which older notebooks don't have.
-  const author = isOthers ? notebook.ownerName : (ownerNameOf(user) ?? notebook.ownerName);
+  // Your own notebooks show your current name. Others' show the author saved
+  // with the notebook (from the owner's sign-in), which older notebooks lack.
+  const author = isOthers ? notebook.author?.name : (user?.displayName ?? notebook.author?.name);
   const details = notebookDetails({author, created: isAdded && notebook.created, isOthers});
 
   return (
@@ -302,13 +294,14 @@ export function EditorPage({id: initialId}) {
               )}
               {!isAdded && <Button onClick={onSave}>Create</Button>}
               {canSave && (
-                <label
-                  className={cn("vis-switch")}
-                  title={isPublic ? "Anyone with the link can view." : "Only you can view."}
-                >
-                  <Switch checked={isPublic} onChange={onToggleVisibility} />
-                  {linkCopied ? "Link copied" : "Public"}
-                </label>
+                <Listbox
+                  label="Visibility"
+                  ghost
+                  align="right"
+                  options={VISIBILITIES}
+                  value={notebook.visibility}
+                  onChange={onChangeVisibility}
+                />
               )}
               {isAdded && (
                 <Button onClick={onDuplicate} tip="Duplicate notebook">

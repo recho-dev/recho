@@ -93,5 +93,5 @@ function index(i, j) {
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * [1] https://observablehq.com/d/9e951c5e9d721ef5
- * [2] https://recho.dev/examples/matrix-rain
+ * [2] https://recho.dev/explore/matrix-rain
  */

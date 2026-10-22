@@ -64,6 +64,14 @@ describe("updateBlocks with an incomplete syntax tree", () => {
     vi.spyOn(console, "groupEnd").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // CodeMirror stops parsing when its time budget (measured with Date.now)
+    // runs out. On a slow machine that cut can land mid-statement, and the
+    // later incremental parse then keeps that statement broken in two — an
+    // upstream bug that would give the tree an extra block. Freezing the
+    // clock makes the parses stop only at the initial parse viewport and the
+    // `upto` limits, so the trees are the same on every machine.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
   });
 
   afterEach(() => {

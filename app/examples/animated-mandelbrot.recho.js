@@ -85,5 +85,5 @@ const d3 = recho.require("d3-scale");
  *                              References
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * [1] https://recho.dev/examples/mandelbrot-set
+ * [1] https://recho.dev/explore/mandelbrot-set
  */
