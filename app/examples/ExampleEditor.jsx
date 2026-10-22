@@ -1,10 +1,13 @@
 "use client";
 import {useRouter} from "next/navigation";
+import {Copy} from "lucide-react";
 import {Editor} from "../Editor.jsx";
+import {Meta} from "../Meta.js";
 import {Button} from "../../components/Button.jsx";
 import {toast} from "../../components/Toast.jsx";
 import {duplicateNotebook, addNotebook} from "../api.js";
 import {ensureUser} from "../auth.js";
+import {extensionOf} from "../shared.js";
 
 export function ExampleEditor({example, initialCode}) {
   const router = useRouter();
@@ -28,25 +31,22 @@ export function ExampleEditor({example, initialCode}) {
   }
 
   return (
-    <Editor
-      initialCode={initialCode}
-      runtime={example.runtime}
-      key={example.title}
-      onDuplicate={onDuplicate}
-      toolBarStart={
-        example.pull_request && (
-          <Button
-            as="a"
-            variant="ghost"
-            key={example.slug}
-            href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Comment
+    <>
+      <Meta
+        example={example}
+        actions={
+          <Button onClick={onDuplicate} tip="Duplicate notebook">
+            <Copy className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
+            <span className="lbl">Duplicate</span>
           </Button>
-        )
-      }
-    />
+        }
+      />
+      <Editor
+        initialCode={initialCode}
+        runtime={example.runtime}
+        key={example.title}
+        fileName={example.slug + extensionOf(example.runtime)}
+      />
+    </>
   );
 }

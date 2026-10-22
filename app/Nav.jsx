@@ -22,15 +22,15 @@ import {Button} from "../components/Button.jsx";
 import {Menu, MenuItem, MenuLabel, MenuSeparator} from "../components/Menu.jsx";
 
 const PAGES = [
-  {href: "/docs", label: "Docs", Icon: BookOpen},
   {href: "/examples", label: "Examples", Icon: LayoutGrid},
+  {href: "/docs", label: "Docs", Icon: BookOpen},
   {href: "/news", label: "News", Icon: Newspaper},
 ];
 
 const NEW_NOTEBOOKS = [
-  {runtime: RUNTIMES.javascript, label: "JavaScript notebook"},
-  {runtime: RUNTIMES.wenyan, label: "文言 wenyan notebook"},
-  {runtime: RUNTIMES.mlscript, label: "MLscript notebook"},
+  {runtime: RUNTIMES.javascript, label: "JavaScript"},
+  {runtime: RUNTIMES.wenyan, label: "文言 wenyan"},
+  {runtime: RUNTIMES.mlscript, label: "MLscript"},
 ];
 
 const icon = {size: 16, strokeWidth: 1.75, className: "ic", "aria-hidden": true};
