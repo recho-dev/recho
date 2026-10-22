@@ -304,9 +304,10 @@
 
   /* One continuous marker per block, left of the code: green beside the
      output of a block that ran and grey beside its code, red along a block
-     that failed. Each row's
-     segment overlaps its neighbours by 1px, so no seam shows at fractional
-     line heights or any zoom. Only the run's ends are inset and rounded. */
+     that failed. Each row's segment reaches 1px into the next, which is drawn
+     over it, so no seam shows at fractional line heights or any zoom, and
+     colours change exactly between lines. Only the run's ends are inset and
+     rounded. */
   /* The space before the code is padding, not margin, so the active line's
      background reaches the code without a gap. */
   .cm-blockIndicators .cm-gutterElement {
@@ -316,9 +317,8 @@
 
   .cm-gutterElement .cm-block-indicator {
     position: relative;
-    top: -1px;
     width: var(--out-marker-width);
-    height: calc(100% + 2px);
+    height: calc(100% + 1px);
 
     &.output {
       background: var(--success-marker);
@@ -333,20 +333,20 @@
     }
 
     &.head {
-      top: 3px;
-      height: calc(100% - 2px);
+      top: var(--out-marker-inset);
+      height: calc(100% + 1px - var(--out-marker-inset));
       border-top-left-radius: var(--out-marker-width);
       border-top-right-radius: var(--out-marker-width);
     }
 
     &.tail {
-      height: calc(100% - 2px);
+      height: calc(100% - var(--out-marker-inset));
       border-bottom-left-radius: var(--out-marker-width);
       border-bottom-right-radius: var(--out-marker-width);
     }
 
     &.head.tail {
-      height: calc(100% - 6px);
+      height: calc(100% - 2 * var(--out-marker-inset));
     }
   }
 

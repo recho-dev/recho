@@ -1589,12 +1589,12 @@
     background: var(--error-marker);
   }
   .thumb-code .line.first::before {
-    top: 3px;
+    top: var(--out-marker-inset);
     border-top-left-radius: var(--out-marker-width);
     border-top-right-radius: var(--out-marker-width);
   }
   .thumb-code .line.last::before {
-    bottom: 3px;
+    bottom: var(--out-marker-inset);
     border-bottom-left-radius: var(--out-marker-width);
     border-bottom-right-radius: var(--out-marker-width);
   }
