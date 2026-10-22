@@ -14,9 +14,10 @@ export class BlockIndicator extends GutterMarker {
   }
 }
 
-// One continuous marker per output run: the output lines of a block (those
-// before its source) get a marker, `head` and `tail` at the run's ends. The
-// source lines get none.
+// One continuous marker per run, `head` and `tail` at its ends. A block that
+// ran marks its output lines (those before its source) as succeeded; a block
+// that failed is marked as failed from its first line to its last, so the
+// failure shows even with no output. Source lines of a block that ran get none.
 const markers = (kind: string) => ({
   head: new BlockIndicator(`cm-block-indicator ${kind} head`),
   tail: new BlockIndicator(`cm-block-indicator ${kind} tail`),
@@ -54,17 +55,17 @@ export const blockIndicator = gutter({
     const block = blocks[index];
     const currentLine = view.state.doc.lineAt(line.from).number;
 
-    // Only the block's output lines, before its source, have a marker.
+    // The run: the whole block if it failed, else its output lines.
     const sourceFirstLine = view.state.doc.lineAt(block.source.from).number;
-    if (currentLine >= sourceFirstLine) return null;
+    const runFirstLine = view.state.doc.lineAt(block.from).number;
+    const runLastLine = block.error ? view.state.doc.lineAt(block.to).number : sourceFirstLine - 1;
+    if (currentLine > runLastLine) return null;
     const group = block.error ? indicatorMarkers.error : indicatorMarkers.output;
 
     // Determine the gutter marker to use.
-    const outputFirstLine = view.state.doc.lineAt(block.from).number;
-    const outputLastLine = sourceFirstLine - 1;
-    if (outputFirstLine === currentLine) {
-      return outputLastLine === currentLine ? group.sole : group.head;
-    } else if (outputLastLine === currentLine) {
+    if (runFirstLine === currentLine) {
+      return runLastLine === currentLine ? group.sole : group.head;
+    } else if (runLastLine === currentLine) {
       return group.tail;
     } else {
       return group.body;
