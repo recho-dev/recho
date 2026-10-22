@@ -1,7 +1,7 @@
 import {useState, type ReactNode} from "react";
 import type {TransactionData} from "./transaction-data.ts";
 import {ObjectInspector} from "react-inspector";
-import {cn} from "../../app/cn.js";
+import {cn} from "../../components/cn.js";
 import {UserEvent} from "./UserEvent.tsx";
 import {PencilLineIcon} from "lucide-react";
 import {Remote} from "./Remote.tsx";
