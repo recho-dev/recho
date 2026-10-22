@@ -129,236 +129,35 @@
   .btn-primary:disabled .kbd-in {
     color: var(--ink-4);
   }
-  .kbd {
-    display: inline-flex;
-    align-items: center;
-    height: calc(var(--space-unit) * 4.5);
-    padding: 0 var(--space-1);
-    border: var(--border-width) solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--sunken);
-    color: var(--ink-2);
-    font: var(--fw-label) var(--fs-xs) / 1 var(--font-ui);
-  }
-  svg.ic {
-    flex: none;
-    display: block;
-  }
 
-  /* Short labels next to icons hide below 560px but stay as the accessible name. */
-  @media (max-width: 560px) {
-    .lbl {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-    .hide-sm {
-      display: none !important;
-    }
-  }
-
-  /* ---------- Fields ---------- */
-  .input {
-    height: var(--control-h);
-    padding: 0 calc(var(--space-unit) * 2.5);
-    border: var(--border-width) solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    color: var(--ink);
-    font-size: var(--fs-sm);
-    min-width: 0;
-    transition:
-      border-color var(--duration-hover),
-      background-color var(--duration-hover);
-  }
-  .input::placeholder {
-    color: var(--ink-4);
-  }
-  .input:hover:not(:disabled) {
-    border-color: var(--border-strong);
-  }
-  .input:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: -1px;
-    border-color: var(--clear);
-  }
-  .input:disabled {
-    background: var(--sunken);
-    color: var(--ink-4);
-    border-color: var(--line);
-  }
-  .input-plain {
-    border-color: var(--clear);
-    background: var(--clear);
-    font-weight: var(--fw-label);
-    padding: 0 var(--space-2);
-  }
-  .input-plain:hover:not(:disabled) {
-    border-color: var(--clear);
-    background: var(--fill-hover);
-  }
+  /* ---------- Pickers ---------- */
+  /* A select's button. Bordered by default; with .btn-ghost it takes the
+     ghost button's look, for toolbars and the title section. */
   .picker {
     justify-content: space-between;
     gap: var(--space-2);
     min-width: 0;
     padding: 0 var(--space-2) 0 calc(var(--space-unit) * 2.5);
-    border-color: var(--border);
-    background: var(--surface);
-    font-weight: var(--fw-body);
   }
   .picker .ic {
     color: var(--ink-3);
   }
-  .picker:hover:not(:disabled) {
-    border-color: var(--border-strong);
-  }
-  .picker[aria-expanded="true"] {
-    border-color: var(--border-strong);
-    background: var(--gray-2);
-  }
-  .picker:disabled {
-    background: var(--sunken);
-    color: var(--ink-4);
-    border-color: var(--line);
-  }
-  .picker.ghost {
-    border-color: var(--clear);
-    background: var(--clear);
-    color: var(--ink-2);
-    font-weight: var(--fw-label);
-  }
-  .picker.ghost:hover:not(:disabled) {
-    border-color: var(--clear);
-    background: var(--fill-hover);
-    color: var(--ink);
-  }
-  .picker.ghost[aria-expanded="true"] {
-    border-color: var(--clear);
-    background: var(--fill-pressed);
-    color: var(--ink);
-  }
-
-  /* Checkbox: the tick wipes in with clip-path. */
-  .check {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--fs-sm);
-    color: var(--ink-2);
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .check input {
-    appearance: none;
-    margin: 0;
-    flex: none;
-    position: relative;
-    cursor: pointer;
-    width: 16px;
-    height: 16px;
-    border: var(--border-width) solid var(--border-strong);
-    border-radius: calc(var(--radius-sm) * 0.67);
+  .picker:not(.btn-ghost) {
+    border-color: var(--border);
     background: var(--surface);
-    box-shadow: var(--shadow-1);
-    transition:
-      background-color var(--duration-hover),
-      border-color var(--duration-hover);
+    font-weight: var(--fw-body);
   }
-  .check input::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--on-accent);
-    opacity: 0;
-    clip-path: inset(0 calc(100% * var(--motion-travel)) 0 0);
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-      center / 100% no-repeat;
-    transition:
-      opacity var(--duration-fast) var(--ease-exit),
-      clip-path var(--duration-fast) var(--ease-exit);
+  .picker:not(.btn-ghost):hover:not(:disabled) {
+    border-color: var(--border-strong);
   }
-  .check:hover input:not(:disabled) {
-    border-color: var(--ink-4);
-  }
-  .check input:checked {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .check:hover input:checked:not(:disabled) {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-  }
-  .check input:checked::before {
-    opacity: 1;
-    clip-path: inset(0);
-    transition:
-      opacity var(--duration-fast) var(--ease-enter),
-      clip-path var(--duration-base) var(--ease-enter);
-  }
-  .check input:disabled {
-    background: var(--sunken);
-    border-color: var(--line);
-    box-shadow: none;
-  }
-  .check input:disabled:checked {
-    background: var(--gray-5);
-    border-color: var(--gray-5);
-  }
-  .check input:disabled::before {
-    background: var(--ink-4);
-  }
-  .check:has(input:disabled) {
-    color: var(--ink-4);
-    cursor: default;
-  }
-
-  /* Switch: the thumb travels on --duration-move. */
-  .switch {
-    appearance: none;
-    margin: 0;
-    flex: none;
-    cursor: pointer;
-    width: 28px;
-    height: 16px;
-    border-radius: var(--radius-full);
-    background: var(--gray-6);
-    position: relative;
-    transition: background-color var(--duration-hover);
-  }
-  .switch::before {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius-full);
-    background: var(--gray-0);
-    box-shadow: var(--shadow-1);
-    transition: transform var(--duration-move) var(--ease-move);
-  }
-  .switch:hover:not(:disabled) {
-    background: var(--gray-7);
-  }
-  .switch:checked {
-    background: var(--accent);
-  }
-  .switch:checked:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-  .switch:checked::before {
-    transform: translateX(12px);
-  }
-  .switch:disabled {
-    background: var(--gray-4);
-    cursor: default;
-  }
-  .switch:disabled::before {
-    box-shadow: none;
+  .picker:not(.btn-ghost)[aria-expanded="true"] {
+    border-color: var(--border-strong);
     background: var(--gray-2);
+  }
+  .picker:not(.btn-ghost):disabled {
+    background: var(--sunken);
+    color: var(--ink-4);
+    border-color: var(--line);
   }
 
   /* ---------- Segmented control ---------- */
@@ -1238,14 +1037,11 @@
     z-index: 10;
   }
   .toolbar .btn,
-  .toolbar .input {
-    border-radius: max(0px, calc(var(--radius-lg) - var(--border-width) - var(--tb-inset)));
-  }
   .toolbar .status {
     margin-left: var(--space-2);
   }
   /* Run and Stop: larger, at the left, the first thing to reach for. */
-  .toolbar .tb-run {
+  .toolbar .tb-action {
     height: calc(var(--space-unit) * 8);
     padding: 0 var(--space-3);
     font-size: var(--fs-md);
@@ -1303,7 +1099,8 @@
   }
   /* An editable title looks like any other until it's hovered or focused. */
   .title-edit {
-    align-self: flex-start;
+    display: inline-block;
+    vertical-align: top;
     min-width: 4ch;
     max-width: calc(100% + var(--space-2));
     margin: 0 calc(var(--space-1) * -1);
@@ -1496,18 +1293,37 @@
   .ex-labels-select {
     display: none;
   }
-  /* The label segments need 455px and wrap below 487px; under that the labels
-     become a select, on one row with the language one. */
+  /* Where the label segments would wrap, the labels become a select, on one
+     row with the language one. LabelFilters measures this and sets data-fit;
+     until it has, a width that suits today's labels decides. */
+  .ex-filters[data-fit="no"] {
+    display: flex;
+    flex-basis: 100%;
+    gap: var(--space-2);
+  }
+  .ex-filters[data-fit="no"] .ex-labels-select {
+    display: contents;
+  }
+  /* Out of sight and out of the flow, but still laid out to be measured. */
+  .ex-filters[data-fit="no"] .ex-labels {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: max-content;
+    visibility: hidden;
+    pointer-events: none;
+  }
   @media (max-width: 519px) {
-    .ex-filters {
+    .ex-filters:not([data-fit]) {
       display: flex;
       flex-basis: 100%;
       gap: var(--space-2);
     }
-    .ex-labels {
+    .ex-filters:not([data-fit]) .ex-labels {
       display: none;
     }
-    .ex-labels-select {
+    .ex-filters:not([data-fit]) .ex-labels-select {
       display: contents;
     }
   }

@@ -1,6 +1,6 @@
 import {Suspense} from "react";
 import {getAllJSExamples} from "../utils.js";
-import {cn} from "../cn.js";
+import {cn} from "../../components/cn.js";
 import {COMMUNITY_LABEL} from "../shared.js";
 import {ExamplesClient} from "./ExamplesClient.jsx";
 import {exampleThumbnail} from "./thumbnails.js";

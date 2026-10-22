@@ -1,6 +1,6 @@
 import {notFound} from "next/navigation";
 import {getAllJSExamples, removeMeta} from "../../utils.js";
-import {cn} from "../../cn.js";
+import {cn} from "../../../components/cn.js";
 import {ExampleEditor} from "../ExampleEditor.jsx";
 
 export async function generateStaticParams() {

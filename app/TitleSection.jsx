@@ -1,4 +1,4 @@
-import {cn} from "./cn.js";
+import {cn} from "../components/cn.js";
 
 /**
  * The title above a notebook: its heading, a line of details such as the
