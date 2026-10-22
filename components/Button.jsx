@@ -2,7 +2,7 @@ import {forwardRef} from "react";
 import {cn} from "./cn.js";
 
 /**
- * A button in one of the shared variants: "primary" (one per view, Run),
+ * A button in one of the shared variants: "primary" (at most one per view),
  * "secondary", "ghost" (toolbar and header actions), or "danger" (a
  * destructive confirm). `icon` makes it square
  * for an icon alone, and `tip` gives it a tooltip and, if it has no other
