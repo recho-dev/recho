@@ -1022,9 +1022,10 @@
   .toolbar {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
-    /* One inset on every side, so the buttons' corners share the frame's centre. */
+    /* One inset on every side and between the buttons, so the space around
+       Run and Stop is the same everywhere. */
     --tb-inset: calc(var(--space-unit) * 1.5);
+    gap: var(--tb-inset);
     padding: var(--tb-inset);
     border-bottom: var(--border-width) solid var(--line);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -1036,14 +1037,9 @@
     top: 0;
     z-index: 10;
   }
-  .toolbar .btn,
+  /* The status stands a little apart from the buttons. */
   .toolbar .status {
-    margin-left: var(--space-2);
-  }
-  /* The first button keeps only the inset, so it sits as far from the left
-     edge as from the top. */
-  .toolbar > :first-child {
-    margin-left: 0;
+    margin-left: var(--tb-inset);
   }
   /* Run and Stop: larger, at the left, the first thing to reach for. */
   .toolbar .tb-action {
