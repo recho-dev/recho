@@ -1,7 +1,7 @@
 import {generate} from "short-uuid";
 import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, writeBatch} from "firebase/firestore";
 import {getFirebase} from "./firebase.js";
-import {RUNTIMES, languageOf} from "./shared.js";
+import {RUNTIMES, languageOf, ownerNameOf} from "./shared.js";
 import {confirmDialog} from "../components/Dialog.jsx";
 
 const LEGACY_FILE_NAME = "obs-files";
@@ -177,6 +177,8 @@ function ownedNotebooks(user) {
 function toDoc(user, notebook) {
   return {
     ownerId: user.uid,
+    // So a public notebook can credit its author. Older docs don't have it.
+    ownerName: ownerNameOf(user),
     visibility: notebook.visibility ?? PRIVATE,
     title: notebook.title,
     content: notebook.content,

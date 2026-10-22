@@ -28,7 +28,7 @@ import {Listbox} from "../components/Listbox.jsx";
 import {Switch} from "../components/Switch.jsx";
 import {toast} from "../components/Toast.jsx";
 import {isMac} from "../components/Kbd.jsx";
-import {BASE_PATH, RUNTIMES, fileNameOf} from "./shared.js";
+import {BASE_PATH, RUNTIMES, fileNameOf, notebookDetails, ownerNameOf} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -270,15 +270,10 @@ export function EditorPage({id: initialId}) {
     {value: RUNTIMES.mlscript, label: "MLscript"},
   ];
 
-  // Who made the notebook and when. Only the owner's own name is known.
-  const author = !isOthers && user ? (user.displayName ?? user.email) : null;
-  const details = [
-    author,
-    isAdded && notebook.created ? `Created ${new Date(notebook.created).toLocaleDateString("en-CA")}` : "Not saved yet",
-    isOthers && "View only",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Your own notebooks show your current name. Others' show the name saved
+  // with the notebook, which older notebooks don't have.
+  const author = isOthers ? notebook.ownerName : (ownerNameOf(user) ?? notebook.ownerName);
+  const details = notebookDetails({author, created: isAdded && notebook.created, isOthers});
 
   return (
     <div>

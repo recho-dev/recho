@@ -66,3 +66,25 @@ export function findFirstOutputRange(content) {
   }
   return {startLine, endLine};
 }
+
+/**
+ * The name shown on a user's notebooks: their display name, or the part of
+ * their email before the @. Never the full email, since public notebooks
+ * show it to anyone with the link.
+ */
+export function ownerNameOf(user) {
+  const name = user?.displayName?.trim();
+  if (name) return name;
+  return user?.email?.split("@")[0] || null;
+}
+
+/** The line under a notebook's title: who made it, when, and whether it's view only. */
+export function notebookDetails({author, created, isOthers}) {
+  return [
+    author,
+    created ? `Created ${new Date(created).toLocaleDateString("en-CA")}` : "Not saved yet",
+    isOthers && "View only",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
