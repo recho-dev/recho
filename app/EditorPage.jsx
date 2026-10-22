@@ -95,8 +95,8 @@ export function EditorPage({id: initialId}) {
     setAutoRun(initialNotebook.autoRun);
   }
 
-  // This effect is triggered when the count changes,
-  // which happens when user clicks the "New" nav link.
+  // This effect is triggered when the count changes, which happens when the
+  // user picks a language from the New menu or clicks the wordmark.
   useEffect(() => {
     if (isAdded) return;
     const runtime = countStore.runtimeFor(count);
@@ -231,7 +231,7 @@ export function EditorPage({id: initialId}) {
       await saveNotebook(newNotebook);
     } catch (error) {
       console.error(error);
-      setNotebook((current) => ({...current, visibility: notebook.visibility}));
+      setNotebook((current) => ({...current, visibility: notebook.visibility, published: notebook.published}));
       toast(`Failed to change visibility: ${error.message}`, {error: true});
       return;
     }
@@ -287,6 +287,7 @@ export function EditorPage({id: initialId}) {
                 <Listbox
                   label="Language"
                   ghost
+                  align="right"
                   options={languages}
                   value={notebook.runtime}
                   onChange={onChangeRuntime}

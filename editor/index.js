@@ -38,7 +38,10 @@ const rechoTheme = EditorView.theme({
   "&.cm-focused .cm-activeLineGutter": {color: "var(--ink-2)"},
   "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {backgroundColor: "var(--fill-pressed)"},
   ".cm-selectionMatch": {backgroundColor: "var(--fill-hover)"},
-  ".cm-searchMatch": {backgroundColor: "var(--warning-tint)", outline: "1px solid var(--warning-marker)"},
+  ".cm-searchMatch": {
+    backgroundColor: "var(--warning-tint)",
+    outline: "var(--border-width) solid var(--warning-marker)",
+  },
   ".cm-tooltip": {
     backgroundColor: "var(--surface)",
     color: "var(--ink)",

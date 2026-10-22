@@ -19,6 +19,7 @@ import {authStore} from "./auth.js";
 import {RUNTIMES} from "./shared.js";
 import {Button} from "../components/Button.jsx";
 import {Menu, MenuItem, MenuLabel, MenuSeparator} from "../components/Menu.jsx";
+import {ThemeSwitch} from "../components/ThemeSwitch.jsx";
 
 const PAGES = [
   {href: "/explore", label: "Explore", Icon: LayoutGrid},
@@ -85,6 +86,7 @@ export function Nav() {
           <span className="lbl">Open</span>
         </Button>
         <span className="tb-sep" aria-hidden="true" />
+        <ThemeSwitch iconProps={icon} />
         <Button
           as="a"
           variant="ghost"

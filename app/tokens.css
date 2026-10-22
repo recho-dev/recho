@@ -221,7 +221,6 @@
   --fs-md: calc(var(--fs-ui) * 1.071); /* 15: wordmark, section labels */
   --fs-lg: calc(var(--fs-ui) * 1.214); /* 17: h2 */
   --fs-xl: calc(var(--fs-ui) * 1.5); /* 21: page title */
-  --fs-code-sm: calc(var(--fs-code) * 0.926); /* 12.5: inline code */
   --fs-gutter: var(--fs-code); /* line numbers, the same size as the code */
   --fs-thumb: 9.5px; /* card thumbnails: code excerpt */
   --fw-body: 400;
@@ -250,11 +249,9 @@
   --ease-swap: ease-in-out; /* fading in place */
   --motion-distance-sm: calc(4px * var(--motion-travel)); /* text swap, content enter, disclosure */
   --motion-distance-md: calc(8px * var(--motion-travel)); /* toast rise */
-  --motion-distance-lg: calc(16px * var(--motion-travel)); /* panel slide */
   --motion-scale-in: calc(1 - 0.03 * var(--motion-travel)); /* menu and toast start */
   --motion-scale-out: calc(1 - 0.01 * var(--motion-travel)); /* menu end */
   --motion-scale-tip: calc(1 - 0.02 * var(--motion-travel)); /* tooltip start */
-  --motion-settle-opacity: 0.35; /* where a re-run output value settles from */
   color-scheme: light;
 }
 
@@ -329,7 +326,7 @@
   color-scheme: dark;
 }
 
-/* Reduced motion: travel and scale go, fades stay. Tune's preview sets the same primitive. */
+/* Reduced motion: travel and scale go, fades stay. */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-reduce: 1;

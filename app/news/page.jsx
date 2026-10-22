@@ -4,8 +4,8 @@ import {NewsLink, NewsRendered} from "./NewsLink.jsx";
 import {PostMeta} from "./PostMeta.jsx";
 
 export const metadata = {
-  title: "News | Recho Notebook",
-  description: "News | Recho Notebook",
+  title: "News | Recho",
+  description: "News | Recho",
 };
 
 export default function Page() {

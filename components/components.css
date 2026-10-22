@@ -129,18 +129,6 @@
   .btn-primary:disabled .kbd-in {
     color: var(--ink-4);
   }
-  .btn-toggle .dot {
-    flex: none;
-    width: 6px;
-    height: 6px;
-    margin-right: 2px;
-    border-radius: var(--radius-full);
-    background: var(--gray-7);
-    transition: background-color var(--duration-hover);
-  }
-  .btn-toggle[aria-pressed="true"] .dot {
-    background: var(--accent);
-  }
   .kbd {
     display: inline-flex;
     align-items: center;
@@ -891,9 +879,6 @@
   .enter {
     animation: enter var(--duration-base) var(--ease-enter) backwards;
   }
-  .fade-in {
-    animation: fade-in var(--duration-fast) var(--ease-swap) backwards;
-  }
   /* A filter change: the new cards rise and fade in one after another,
      25ms apart and capped at the 12th card, so a long list still settles fast.
      With reduced motion the rise is 0 and only the fade is left. */
@@ -1338,41 +1323,6 @@
   }
 
   /* ---------- Notebook page ---------- */
-  .recent {
-    border-bottom: var(--border-width) solid var(--line);
-    background: var(--sunken);
-  }
-  .recent-in {
-    display: flex;
-    align-items: center;
-    gap: var(--space-5);
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: var(--space-2) var(--space-4);
-  }
-  @media (min-width: 720px) {
-    .recent-in {
-      padding: var(--space-2) var(--space-5);
-    }
-  }
-  .recent-item {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    max-width: 160px;
-  }
-  .recent-title {
-    overflow: hidden;
-    color: var(--ink);
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-label);
-    text-decoration: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .recent-title:hover {
-    text-decoration: underline;
-  }
   .tagline {
     margin: var(--space-6) var(--space-4) 0;
     color: var(--ink-2);
