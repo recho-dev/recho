@@ -1,5 +1,5 @@
 import {BadgeQuestionMarkIcon, HashIcon, RefreshCcw, type LucideIcon} from "lucide-react";
-import {cn} from "../../app/cn.js";
+import {cn} from "../../components/cn.js";
 
 export function Remote({remoteValue}: {remoteValue: unknown}) {
   let Icon: LucideIcon;
