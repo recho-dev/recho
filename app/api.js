@@ -113,14 +113,18 @@ const STARTERS = {
   mlscript: MLSCRIPT_CONTENT,
 };
 
+/** The code a new notebook in `runtime` starts with. */
+export function starterContent(runtime = DEFAULT_RUNTIME) {
+  return (STARTERS[languageOf(runtime)] ?? STARTERS.javascript).trimStart();
+}
+
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const content = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
   return {
     id: generate(),
     title: UNTITLED,
     created: null,
     updated: null,
-    content: content.trimStart(),
+    content: starterContent(runtime),
     autoRun: true,
     runtime,
     visibility: PRIVATE,

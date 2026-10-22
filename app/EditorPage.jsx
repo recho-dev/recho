@@ -37,7 +37,11 @@ function isOwnedBy(notebook, uid) {
   return !notebook?.ownerId || notebook.ownerId === uid;
 }
 
-export function EditorPage({id: initialId}) {
+/**
+ * A saved notebook when `id` is given, otherwise a new, unsaved one. A new
+ * notebook is in `runtime` unless the New menu asks for another language.
+ */
+export function EditorPage({id: initialId, runtime: initialRuntime}) {
   const router = useRouter();
   const [notebook, setNotebook] = useState(UNSET);
   const [autoRun, setAutoRun] = useState(false);
@@ -99,9 +103,9 @@ export function EditorPage({id: initialId}) {
   // user picks a language from the New menu or clicks the wordmark.
   useEffect(() => {
     if (isAdded) return;
-    const runtime = countStore.runtimeFor(count);
+    const runtime = countStore.runtimeFor(count) ?? initialRuntime;
     loadNotebook(createNotebook(runtime));
-    // Only the New menu asks for a runtime; the wordmark also starts a notebook.
+    // Only a template or the New menu asks for a runtime; the wordmark also starts a notebook.
     if (runtime) setTitleFocus(count);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
