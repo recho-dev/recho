@@ -266,7 +266,6 @@ export function EditorPage({id: initialId}) {
   return (
     <div>
       {/* The list of recent notebooks is hidden until its redesign (#254). */}
-      {!isAdded && <p className={cn("tagline")}>Explore code and art with instant feedback.</p>}
       <div className={cn("page editor-page")}>
         <TitleSection
           title={

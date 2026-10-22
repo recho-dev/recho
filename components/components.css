@@ -123,6 +123,12 @@
     font-size: var(--fs-xs);
     color: var(--ink-3);
   }
+  .btn-primary .kbd-in {
+    color: var(--on-accent-quiet);
+  }
+  .btn-primary:disabled .kbd-in {
+    color: var(--ink-4);
+  }
 
   /* ---------- Pickers ---------- */
   /* A select's button. Bordered by default; with .btn-ghost it takes the
@@ -1111,15 +1117,6 @@
   .title-edit:focus {
     background: var(--fill-hover);
     box-shadow: 0 0 0 var(--border-width) var(--line);
-  }
-
-  /* ---------- Notebook page ---------- */
-  .tagline {
-    margin: var(--space-6) var(--space-4) 0;
-    color: var(--ink-2);
-    font-size: var(--fs-xl);
-    font-weight: var(--fw-body);
-    text-align: center;
   }
 
   /* ---------- Docs ---------- */
