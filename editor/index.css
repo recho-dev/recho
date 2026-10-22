@@ -177,11 +177,11 @@
     transition: background-color var(--duration-hover);
 
     &:hover {
-      background-color: var(--gray-2);
+      background-color: var(--fill-hover);
     }
 
     &:active {
-      background-color: var(--gray-4);
+      background-color: var(--fill-pressed);
       transition-duration: 0s;
     }
   }

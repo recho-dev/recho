@@ -7,7 +7,7 @@ import {useLayoutEffect} from "react";
 // News list <-> post: the clicked row's cover and title move to their place on
 // the new page (View Transitions, named news-cover and news-title) and the rest
 // crossfades. Between two posts it is a plain crossfade. Without the API the
-// new page fades in on its own (see .news-view in components.css). With reduced
+// new page fades in on its own (see .news-page in components.css). With reduced
 // motion nothing is named, so it is a plain crossfade too.
 //
 // Next's client navigation is a soft navigation, so CSS @view-transition never

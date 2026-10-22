@@ -93,7 +93,7 @@ export default function Page() {
             <Card
               href={`/works/${notebook.id}`}
               title={notebook.title}
-              subtitle={`${VISIBILITIES.find((v) => v.value === notebook.visibility)?.label ?? "Private"} · Created ${new Date(notebook.created).toLocaleDateString()}`}
+              subtitle={`${VISIBILITIES.find((v) => v.value === notebook.visibility)?.label ?? "Private"} · Created ${new Date(notebook.created).toLocaleDateString("en-CA")}`}
               thumbnail={
                 <ThumbnailClient
                   code={notebook.content}
