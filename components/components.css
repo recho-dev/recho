@@ -1119,15 +1119,6 @@
     box-shadow: 0 0 0 var(--border-width) var(--line);
   }
 
-  /* ---------- Notebook page ---------- */
-  .tagline {
-    margin: var(--space-6) var(--space-4) 0;
-    color: var(--ink-2);
-    font-size: var(--fs-xl);
-    font-weight: var(--fw-body);
-    text-align: center;
-  }
-
   /* ---------- Docs ---------- */
   .docs {
     display: grid;
