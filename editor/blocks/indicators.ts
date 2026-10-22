@@ -80,7 +80,9 @@ export const blockIndicator = gutter({
     if (blocks === undefined) return null;
     const index = findEnclosingBlock(blocks, block.from);
     if (index === null || block.from >= blocks[index].source.from) return null;
-    return blocks[index].error ? indicatorMarkers.error.sole : indicatorMarkers.output.sole;
+    // The output is one widget, so its run ends with it; a failed block's run
+    // goes on through its source, so the widget only starts it.
+    return blocks[index].error ? indicatorMarkers.error.head : indicatorMarkers.output.sole;
   },
   initialSpacer() {
     return spacer;
