@@ -1,6 +1,6 @@
 "use client";
 import {useEffect, useRef, useState} from "react";
-import {Square, Copy} from "lucide-react";
+import {Play, Square} from "lucide-react";
 import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
@@ -32,10 +32,8 @@ export function Editor({
   onUserInput = () => {},
   onBeforeEachRun = () => {},
   autoRun = true,
-  toolBarStart = null,
-  status = null,
+  fileName = null,
   pinToolbar = true,
-  onDuplicate = null,
   onError = onDefaultError,
 }) {
   const containerRef = useRef(null);
@@ -132,40 +130,28 @@ export function Editor({
 
   const shortcut = useShortcut("S");
   // Edits stop the outputs updating until the next run.
-  const shownStatus = compiling ? "Compiling…" : (status ?? (needRerun ? "Edited" : null));
+  const shownStatus = compiling ? "Compiling…" : needRerun ? "Edited" : null;
   // The dot's colour: busy while compiling, waiting while edits haven't run.
-  const statusState = compiling ? "busy" : !status && needRerun ? "waiting" : null;
+  const statusState = compiling ? "busy" : needRerun ? "waiting" : null;
 
   return (
     <div className="editor-frame">
       <div className={cn("toolbar", pinToolbar && "pinned")} role="toolbar" aria-label="Notebook">
-        <div className="toolbar-start">{toolBarStart}</div>
-        {shownStatus && (
-          <>
-            <span
-              key={shownStatus}
-              role="status"
-              className="status swap-in hide-sm"
-              data-state={statusState ?? undefined}
-            >
-              {shownStatus}
-            </span>
-            <span className="tb-sep hide-sm" aria-hidden="true" />
-          </>
-        )}
-        {onDuplicate && (
-          <Button onClick={onDuplicate} tip="Duplicate notebook">
-            <Copy className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
-            <span className="lbl">Duplicate</span>
-          </Button>
-        )}
-        <Button tip="Stop updating" onClick={onStop}>
+        <Button variant="primary" className="tb-run" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
+          <Play className="ic" size={12} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+          Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
+        </Button>
+        <Button className="tb-run" tip="Stop updating" onClick={onStop}>
           <Square className="ic" size={10} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           <span className="lbl">Stop</span>
         </Button>
-        <Button variant="primary" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
-          Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
-        </Button>
+        {shownStatus && (
+          <span key={shownStatus} role="status" className="status swap-in" data-state={statusState ?? undefined}>
+            {shownStatus}
+          </span>
+        )}
+        <span className="spacer" />
+        {fileName && <span className="tb-file">{fileName}</span>}
       </div>
       <div className="editor-body">
         {loading.parts.length > 0 && !loadError && (

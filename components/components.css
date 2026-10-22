@@ -1251,42 +1251,23 @@
   .toolbar .input {
     border-radius: var(--radius-nested);
   }
-  .toolbar .input-plain {
-    flex: 1 1 120px;
-  }
-  .toolbar .menu-wrap {
-    flex: none;
-  }
   .toolbar .status {
-    margin-right: var(--space-2);
+    margin-left: var(--space-2);
   }
-  .tb-switch {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 0 var(--space-2);
-    color: var(--ink-2);
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-label);
-    cursor: pointer;
+  /* Run and Stop: larger, at the left, the first thing to reach for. */
+  .toolbar .tb-run {
+    height: calc(var(--space-unit) * 8);
+    padding: 0 var(--space-3);
+    font-size: var(--fs-md);
   }
-  .toolbar-start {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: center;
-    gap: var(--space-1);
+  /* The file the notebook stands for, as a reminder that it's plain code. */
+  .tb-file {
     min-width: 0;
-  }
-  .tb-title {
-    flex: 1 1 120px;
-    min-width: 0;
-    margin: 0;
     padding: 0 var(--space-2);
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-label);
-    line-height: var(--control-h);
     overflow: hidden;
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1304,6 +1285,61 @@
     overflow-x: auto;
     font: var(--fs-code) / var(--lh-code) var(--font-mono);
     color: var(--ink-2);
+  }
+
+  /* ---------- Title section, above a notebook ---------- */
+  .title-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .title-main {
+    display: flex;
+    flex: 1 1 240px;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .title-main .status {
+    white-space: normal;
+  }
+  .title-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  /* An editable title looks like any other until it's hovered or focused. */
+  .title-edit {
+    align-self: flex-start;
+    min-width: 4ch;
+    max-width: calc(100% + var(--space-2));
+    margin: 0 calc(var(--space-1) * -1);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    outline: none;
+    overflow-wrap: anywhere;
+    cursor: text;
+    transition: background-color var(--duration-hover);
+  }
+  .title-edit:hover {
+    background: var(--fill-hover);
+  }
+  .title-edit:focus {
+    background: var(--fill-hover);
+    box-shadow: 0 0 0 var(--border-width) var(--line);
+  }
+  .vis-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    cursor: pointer;
   }
 
   /* ---------- Notebook page ---------- */
@@ -1428,15 +1464,6 @@
   }
   .ex-head .status {
     flex: 1;
-  }
-  .ex-meta {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    margin-bottom: var(--space-4);
-  }
-  .ex-meta .status {
-    white-space: normal;
   }
   .card-grid {
     list-style: none;

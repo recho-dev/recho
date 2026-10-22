@@ -1,7 +1,10 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
+import {Copy} from "lucide-react";
 import {Editor} from "./Editor.jsx";
+import {TitleSection} from "./TitleSection.jsx";
+import {NotebookTitle} from "./NotebookTitle.jsx";
 import {
   getNotebookById,
   createNotebook,
@@ -21,12 +24,11 @@ import {confirmDialog} from "../components/Dialog.jsx";
 import {authStore, ensureUser} from "./auth.js";
 import {cn} from "./cn.js";
 import {Button} from "../components/Button.jsx";
-import {Input} from "../components/Input.jsx";
 import {Listbox} from "../components/Listbox.jsx";
 import {Switch} from "../components/Switch.jsx";
 import {toast} from "../components/Toast.jsx";
 import {isMac} from "../components/Kbd.jsx";
-import {BASE_PATH, RUNTIMES} from "./shared.js";
+import {BASE_PATH, RUNTIMES, fileNameOf} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -41,11 +43,11 @@ export function EditorPage({id: initialId}) {
   const [autoRun, setAutoRun] = useState(false);
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
-  const [title, setTitle] = useState("");
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
-  const titleRef = useRef(null);
+  // Bumped to focus and select the title, for a notebook made from the New menu.
+  const [titleFocus, setTitleFocus] = useState(null);
   const linkCopiedTimer = useRef(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
@@ -93,13 +95,16 @@ export function EditorPage({id: initialId}) {
     if (!initialNotebook) return;
     setInitialCode(initialNotebook.content);
     setAutoRun(initialNotebook.autoRun);
-    setTitle(initialNotebook.title);
   }
 
   // This effect is triggered when the count changes,
   // which happens when user clicks the "New" nav link.
   useEffect(() => {
-    if (!isAdded) loadNotebook(createNotebook(countStore.runtimeFor(count)));
+    if (isAdded) return;
+    const runtime = countStore.runtimeFor(count);
+    loadNotebook(createNotebook(runtime));
+    // Only the New menu asks for a runtime; the wordmark also starts a notebook.
+    if (runtime) setTitleFocus(count);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
@@ -202,25 +207,11 @@ export function EditorPage({id: initialId}) {
     else isDirtyStore.setDirty(true);
   }
 
-  // Only submit rename when blur with valid title.
-  function onTitleBlur() {
-    // The title can't be empty.
-    if (!title) return setTitle(notebook.title);
-    // Focusing and leaving the field changes nothing.
-    if (title === notebook.title) return;
+  function onRename(title) {
     const newNotebook = {...notebook, title};
     setNotebook(newNotebook);
     if (canSave) saveNotebookDebounced(newNotebook);
     else isDirtyStore.setDirty(true);
-  }
-
-  function onTitleChange(e) {
-    setTitle(e.target.value);
-  }
-
-  function onTitleKeyDown(e) {
-    // Leaving the field commits the title.
-    if (e.key === "Enter") titleRef.current.blur();
   }
 
   // If long-running code is detected, disable auto run next time
@@ -279,36 +270,32 @@ export function EditorPage({id: initialId}) {
     {value: RUNTIMES.mlscript, label: "MLscript"},
   ];
 
+  // Who made the notebook and when. Only the owner's own name is known.
+  const author = !isOthers && user ? (user.displayName ?? user.email) : null;
+  const details = [
+    author,
+    isAdded && notebook.created ? `Created ${new Date(notebook.created).toLocaleDateString("en-CA")}` : "Not saved yet",
+    isOthers && "View only",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div>
       {/* The list of recent notebooks is hidden until its redesign (#254). */}
       {!isAdded && <p className={cn("tagline")}>Explore code and art with instant feedback.</p>}
       <div className={cn("page editor-page")}>
-        <Editor
-          initialCode={initialCode}
-          runtime={notebook.runtime}
-          key={notebook.id}
-          onUserInput={onUserInput}
-          onBeforeEachRun={onBeforeEachRun}
-          autoRun={autoRun}
-          onDuplicate={isAdded ? onDuplicate : null}
-          status={isAdded && isOthers ? "View only" : null}
-          toolBarStart={
+        <TitleSection
+          title={
+            isOthers ? (
+              <h1 className={cn("page-title")}>{notebook.title}</h1>
+            ) : (
+              <NotebookTitle value={notebook.title} onChange={onRename} focusKey={titleFocus} />
+            )
+          }
+          details={details}
+          actions={
             <>
-              {isOthers ? (
-                <h1 className={cn("tb-title")}>{notebook.title}</h1>
-              ) : (
-                <Input
-                  plain
-                  aria-label="Notebook title"
-                  autoComplete="off"
-                  value={title}
-                  onChange={onTitleChange}
-                  onBlur={onTitleBlur}
-                  onKeyDown={onTitleKeyDown}
-                  ref={titleRef}
-                />
-              )}
               {!isAdded && (
                 <Listbox
                   label="Language"
@@ -321,15 +308,30 @@ export function EditorPage({id: initialId}) {
               {!isAdded && <Button onClick={onSave}>Create</Button>}
               {canSave && (
                 <label
-                  className={cn("tb-switch")}
+                  className={cn("vis-switch")}
                   title={isPublic ? "Anyone with the link can view." : "Only you can view."}
                 >
                   <Switch checked={isPublic} onChange={onToggleVisibility} />
                   {linkCopied ? "Link copied" : "Public"}
                 </label>
               )}
+              {isAdded && (
+                <Button onClick={onDuplicate} tip="Duplicate notebook">
+                  <Copy className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span className={cn("lbl")}>Duplicate</span>
+                </Button>
+              )}
             </>
           }
+        />
+        <Editor
+          initialCode={initialCode}
+          runtime={notebook.runtime}
+          key={notebook.id}
+          onUserInput={onUserInput}
+          onBeforeEachRun={onBeforeEachRun}
+          autoRun={autoRun}
+          fileName={fileNameOf(notebook.title, notebook.runtime)}
         />
       </div>
     </div>
