@@ -210,6 +210,9 @@
   --font-mono:
     "Recho Glyphs", "Spline Sans Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
     monospace;
+  /* Newsreader for news titles and article text. */
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Charter, "Palatino Linotype", Georgia, serif;
+  --fw-serif: 500;
   --fs-xs: calc(var(--fs-ui) * 0.857); /* 12: captions, kbd */
   --fs-sm: calc(var(--fs-ui) * 0.929); /* 13: controls */
   --fs-base: var(--fs-ui); /* 14: body */

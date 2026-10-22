@@ -3,6 +3,8 @@
 @import "./fonts.css";
 @import "@fontsource-variable/spline-sans-mono";
 @import "@fontsource-variable/spline-sans-mono/wght-italic";
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/newsreader/wght-italic";
 @import "../components/components.css";
 @import "../editor/index.css";
 

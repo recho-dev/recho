@@ -966,37 +966,262 @@
   }
 
   /* ---------- News ---------- */
-  .news article {
-    margin-top: var(--space-6);
-    padding-top: var(--space-5);
-    border-top: var(--border-width) solid var(--line);
+  /* A reading-width list. The cover sits beside the words and shrinks to a
+     thumbnail on phones; the newest post is not made bigger than the rest. */
+  .news-page.reading {
+    max-width: calc(760px + 2 * var(--space-4));
   }
-  .news a {
-    color: var(--ink);
+  @media (min-width: 720px) {
+    .news-page.reading {
+      max-width: calc(760px + 2 * var(--space-5));
+    }
+  }
+  .news-page .news-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .news-page .post {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: var(--space-5);
+    align-items: center;
+    padding: var(--space-4);
+    margin: 0 calc(-1 * var(--space-4));
+    border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--duration-hover);
+  }
+  .news-page .post:hover {
+    background: var(--fill-hover);
+  }
+  .news-page .post:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .news-page .post-meta .dot {
+    color: var(--ink-4);
+  }
+  .news-page .post-meta a {
+    color: inherit;
     text-decoration: none;
   }
-  .news a:hover {
+  .news-page .post-meta a:hover {
+    color: var(--ink);
     text-decoration: underline;
   }
-  .news h2 {
-    margin: 0 0 var(--space-1);
-    font-size: var(--fs-xl);
-    font-weight: var(--fw-heading);
-    line-height: var(--lh-ui);
+  .news-page .post h2 {
+    margin: var(--space-1) 0 var(--space-1);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-md) + 3px);
+    font-weight: var(--fw-serif);
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    color: var(--ink);
   }
-  .news p {
-    margin: 0 0 var(--space-3);
+  .news-page .post p {
+    margin: 0;
     color: var(--ink-2);
-    font-size: var(--fs-md);
     line-height: var(--lh-prose);
-    white-space: normal;
   }
-  .news img {
+  .news-page .cover {
     display: block;
     width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: var(--border-width) solid var(--line);
+    background: var(--sunken);
+  }
+  .news-page .post .cover {
+    transition: box-shadow var(--duration-base) var(--ease-move);
+  }
+  .news-page .post:hover .cover {
+    box-shadow: var(--shadow-2);
+  }
+  @media (max-width: 560px) {
+    .news-page .post {
+      grid-template-columns: minmax(0, 1fr) 88px;
+      gap: var(--space-3);
+      align-items: start;
+    }
+    .news-page .post p {
+      display: none;
+    }
+  }
+  .news-page .article {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .news-page .back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-5);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    color: var(--ink-3);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .news-page .back:hover {
+    color: var(--ink);
+  }
+  .news-page .back:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .article h1 {
+    margin: var(--space-2) 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-xl) + 6px);
+    font-weight: var(--fw-serif);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .news-page .article .lede {
+    margin: 0 0 var(--space-5);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: calc(var(--fs-md) + 2px);
+    color: var(--ink-2);
+    line-height: var(--lh-prose);
+  }
+  .news-page .article .cover {
     height: auto;
+    aspect-ratio: auto;
+    border-radius: var(--radius-lg);
+  }
+  .news-page .article-body {
+    margin-top: var(--space-6);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-md) + 3px);
+    line-height: var(--lh-prose);
+    color: var(--ink);
+  }
+  .news-page .article-body p {
+    margin: 0 0 var(--space-4);
+  }
+  .news-page .original {
+    margin: var(--space-5) 0 0;
+    font-size: var(--fs-sm);
+  }
+  .news-page .original a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+  .news-page .original a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+  .news-page .read-on {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    padding: var(--space-3) var(--space-4);
     border: var(--border-width) solid var(--line);
     border-radius: var(--radius-lg);
+    background: var(--sunken);
+  }
+  .news-page .read-on p {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
+  }
+  .news-page .more {
+    margin-top: var(--space-7);
+    padding-top: var(--space-4);
+    border-top: var(--border-width) solid var(--line);
+  }
+  .news-page .more h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-heading);
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .news-page .more ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .news-page .more a {
+    display: flex;
+    gap: var(--space-4);
+    align-items: baseline;
+    padding: var(--space-2) var(--space-2);
+    margin: 0 calc(-1 * var(--space-2));
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color var(--duration-hover);
+  }
+  .news-page .more a:hover {
+    background: var(--fill-hover);
+  }
+  .news-page .more a:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .more a span {
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-ui) + 2px);
+  }
+  .news-page .more time {
+    flex: none;
+    width: 7.5em;
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Without View Transitions a news page fades in when it arrives
+     (app/news/NewsLink.jsx runs the transition where the API exists). */
+  @supports not (view-transition-name: none) {
+    .news-page {
+      animation: fade-in var(--duration-base) var(--ease-swap) backwards;
+    }
+  }
+  ::view-transition-group(root) {
+    animation-duration: var(--duration-base);
+  }
+  ::view-transition-group(news-cover),
+  ::view-transition-group(news-title) {
+    animation-duration: var(--duration-slow);
+    animation-timing-function: var(--ease-move);
+  }
+  /* Keep the cover cropped and the title unstretched while they change size. */
+  ::view-transition-old(news-cover),
+  ::view-transition-new(news-cover) {
+    height: 100%;
+    object-fit: cover;
+  }
+  ::view-transition-old(news-title),
+  ::view-transition-new(news-title) {
+    width: auto;
+    height: 100%;
+  }
+  ::view-transition-old(news-title) {
+    animation-duration: var(--duration-fast);
   }
 
   /* ---------- Editor frame and toolbar ---------- */
