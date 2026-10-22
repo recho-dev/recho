@@ -1040,6 +1040,11 @@
   .toolbar .status {
     margin-left: var(--space-2);
   }
+  /* The first button keeps only the inset, so it sits as far from the left
+     edge as from the top. */
+  .toolbar > :first-child {
+    margin-left: 0;
+  }
   /* Run and Stop: larger, at the left, the first thing to reach for. */
   .toolbar .tb-action {
     height: calc(var(--space-unit) * 8);
