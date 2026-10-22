@@ -1539,6 +1539,28 @@
   .ex-head .status {
     flex: 1;
   }
+  .ex-filters,
+  .ex-labels {
+    display: contents;
+  }
+  .ex-labels-select {
+    display: none;
+  }
+  /* The label segments need 455px and wrap below 487px; under that the labels
+     become a select, on one row with the language one. */
+  @media (max-width: 519px) {
+    .ex-filters {
+      display: flex;
+      flex-basis: 100%;
+      gap: var(--space-2);
+    }
+    .ex-labels {
+      display: none;
+    }
+    .ex-labels-select {
+      display: contents;
+    }
+  }
   .card-grid {
     list-style: none;
     margin: 0;
