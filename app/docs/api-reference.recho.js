@@ -23,6 +23,7 @@
  * - echo.dispose(callback) - Register a disposal callback before re-running the current block (https://recho.dev/docs/api-echo-dispose)
  * - recho.state(value) - Create reactive state variables for mutable values (https://recho.dev/docs/api-state)
  * - recho.inspect(value[, options]) - Format values for inspection (https://recho.dev/docs/api-inspect)
+ * - recho.md`markdown` - Render Markdown as coloured text (https://recho.dev/docs/api-md)
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *                                 Inputs
