@@ -1,22 +1,41 @@
 "use client";
 import {useEffect, useLayoutEffect} from "react";
+import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {ChevronDown} from "lucide-react";
+import {ChevronDown, ChevronLeft, ChevronRight} from "lucide-react";
 import {Sidebar} from "../Sidebar.js";
 import {Button} from "../../components/Button.jsx";
 import {usePopover} from "../../components/usePopover.js";
 
-/** Where the current page sits in the nav: "Features / Inline echoing". */
-function currentTrail(navStructure, docsMap, slug) {
+/** Every page in reading order, with the group it is listed under. */
+function pagesInOrder(navStructure, docsMap) {
+  const pages = [];
+  const add = (slug, group) => docsMap[slug] && pages.push({slug, title: docsMap[slug].title, group});
   for (const entry of navStructure) {
     if (entry.type === "group") {
-      if (entry.slug === slug) return `${entry.title} / Overview`;
-      if (entry.items.some((page) => page.slug === slug)) return `${entry.title} / ${docsMap[slug]?.title ?? slug}`;
-    } else if (entry.slug === slug) {
-      return docsMap[slug]?.title ?? slug;
+      if (entry.slug) add(entry.slug, entry.title);
+      for (const page of entry.items) add(page.slug, entry.title);
+    } else {
+      add(entry.slug, null);
     }
   }
-  return "Docs";
+  return pages;
+}
+
+/** A step to the page before or after, or a disabled button at either end. */
+function StepLink({page, label, children}) {
+  if (!page) {
+    return (
+      <Button variant="ghost" icon disabled aria-label={label}>
+        {children}
+      </Button>
+    );
+  }
+  return (
+    <Button as={Link} variant="ghost" icon href={`/docs/${page.slug}`} tip={`${label}: ${page.title}`}>
+      {children}
+    </Button>
+  );
 }
 
 // A sidebar click crossfades the doc: the old one fades out while the new one
@@ -58,9 +77,12 @@ export function DocsLayoutClient({navStructure, docsMap, children}) {
   // Escape closes it.
   const {open: navOpen, setOpen: setNavOpen, ref: navRef, triggerRef} = usePopover();
   const slug = pathname.split("/").pop();
+  const pages = pagesInOrder(navStructure, docsMap);
+  const index = pages.findIndex((page) => page.slug === slug);
+  const page = pages[index];
 
   // Close the mobile nav when the page changes (a link, Back or Forward).
-  useEffect(() => setNavOpen(false), [pathname]);
+  useEffect(() => setNavOpen(false), [pathname, setNavOpen]);
 
   // The new doc is in the DOM: let a pending crossfade run.
   useLayoutEffect(() => pending?.(), [pathname]);
@@ -88,18 +110,39 @@ export function DocsLayoutClient({navStructure, docsMap, children}) {
   return (
     <div className="page wide">
       <div className="docs">
-        <div className="docs-nav" ref={navRef}>
-          <Button
-            ref={triggerRef}
-            className="docs-toggle"
-            aria-expanded={navOpen}
-            aria-controls="docs-side"
-            onClick={() => setNavOpen(!navOpen)}
-          >
-            <span>{currentTrail(navStructure, docsMap, slug)}</span>
-            <ChevronDown className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
-          </Button>
-          <nav className={navOpen ? "side open" : "side"} id="docs-side" aria-label="Docs" onClickCapture={onNavClick}>
+        {/* Below 1100px the doc's title is this menu button, with steps to the
+            pages either side; the doc's own title is hidden. */}
+        <div className="docs-nav" ref={navRef} onClickCapture={onNavClick}>
+          <div className="docs-head">
+            <div className="docs-group">{page?.group ?? "Docs"}</div>
+            <div className="docs-head-row">
+              <h1 className="page-title">
+                <button
+                  ref={triggerRef}
+                  type="button"
+                  className="docs-title"
+                  aria-expanded={navOpen}
+                  aria-controls="docs-side"
+                  onClick={() => setNavOpen(!navOpen)}
+                >
+                  <span>{page?.title ?? "Docs"}</span>
+                  <ChevronDown className="ic" size={16} strokeWidth={1.75} aria-hidden="true" />
+                </button>
+              </h1>
+              {page && (
+                <span className="docs-count">
+                  {index + 1} / {pages.length}
+                </span>
+              )}
+              <StepLink page={pages[index - 1]} label="Previous">
+                <ChevronLeft className="ic" size={16} strokeWidth={1.75} aria-hidden="true" />
+              </StepLink>
+              <StepLink page={index < 0 ? undefined : pages[index + 1]} label="Next">
+                <ChevronRight className="ic" size={16} strokeWidth={1.75} aria-hidden="true" />
+              </StepLink>
+            </div>
+          </div>
+          <nav className={navOpen ? "side open" : "side"} id="docs-side" aria-label="Docs">
             <Sidebar navStructure={navStructure} docsMap={docsMap} onLinkClick={() => setNavOpen(false)} />
           </nav>
         </div>
