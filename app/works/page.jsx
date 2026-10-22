@@ -6,7 +6,7 @@ import {ThumbnailClient} from "../ThumbnailClient.js";
 import {getNotebooks, deleteNotebook, VISIBILITIES} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange, highlightLanguage} from "../shared.js";
-import {cn} from "../cn.js";
+import {cn} from "../../components/cn.js";
 import {Button} from "../../components/Button.jsx";
 import {Card} from "../../components/Card.jsx";
 import {toast} from "../../components/Toast.jsx";

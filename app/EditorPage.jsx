@@ -23,12 +23,12 @@ import {
 import {isDirtyStore, countStore} from "./store.js";
 import {confirmDialog} from "../components/Dialog.jsx";
 import {authStore, ensureUser} from "./auth.js";
-import {cn} from "./cn.js";
+import {cn} from "../components/cn.js";
 import {Button} from "../components/Button.jsx";
 import {Listbox} from "../components/Listbox.jsx";
 import {toast} from "../components/Toast.jsx";
-import {isMac} from "../components/Kbd.jsx";
-import {BASE_PATH, RUNTIMES, fileNameOf, notebookDetails} from "./shared.js";
+import {isMac} from "../components/shortcut.js";
+import {BASE_PATH, LANGUAGES, fileNameOf, notebookDetails} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -256,11 +256,7 @@ export function EditorPage({id: initialId}) {
     }
   }
 
-  const languages = [
-    {value: RUNTIMES.javascript, label: "JavaScript"},
-    {value: RUNTIMES.wenyan, label: "文言 wenyan"},
-    {value: RUNTIMES.mlscript, label: "MLscript"},
-  ];
+  const languages = LANGUAGES.map(({runtime, label}) => ({value: runtime, label}));
 
   // Your own notebooks show your current name. Others' show the author saved
   // with the notebook (from the owner's sign-in), which older notebooks lack.
