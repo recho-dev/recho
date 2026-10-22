@@ -1,7 +1,6 @@
 "use client";
 import {useRouter} from "next/navigation";
 import {Editor} from "../Editor.jsx";
-import {Button} from "../../components/Button.jsx";
 import {toast} from "../../components/Toast.jsx";
 import {duplicateNotebook, addNotebook} from "../api.js";
 import {ensureUser} from "../auth.js";
@@ -27,26 +26,5 @@ export function ExampleEditor({example, initialCode}) {
     }
   }
 
-  return (
-    <Editor
-      initialCode={initialCode}
-      runtime={example.runtime}
-      key={example.title}
-      onDuplicate={onDuplicate}
-      toolBarStart={
-        example.pull_request && (
-          <Button
-            as="a"
-            variant="ghost"
-            key={example.slug}
-            href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Comment
-          </Button>
-        )
-      }
-    />
-  );
+  return <Editor initialCode={initialCode} runtime={example.runtime} key={example.title} onDuplicate={onDuplicate} />;
 }

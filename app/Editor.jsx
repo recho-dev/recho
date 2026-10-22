@@ -153,16 +153,16 @@ export function Editor({
             <span className="tb-sep hide-sm" aria-hidden="true" />
           </>
         )}
-        <Button tip="Stop updating" onClick={onStop}>
-          <Square className="ic" size={10} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
-          <span className="lbl">Stop</span>
-        </Button>
         {onDuplicate && (
-          <Button variant="ghost" onClick={onDuplicate} tip="Duplicate notebook">
+          <Button onClick={onDuplicate} tip="Duplicate notebook">
             <Copy className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
             <span className="lbl">Duplicate</span>
           </Button>
         )}
+        <Button tip="Stop updating" onClick={onStop}>
+          <Square className="ic" size={10} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+          <span className="lbl">Stop</span>
+        </Button>
         <Button variant="primary" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
           Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
         </Button>

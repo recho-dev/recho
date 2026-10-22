@@ -1,7 +1,6 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Lock, Globe} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {
   getNotebookById,
@@ -11,7 +10,6 @@ import {
   saveNotebookDebounced,
   flushPendingSave,
   hasUnsavedChanges,
-  getNotebooks,
   duplicateNotebook,
   markRunning,
   clearRunning,
@@ -25,9 +23,9 @@ import {cn} from "./cn.js";
 import {Button} from "../components/Button.jsx";
 import {Input} from "../components/Input.jsx";
 import {Listbox} from "../components/Listbox.jsx";
+import {Switch} from "../components/Switch.jsx";
 import {toast} from "../components/Toast.jsx";
 import {isMac} from "../components/Kbd.jsx";
-import {SafeLink} from "./SafeLink.jsx";
 import {BASE_PATH, RUNTIMES} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
@@ -40,7 +38,6 @@ function isOwnedBy(notebook, uid) {
 export function EditorPage({id: initialId}) {
   const router = useRouter();
   const [notebook, setNotebook] = useState(UNSET);
-  const [notebookList, setNotebookList] = useState([]);
   const [autoRun, setAutoRun] = useState(false);
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
@@ -141,15 +138,6 @@ export function EditorPage({id: initialId}) {
       document.title = `${isAdded ? notebook.title : "New"} | Recho`;
     }, 100);
   }, [notebook, isAdded]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    let cancelled = false;
-    getNotebooks()
-      .then((notebooks) => !cancelled && setNotebookList(notebooks.slice(0, 4)))
-      .catch((error) => console.error(error));
-    return () => (cancelled = true);
-  }, [isAdded, authLoading, uid]);
 
   useEffect(() => {
     const onBeforeUnload = (e) => {
@@ -293,27 +281,8 @@ export function EditorPage({id: initialId}) {
 
   return (
     <div>
-      {!isAdded && notebookList.length > 0 && (
-        <nav className={cn("recent")} aria-label="Your notebooks">
-          <div className={cn("recent-in")}>
-            {notebookList.map((notebook) => (
-              <div key={notebook.id} className={cn("recent-item hide-sm")}>
-                <SafeLink href={`/works/${notebook.id}`} className={cn("recent-title")}>
-                  {notebook.title}
-                </SafeLink>
-                <span className={cn("status")}>Created {new Date(notebook.created).toLocaleDateString()}</span>
-              </div>
-            ))}
-            <span className={cn("spacer")} />
-            <Button as={SafeLink} variant="ghost" href="/works">
-              View your notebooks
-            </Button>
-          </div>
-        </nav>
-      )}
-      {!isAdded && notebookList.length === 0 && (
-        <p className={cn("tagline")}>Explore code and art with instant feedback.</p>
-      )}
+      {/* The list of recent notebooks is hidden until its redesign (#254). */}
+      {!isAdded && <p className={cn("tagline")}>Explore code and art with instant feedback.</p>}
       <div className={cn("page editor-page")}>
         <Editor
           initialCode={initialCode}
@@ -351,22 +320,13 @@ export function EditorPage({id: initialId}) {
               )}
               {!isAdded && <Button onClick={onSave}>Create</Button>}
               {canSave && (
-                <Button
-                  variant="ghost"
-                  onClick={onToggleVisibility}
-                  title={
-                    isPublic
-                      ? "Anyone with the link can view. Click to make private."
-                      : "Only you can view. Click to make public."
-                  }
+                <label
+                  className={cn("tb-switch")}
+                  title={isPublic ? "Anyone with the link can view." : "Only you can view."}
                 >
-                  {isPublic ? (
-                    <Globe className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
-                  ) : (
-                    <Lock className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
-                  )}
-                  {linkCopied ? "Link copied" : isPublic ? "Public" : "Private"}
-                </Button>
+                  <Switch checked={isPublic} onChange={onToggleVisibility} />
+                  {linkCopied ? "Link copied" : "Public"}
+                </label>
               )}
             </>
           }
