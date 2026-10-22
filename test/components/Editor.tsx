@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import {Play, Square, RefreshCcw} from "lucide-react";
 import {createEditor} from "../../editor/index.js";
-import {cn} from "../../app/cn.js";
+import {cn} from "../../components/cn.js";
 import type {PluginValue, ViewPlugin} from "@codemirror/view";
 
 interface EditorProps {
