@@ -1402,7 +1402,9 @@
   .doc {
     min-width: 0;
   }
-  @media (max-width: 760px) {
+  /* Docs are written to 80 columns, which need about 750px of editor. Beside
+     the sidebar that fits from 1100px; below it the sidebar folds into a menu. */
+  @media (max-width: 1099px) {
     .docs {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-4);
