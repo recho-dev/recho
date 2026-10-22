@@ -69,8 +69,8 @@ export function Nav() {
             </>
           }
         >
-          {LANGUAGES.map(({runtime, label}) => (
-            <MenuItem as={SafeLink} key={runtime} href="/" newRuntime={runtime}>
+          {LANGUAGES.map(({value, runtime, label}) => (
+            <MenuItem as={SafeLink} key={runtime} href={`/new?lang=${value}`} newRuntime={runtime}>
               {label}
             </MenuItem>
           ))}
