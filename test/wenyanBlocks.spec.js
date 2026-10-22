@@ -77,7 +77,7 @@ describe("block indicator", () => {
     });
     const source = {from: output.length + 1, to: doc.length};
     const block = (error) => new BlockMetadata("a", "", {from: 0, to: output.length}, source, {}, error);
-    // The marker of the run's first line; the gutter's first element is a
+    // The marker of the block's first line; the gutter's first element is a
     // hidden spacer.
     const marker = () =>
       [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator.head")].at(-1)?.className;
@@ -90,7 +90,7 @@ describe("block indicator", () => {
     view.destroy();
   });
 
-  it("marks a block's output as succeeded, and a failed block from end to end", () => {
+  it("marks a block's output as succeeded and its source as source, and a failed block from end to end", () => {
     const output = "批曰。「「➜ 三」」。";
     const doc = `${output}\n夫三。示之。`;
     const view = new EditorView({
@@ -101,13 +101,12 @@ describe("block indicator", () => {
     const block = (error) => new BlockMetadata("a", "", {from: 0, to: output.length}, source, {}, error);
     // The markers drawn, top to bottom; lines without one draw nothing.
     const markers = () =>
-      [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator.output, .cm-block-indicator.error")].map(
+      [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator:is(.output, .source, .error)")].map(
         (element) => element.className.replace("cm-block-indicator ", ""),
       );
 
     view.dispatch({effects: blockMetadataEffect.of([block(false)])});
-    // The output line alone; the source line of a block that ran has none.
-    expect(markers()).toEqual(["output head tail"]);
+    expect(markers()).toEqual(["output head", "source tail"]);
     view.dispatch({effects: blockMetadataEffect.of([block(true)])});
     expect(markers()).toEqual(["error head", "error tail"]);
     view.destroy();
