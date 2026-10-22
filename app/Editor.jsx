@@ -144,7 +144,7 @@ export function Editor({
   return (
     <div className="editor-frame">
       <div className={cn("toolbar", pinToolbar && "pinned")} role="toolbar" aria-label="Notebook">
-        <Button className="tb-action" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
+        <Button variant="primary" className="tb-action" onClick={onRun} aria-keyshortcuts="Meta+S Control+S">
           <Play className="ic" size={12} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
         </Button>
