@@ -1583,7 +1583,7 @@
     top: -1px;
     bottom: -1px;
     width: var(--out-marker-width);
-    background: var(--out-marker);
+    background: var(--success-marker);
   }
   .thumb-code .line.err::before {
     background: var(--error-marker);
