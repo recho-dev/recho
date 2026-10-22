@@ -6,6 +6,7 @@ import * as stdlib from "./stdlib/index.js";
 import {BlockMetadata} from "../editor/blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
 import {IntervalTree} from "../lib/IntervalTree.ts";
+import {stripAnsi} from "../lib/ansi.js";
 import {rewriteMutables, transpileRechoJavaScript} from "./transpile.js";
 import {analyzeMutables, createMutator} from "./mutable.js";
 import {ButtonRegistry, makeButton} from "./controls/button.js";
@@ -351,7 +352,11 @@ export function createRuntime(initialCode, options = {}) {
     // Display the syntax error at the appropriate location.
     const from = language.errorOffset(code, error);
     const errorMsg =
-      addPrefix(outputFormat.inspect(error, {}).format(), outputFormat.errorPrefix, outputFormat.formatLine) + "\n";
+      addPrefix(
+        stripAnsi(outputFormat.inspect(error, {}).format()),
+        outputFormat.errorPrefix,
+        outputFormat.formatLine,
+      ) + "\n";
     dispatch(
       language.nodes ? nodesErrorChanges(code, from, errorMsg) : [...removeChanges(code), {from, insert: errorMsg}],
     );

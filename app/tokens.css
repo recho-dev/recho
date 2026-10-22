@@ -52,6 +52,8 @@
   --semantic-marker-l: 0.6;
   --tint-l: 0.97;
   --syntax-l: 0.48;
+  --ansi-l: 0.52; /* ANSI colours in output */
+  --ansi-bright-l: 0.62;
   --hairline-alpha: 0.1;
   --hairline-strong-alpha: 0.17;
   --fill-alpha: 0.05;
@@ -148,6 +150,28 @@
   --syn-operator: var(--ink-3);
   --syn-comment: var(--ink-3);
   --syn-tag: var(--syn-number);
+
+  /* ---- ANSI colours (SGR in output) ------------------------------------ */
+  /* The 16 terminal colours, readable on --surface. Hues follow the semantic
+     ones (red 27, green 150, yellow 75); only lightness changes in dark.
+     Black and white are greys that keep their contrast on either surface. */
+  --ansi-chroma: 0.14;
+  --ansi-black: var(--gray-12);
+  --ansi-red: oklch(var(--ansi-l) var(--ansi-chroma) 27);
+  --ansi-green: oklch(var(--ansi-l) var(--ansi-chroma) 150);
+  --ansi-yellow: oklch(var(--ansi-l) var(--ansi-chroma) 75);
+  --ansi-blue: oklch(var(--ansi-l) var(--ansi-chroma) 255);
+  --ansi-magenta: oklch(var(--ansi-l) var(--ansi-chroma) 330);
+  --ansi-cyan: oklch(var(--ansi-l) var(--ansi-chroma) 200);
+  --ansi-white: var(--gray-10);
+  --ansi-bright-black: var(--gray-11);
+  --ansi-bright-red: oklch(var(--ansi-bright-l) var(--ansi-chroma) 27);
+  --ansi-bright-green: oklch(var(--ansi-bright-l) var(--ansi-chroma) 150);
+  --ansi-bright-yellow: oklch(var(--ansi-bright-l) var(--ansi-chroma) 85);
+  --ansi-bright-blue: oklch(var(--ansi-bright-l) var(--ansi-chroma) 255);
+  --ansi-bright-magenta: oklch(var(--ansi-bright-l) var(--ansi-chroma) 330);
+  --ansi-bright-cyan: oklch(var(--ansi-bright-l) var(--ansi-chroma) 200);
+  --ansi-bright-white: var(--gray-9);
 
   /* ---- Space ----------------------------------------------------------- */
   --space-1: var(--space-unit); /* 4 */
@@ -281,6 +305,12 @@
     --semantic-marker-l: 0.65;
     --tint-l: 0.27;
     --syntax-l: 0.8;
+    --ansi-l: 0.72;
+    --ansi-bright-l: 0.82;
+    --ansi-black: var(--gray-9);
+    --ansi-white: var(--gray-11);
+    --ansi-bright-black: var(--gray-10);
+    --ansi-bright-white: var(--gray-12);
     --hairline-alpha: 0.12;
     --hairline-strong-alpha: 0.2;
     --fill-alpha: 0.06;
@@ -316,6 +346,12 @@
   --semantic-marker-l: 0.65;
   --tint-l: 0.27;
   --syntax-l: 0.8;
+  --ansi-l: 0.72;
+  --ansi-bright-l: 0.82;
+  --ansi-black: var(--gray-9);
+  --ansi-white: var(--gray-11);
+  --ansi-bright-black: var(--gray-10);
+  --ansi-bright-white: var(--gray-12);
   --hairline-alpha: 0.12;
   --hairline-strong-alpha: 0.2;
   --fill-alpha: 0.06;

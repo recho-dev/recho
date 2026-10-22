@@ -190,13 +190,26 @@ export function nextHighlightState(line: string, state: HighlightState = INITIAL
   return {inBlockComment};
 }
 
+// An SGR sequence; it resets the colours when its parameters include `0`
+// (or nothing), `39` (foreground) or `49` (background).
+const SGR = /\x1b\[([\d;]*)m/g;
+
+// `line` with `color` applied again after every reset inside it, so coloured
+// output (SGR in the line itself) doesn't drop the line's colour after it.
+function keepColor(line: string, color: string): string {
+  if (!line.includes("\x1b[")) return line;
+  return line.replace(SGR, (sequence, params: string) =>
+    params.split(";").some((p) => p === "" || p === "0" || p === "39" || p === "49") ? sequence + color : sequence,
+  );
+}
+
 // Highlight a single line of source (without the runtime output prefix).
 // Returns a styled string (length = visible chars equal to `line`).
 export function highlightLine(line: string, state: HighlightState = INITIAL_STATE): string {
   // Comment? Whole-line color.
   const trimmed = line.trimStart();
   if (trimmed.startsWith(OUTPUT_PREFIX) || trimmed.startsWith("//➜")) {
-    return fg(C.output) + line + reset;
+    return fg(C.output) + keepColor(line, fg(C.output)) + reset;
   }
   if (trimmed.startsWith(ERROR_PREFIX) || trimmed.startsWith("//✗")) {
     return fg(C.error) + line + reset;

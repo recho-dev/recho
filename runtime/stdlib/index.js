@@ -1,5 +1,6 @@
 import {require as browserRequire} from "d3-require";
 import {parseSpecifier} from "./specifier.js";
+import {colorLevel, mergeModules, normalizeModule} from "./modules.js";
 
 const nodeImportCache = new Map();
 
@@ -7,26 +8,11 @@ function hasDocument() {
   return typeof document !== "undefined" && document.createElement && document.head;
 }
 
-function normalizeModule(module) {
-  const keys = Object.keys(module);
-  if (keys.includes("module.exports")) return module.default;
-  return keys.length === 1 && keys[0] === "default" ? module.default : module;
-}
-
-function mergeModules(modules) {
-  const merged = {};
-  for (const module of modules) {
-    const normalized = normalizeModule(module);
-    Object.assign(merged, normalized);
-  }
-  return merged;
-}
-
 function nodeImport(spec) {
   if (typeof spec !== "string") return Promise.resolve(spec);
   let module = nodeImportCache.get(spec);
   if (!module) {
-    module = importInstalled(spec).then(normalizeModule);
+    module = importInstalled(spec).then(normalizeModule).then(colorLevel);
     nodeImportCache.set(spec, module);
   }
   return module;
@@ -60,8 +46,38 @@ async function importInstalled(spec) {
   );
 }
 
+// jsDelivr's ESM build of a package: `name@version/subpath/+esm`.
+function esmURL(spec) {
+  const {name, version, subpath} = parseSpecifier(spec);
+  return `https://cdn.jsdelivr.net/npm/${name}@${version ?? "latest"}${subpath}/+esm`;
+}
+
+const esmCache = new Map();
+
+// d3-require loads UMD and AMD scripts only. A package it can't load (e.g.
+// one published only as ES modules, like chalk 5) is imported from jsDelivr's
+// ESM endpoint instead; if that fails too, d3-require's error is the one shown.
+function browserRequireOne(spec) {
+  if (typeof spec !== "string" || /^https?:\/\//i.test(spec)) return browserRequire(spec).then(colorLevel);
+  return browserRequire(spec).then(colorLevel, (error) => {
+    let module = esmCache.get(spec);
+    if (!module) {
+      module = import(/* @vite-ignore */ /* webpackIgnore: true */ esmURL(spec)).then(normalizeModule);
+      esmCache.set(spec, module);
+      module.catch(() => esmCache.delete(spec));
+    }
+    return module.then(colorLevel, () => Promise.reject(error));
+  });
+}
+
 export function require(...names) {
-  if (hasDocument()) return browserRequire(...names);
+  if (hasDocument()) {
+    if (names.length === 1) return browserRequireOne(names[0]);
+    // Several at once load as before; only when one fails, one by one.
+    return browserRequire(...names).then(colorLevel, () =>
+      Promise.all(names.map(browserRequireOne)).then(mergeModules),
+    );
+  }
   return names.length > 1 ? Promise.all(names.map(nodeImport)).then(mergeModules) : nodeImport(names[0]);
 }
 
