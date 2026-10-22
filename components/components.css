@@ -1236,7 +1236,9 @@
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    padding: var(--space-2) var(--space-1);
+    /* One inset on every side, so the buttons' corners share the frame's centre. */
+    --tb-inset: calc(var(--space-unit) * 1.5);
+    padding: var(--tb-inset);
     border-bottom: var(--border-width) solid var(--line);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
@@ -1249,7 +1251,7 @@
   }
   .toolbar .btn,
   .toolbar .input {
-    border-radius: var(--radius-nested);
+    border-radius: max(0px, calc(var(--radius-lg) - var(--border-width) - var(--tb-inset)));
   }
   .toolbar .status {
     margin-left: var(--space-2);
