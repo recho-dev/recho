@@ -57,7 +57,7 @@ export function Dialogs() {
     <dialog
       ref={ref}
       className="dialog"
-      aria-labelledby="dialog-title"
+      aria-labelledby={item ? "dialog-title" : undefined}
       aria-describedby={item?.message ? "dialog-message" : undefined}
       // Escape cancels.
       onCancel={(e) => {

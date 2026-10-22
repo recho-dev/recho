@@ -2,8 +2,9 @@
 import {useEffect} from "react";
 
 /**
- * The app follows the system theme through tokens.css. When the theme
- * changes, transitions pause for one frame, so nothing lags behind the swap.
+ * The app follows the system theme through tokens.css unless ThemeSwitch has
+ * set data-theme. When the system theme changes, transitions pause for one
+ * frame, so nothing lags behind the swap.
  */
 export function ThemeSync() {
   useEffect(() => {

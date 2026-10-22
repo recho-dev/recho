@@ -1,5 +1,5 @@
 "use client";
-import {useId} from "react";
+import {useId, useState} from "react";
 import {Check, ChevronDown} from "lucide-react";
 import {cn} from "./cn.js";
 import {usePopover, onArrowKeys} from "./usePopover.js";
@@ -15,15 +15,28 @@ import {usePopover, onArrowKeys} from "./usePopover.js";
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.ghost] - No border, for toolbars.
  * @param {"left" | "right"} [props.align] - Which edge the list lines up with.
+ * @param {boolean} [props.disabled]
  */
 export function Listbox({label, options, value, onChange, ghost = false, align = "left", disabled = false}) {
   const {open, setOpen, ref, triggerRef} = usePopover();
   const id = useId();
   const current = options.find((option) => option.value === value) ?? options[0];
+  // Opens toward the other edge when the list would leave the window there.
+  const [flip, setFlip] = useState(false);
 
   function show() {
+    setFlip(false);
     setOpen(true);
-    requestAnimationFrame(() => ref.current?.querySelector('[aria-selected="true"]')?.focus());
+    requestAnimationFrame(() => {
+      const wrap = ref.current;
+      const menu = wrap?.querySelector(".menu");
+      if (!menu) return;
+      // offsetWidth, as the opening scale would shrink the measured box.
+      const {left, right} = wrap.getBoundingClientRect();
+      const margin = 8;
+      setFlip(align === "left" ? left + menu.offsetWidth > innerWidth - margin : right - menu.offsetWidth < margin);
+      menu.querySelector('[aria-selected="true"]')?.focus();
+    });
   }
 
   function choose(option) {
@@ -58,7 +71,7 @@ export function Listbox({label, options, value, onChange, ghost = false, align =
       </button>
       <div
         id={id}
-        className={cn("menu", align === "left" && "left")}
+        className={cn("menu", (align === "left") !== flip && "left")}
         role="listbox"
         aria-label={label}
         hidden={!open}

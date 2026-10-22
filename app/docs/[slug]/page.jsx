@@ -23,7 +23,7 @@ export default async function Page({params}) {
   return (
     <>
       <TitleSection title={<h1 className="page-title">{doc.title}</h1>} />
-      <Editor initialCode={removeJSMeta(doc.content)} pinToolbar={true} fileName={`${doc.slug}.js`} />
+      <Editor initialCode={removeJSMeta(doc.content)} fileName={`${doc.slug}.js`} />
     </>
   );
 }
