@@ -1,7 +1,6 @@
 import {notFound} from "next/navigation";
 import {getAllJSExamples, removeMeta} from "../../utils.js";
 import {cn} from "../../cn.js";
-import {Meta} from "../../Meta.js";
 import {ExampleEditor} from "../ExampleEditor.jsx";
 
 export async function generateStaticParams() {
@@ -24,7 +23,6 @@ export default async function Page({params}) {
   const initialCode = removeMeta(example);
   return (
     <div className={cn("page")}>
-      <Meta example={example} />
       <ExampleEditor example={example} initialCode={initialCode} />
     </div>
   );

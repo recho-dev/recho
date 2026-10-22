@@ -1,7 +1,6 @@
 import {generate} from "short-uuid";
 import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, writeBatch} from "firebase/firestore";
 import {getFirebase} from "./firebase.js";
-import {predicates, objects} from "friendly-words";
 import {RUNTIMES, languageOf} from "./shared.js";
 import {confirmDialog} from "../components/Dialog.jsx";
 
@@ -15,11 +14,7 @@ export const PRIVATE = "private";
 
 export const PUBLIC = "public";
 
-function generateProjectName(extension = ".js") {
-  const adj = predicates[~~(Math.random() * predicates.length)];
-  const obj = objects[~~(Math.random() * objects.length)];
-  return `${adj}-${obj}${extension}`;
-}
+export const UNTITLED = "Untitled";
 
 const DEFAULT_CONTENT = `
 /*
@@ -100,18 +95,18 @@ fun odd(n) = if n == 0 then false else even(n - 1)
 echo(even(10), odd(10))
 `;
 
-// A new notebook's file extension and starter code, by language.
+// A new notebook's starter code, by language.
 const STARTERS = {
-  javascript: {extension: ".js", content: DEFAULT_CONTENT},
-  wenyan: {extension: ".wy", content: WENYAN_CONTENT},
-  mlscript: {extension: ".mls", content: MLSCRIPT_CONTENT},
+  javascript: DEFAULT_CONTENT,
+  wenyan: WENYAN_CONTENT,
+  mlscript: MLSCRIPT_CONTENT,
 };
 
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const {extension, content} = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
+  const content = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
   return {
     id: generate(),
-    title: generateProjectName(extension),
+    title: UNTITLED,
     created: null,
     updated: null,
     content: content.trimStart(),
