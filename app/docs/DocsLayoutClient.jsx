@@ -1,9 +1,10 @@
 "use client";
-import {useEffect, useLayoutEffect, useState} from "react";
+import {useEffect, useLayoutEffect} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import {ChevronDown} from "lucide-react";
 import {Sidebar} from "../Sidebar.js";
 import {Button} from "../../components/Button.jsx";
+import {usePopover} from "../../components/usePopover.js";
 
 /** Where the current page sits in the nav: "Features / Inline echoing". */
 function currentTrail(navStructure, docsMap, slug) {
@@ -53,7 +54,9 @@ function switchDoc(router, href) {
 export function DocsLayoutClient({navStructure, docsMap, children}) {
   const pathname = usePathname();
   const router = useRouter();
-  const [navOpen, setNavOpen] = useState(false);
+  // Below 1100px the sidebar is a menu over the doc: a click outside it or
+  // Escape closes it.
+  const {open: navOpen, setOpen: setNavOpen, ref: navRef, triggerRef} = usePopover();
   const slug = pathname.split("/").pop();
 
   // Close the mobile nav when the page changes (a link, Back or Forward).
@@ -85,18 +88,21 @@ export function DocsLayoutClient({navStructure, docsMap, children}) {
   return (
     <div className="page wide">
       <div className="docs">
-        <Button
-          className="docs-toggle"
-          aria-expanded={navOpen}
-          aria-controls="docs-side"
-          onClick={() => setNavOpen(!navOpen)}
-        >
-          <span>{currentTrail(navStructure, docsMap, slug)}</span>
-          <ChevronDown className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
-        </Button>
-        <nav className={navOpen ? "side open" : "side"} id="docs-side" aria-label="Docs" onClickCapture={onNavClick}>
-          <Sidebar navStructure={navStructure} docsMap={docsMap} onLinkClick={() => setNavOpen(false)} />
-        </nav>
+        <div className="docs-nav" ref={navRef}>
+          <Button
+            ref={triggerRef}
+            className="docs-toggle"
+            aria-expanded={navOpen}
+            aria-controls="docs-side"
+            onClick={() => setNavOpen(!navOpen)}
+          >
+            <span>{currentTrail(navStructure, docsMap, slug)}</span>
+            <ChevronDown className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
+          </Button>
+          <nav className={navOpen ? "side open" : "side"} id="docs-side" aria-label="Docs" onClickCapture={onNavClick}>
+            <Sidebar navStructure={navStructure} docsMap={docsMap} onLinkClick={() => setNavOpen(false)} />
+          </nav>
+        </div>
         <div key={pathname} className="doc enter">
           {children}
         </div>

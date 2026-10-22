@@ -1396,11 +1396,22 @@
   .docs .side::-webkit-scrollbar-track:vertical {
     margin-block: var(--radius-lg);
   }
+  /* Groups the menu button with the list, for closing on a click outside;
+     it adds no box of its own. */
+  .docs-nav {
+    display: contents;
+  }
   .docs-toggle {
     display: none;
   }
   .doc {
     min-width: 0;
+  }
+  @media (max-width: 1099px) {
+    .doc {
+      grid-row: 2;
+      grid-column: 1;
+    }
   }
   /* Docs are written to 80 columns, which need about 750px of editor. Beside
      the sidebar that fits from 1100px; below it the sidebar folds into a menu. */
@@ -1410,6 +1421,7 @@
       gap: var(--space-4);
     }
     .docs-toggle {
+      grid-row: 1;
       display: flex;
       width: 100%;
       justify-content: space-between;
@@ -1418,14 +1430,21 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* Disclosure: the list fades in and drops into place. */
+    /* A menu over the doc, in the doc's grid cell so it takes no room of its
+       own: the list fades in and drops into place. */
     .docs .side {
-      position: static;
-      max-height: none;
-      margin: 0;
+      grid-row: 2;
+      grid-column: 1;
+      align-self: start;
+      position: relative;
+      z-index: 20;
+      top: auto;
+      max-height: min(560px, 70vh);
+      margin: calc(var(--space-3) * -1) 0 0; /* 4px under the button, as menus sit */
       border: var(--border-width) solid var(--line);
       border-radius: var(--radius-lg);
       background: var(--surface);
+      box-shadow: var(--shadow-3);
       transition:
         opacity var(--duration-fast) var(--ease-exit),
         translate var(--duration-fast) var(--ease-exit),
