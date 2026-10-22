@@ -1,12 +1,13 @@
 import {Suspense} from "react";
 import {getAllJSExamples} from "../utils.js";
 import {cn} from "../cn.js";
+import {COMMUNITY_LABEL} from "../shared.js";
 import {ExamplesClient} from "./ExamplesClient.jsx";
 import {exampleThumbnail} from "./thumbnails.js";
 
 export const metadata = {
-  title: "Examples | Recho",
-  description: "Examples | Recho",
+  title: "Explore | Recho",
+  description: "Explore | Recho",
 };
 
 // Cache examples at module level - Node.js module cache ensures this only runs once per process
@@ -29,7 +30,8 @@ const allLabels = (() => {
       example.label.forEach((label) => labelSet.add(label));
     }
   });
-  return Array.from(labelSet).sort();
+  // Public notebooks are labeled Community; it comes first, before the examples' labels.
+  return [COMMUNITY_LABEL, ...Array.from(labelSet).sort()];
 })();
 
 export default async function Page() {
@@ -37,7 +39,7 @@ export default async function Page() {
   // All filtering happens client-side via ExamplesClient component
   return (
     <div className={cn("page wide")}>
-      <Suspense fallback={<p className={cn("status")}>Loading examples…</p>}>
+      <Suspense fallback={<p className={cn("status")}>Loading notebooks…</p>}>
         <ExamplesClient examples={await cards} allLabels={allLabels} />
       </Suspense>
     </div>

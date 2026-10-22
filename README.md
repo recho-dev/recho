@@ -9,7 +9,7 @@
 - [Editor](https://recho.dev/notebook) 📝 - The quickest way to get started with Recho.
 - [Announcement](https://medium.com/@subairui/a-lighter-way-to-code-with-creativity-8c0ac739aa6f) 📢 - Read our initial release story to discovery the vision behind Recho.
 - [Documentation](https://recho.dev/notebook/docs/introduction) 📚 - Learn how to use Recho with our comprehensive guides.
-- [Examples](https://recho.dev/notebook/examples) 🖼️ - See what you can create and draw some inspiration!
+- [Explore](https://recho.dev/notebook/explore) 🖼️ - See what you can create and draw some inspiration!
 - [Sharing](/CONTRIBUTING.md#sharing-examples) 🎨 - Follow the instructions to open a [pull request](https://github.com/recho-dev/notebook/new/main/app/examples) to share your sketches!
 - [Contributing](/CONTRIBUTING.md) 🙏 - We have [a bunch of things](https://github.com/recho-dev/notebook/issues) that we would like you to help us build together!
 
@@ -47,7 +47,7 @@ That’s how Recho began — **[a lighter way to code with creativity](https://m
 
 Recho is in beta — and open source! 🎉 Try it out on our [website](https://recho.dev/notebook) or explore the code on [GitHub](https://github.com/recho-dev/notebook). We’d love your thoughts, comments, or suggestions. Want to contribute? Here’s where you can help:
 
-- **Sharing Examples** – [text analysis](https://recho.dev/notebook/examples/word-count), [ASCII art](https://recho.dev/notebook/examples/moon-sundial), [data viz](https://recho.dev/notebook/examples/phases-of-the-moon), [graphics](https://recho.dev/notebook/examples/cg-text-based-shaders), [concrete poetry](https://recho.dev/notebook/examples/fire!), or demos with [D3](https://d3js.org/), [Tone](https://tonejs.github.io/), [ml5](https://ml5js.org/)… anything! One example is enough.
+- **Sharing Examples** – [text analysis](https://recho.dev/notebook/explore/word-count), [ASCII art](https://recho.dev/notebook/explore/moon-sundial), [data viz](https://recho.dev/notebook/explore/phases-of-the-moon), [graphics](https://recho.dev/notebook/explore/cg-text-based-shaders), [concrete poetry](https://recho.dev/notebook/explore/fire!), or demos with [D3](https://d3js.org/), [Tone](https://tonejs.github.io/), [ml5](https://ml5js.org/)… anything! One example is enough.
 - **Polyglot Programming** – Recho is JavaScript-first but open to any language that compiles to JavaScript — [Python](https://www.python.org/), [Rust](https://www.rust-lang.org/), [MLscript](https://github.com/hkust-taco/mlscript), [wenyan‑lang](https://wy-lang.org/)… your playground.
 - **LLM Experiments** – What if LLMs could "see" both the input and the output?
 
