@@ -1,6 +1,7 @@
 import {compactDecoration} from "./compact.ts";
 import {debugDecoration} from "./debug.ts";
 export {blockIndicator} from "./indicators.ts";
+export {runButtonGutter} from "./runButton.ts";
 import {outputDecoration, outputLines} from "./output.ts";
 import {blockMetadataExtension} from "./state.ts";
 

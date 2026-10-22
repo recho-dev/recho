@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {getAllJSExamples} from "../app/utils.js";
-import {exampleThumbnail} from "../app/examples/thumbnails.js";
+import {exampleThumbnail} from "../app/explore/thumbnails.js";
 
 const examples = getAllJSExamples();
 const bySlug = (slug) => examples.find((example) => example.slug === slug);

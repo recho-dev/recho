@@ -106,5 +106,5 @@ const {Vector2, Vector3, Vector4} = await recho.require("three@0.160.0/build/thr
  *                              References
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * [1] https://recho.dev/examples/cg-text-based-shaders
+ * [1] https://recho.dev/explore/cg-text-based-shaders
  */

@@ -6,8 +6,26 @@ describe("transpile", () => {
     const input = `{setInterval(() => echo(1), 0);}`;
     const output = transpileRechoJavaScript(input);
     expect(output).toBe(
-      `let __cellEcho__ = __getEcho__();invalidation.then(__cellEcho__.__dispose__);{setInterval(() =>{const echo = __getEcho__() || __cellEcho__;return  echo(1);}, 0);}`,
+      `let __cellEcho__ = __getEcho__();invalidation.then(__cellEcho__.__dispose__);{setInterval(() =>{const echo = __getEcho__() || __cellEcho__;return ( echo(1));}, 0);}`,
     );
+  });
+
+  // Runs a transpiled cell, then returns the value of `expression` in it.
+  const run = (cell, expression) => {
+    const code = `${transpileRechoJavaScript(cell)}\nreturn ${expression};`;
+    return new Function("__getEcho__", "invalidation", code)(() => null, new Promise(() => {}));
+  };
+
+  it.each([
+    ["a body on the next line", "const g = (x) =>\n  'G' + x;", "g(1)", "G1"],
+    ["a comment before the body", "const g = (x) => // note\n  x * 2;", "g(2)", 4],
+    ["an object body", "const g = () => ({a: 1});", "g().a", 1],
+    ["a sequence body", "const g = () => (0, 2);", "g()", 2],
+    ["an arrow in a default parameter", "const g = (f = () => 3) => f() + 1;", "g()", 4],
+    ["nested arrows", "const g = (a) =>\n  (b) =>\n    a + b;", "g(1)(2)", 3],
+    ["an async arrow", "const g = async () =>\n  5;", "g()", 5],
+  ])("keeps the value of an arrow with %s", async (_, cell, expression, expected) => {
+    expect(await run(cell, expression)).toEqual(expected);
   });
 });
 

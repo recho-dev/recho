@@ -5,15 +5,30 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    // Notebooks are stored by id. Public notebooks can be read by anyone with
-    // the link. Only the owner can read private notebooks or write any of them.
+    // Notebooks are stored by id. Unlisted and public notebooks can be opened by
+    // anyone with the link, but only public ones can be listed (on the Explore
+    // page). Only the owner can read private notebooks or write any of them.
     match /notebooks/{notebookId} {
-      function isValid() {
-        return isUser(request.resource.data.ownerId)
-          && request.resource.data.visibility in ["private", "public"];
+      // The author shown on Explore must match the owner's sign-in token, so
+      // nobody can publish as someone else. It's optional, so saves from
+      // clients that don't write it yet keep working.
+      function hasValidAuthor() {
+        let data = request.resource.data;
+        return !("author" in data)
+          || (data.author is map
+            && data.author.keys().hasOnly(["name", "photoURL"])
+            && data.author.get("name", null) == request.auth.token.get("name", null)
+            && data.author.get("photoURL", null) == request.auth.token.get("picture", null));
       }
 
-      allow read: if resource.data.visibility == "public" || isUser(resource.data.ownerId);
+      function isValid() {
+        return isUser(request.resource.data.ownerId)
+          && request.resource.data.visibility in ["private", "unlisted", "public"]
+          && hasValidAuthor();
+      }
+
+      allow get: if resource.data.visibility in ["unlisted", "public"] || isUser(resource.data.ownerId);
+      allow list: if resource.data.visibility == "public" || isUser(resource.data.ownerId);
       allow create: if isValid();
       allow update: if isUser(resource.data.ownerId) && isValid();
       allow delete: if isUser(resource.data.ownerId);

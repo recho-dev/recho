@@ -44,7 +44,7 @@
     "app:dev": "next dev",
     "app:build": "next build",
     "app:start": "next start",
-    "test": "npm run test:lint && npm run test:format && npm run test:typecheck && npm run test:js",
+    "test": "pnpm test:lint && pnpm test:format && pnpm test:typecheck && pnpm test:js",
     "test:js": "TZ=America/New_York vitest",
     "test:fuzz": "TZ=America/New_York FUZZ_SEEDS=${FUZZ_SEEDS:-60} FUZZ_STEPS=${FUZZ_STEPS:-250} vitest run blocks/update.spec.ts",
     "perf": "node test/perf/tui-perf.mjs",
@@ -67,6 +67,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "firebase-admin": "^14.5.0",
     "globals": "^16.5.0",
     "immutable": "^5.1.4",
     "lucide-react": "^0.542.0",
@@ -136,5 +137,11 @@
     "three": "^0.160.1",
     "web-tree-sitter": "0.26.9",
     "wenyan": "github:recho-dev/wenyan#master"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   }
 }

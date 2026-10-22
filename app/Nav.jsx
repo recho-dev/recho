@@ -9,7 +9,6 @@ import {
   Plus,
   ChevronDown,
   FolderOpen,
-  Share,
   Github,
   Menu as MenuIcon,
   LogIn,
@@ -22,7 +21,7 @@ import {Button} from "../components/Button.jsx";
 import {Menu, MenuItem, MenuLabel, MenuSeparator} from "../components/Menu.jsx";
 
 const PAGES = [
-  {href: "/examples", label: "Examples", Icon: LayoutGrid},
+  {href: "/explore", label: "Explore", Icon: LayoutGrid},
   {href: "/docs", label: "Docs", Icon: BookOpen},
   {href: "/news", label: "News", Icon: Newspaper},
 ];
@@ -38,14 +37,6 @@ const icon = {size: 16, strokeWidth: 1.75, className: "ic", "aria-hidden": true}
 export function Nav() {
   const pathname = usePathname();
   const auth = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getServerSnapshot);
-
-  function handleUpload(e) {
-    e.preventDefault();
-    const confirm = window.confirm(
-      `Make a Pull Request to share your notebook to Examples!\n- Input the filename\n- Copy the code\n- Click the "Commit changes" button`,
-    );
-    if (confirm) window.open("https://github.com/recho-dev/notebook/new/main/app/examples", "_blank");
-  }
 
   const current = (href) => (pathname.startsWith(href) ? "page" : undefined);
 
@@ -92,19 +83,6 @@ export function Nav() {
         <Button as={SafeLink} variant="ghost" className="act" href="/works" aria-current={current("/works")}>
           <FolderOpen {...icon} />
           <span className="lbl">Open</span>
-        </Button>
-        <Button
-          as="a"
-          variant="ghost"
-          className="act"
-          href="https://github.com/recho-dev/notebook/new/main/app/examples"
-          onClick={handleUpload}
-          target="_blank"
-          rel="noreferrer"
-          tip="Share to Examples"
-        >
-          <Share {...icon} />
-          <span className="lbl">Share</span>
         </Button>
         <span className="tb-sep" aria-hidden="true" />
         <Button

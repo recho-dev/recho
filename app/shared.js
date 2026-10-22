@@ -2,6 +2,9 @@ import {OUTPUT_MARK} from "../runtime/constant.js";
 
 export const BASE_PATH = "";
 
+/** The Explore label of public notebooks. */
+export const COMMUNITY_LABEL = "Community";
+
 // Output lines in JavaScript and MLscript (//➜) and wenyan (批曰。「「➜) notebooks.
 const OUTPUT_PREFIXES = [`//${OUTPUT_MARK}`, `批曰。「「${OUTPUT_MARK}`];
 

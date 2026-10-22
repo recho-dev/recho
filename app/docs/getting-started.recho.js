@@ -277,7 +277,7 @@ echo(d3.range(10));
  * to the editor: https://recho.dev and start creating your own notebooks!
  *
  * If you need inspiration, you can check out the examples page:
- * https://recho.dev/examples to see what you can create with Recho.
+ * https://recho.dev/explore to see what you can create with Recho.
  *
  * Of course, we'll not stop you if you want to dive into the details of Recho.
  *

@@ -3,7 +3,7 @@ import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
 import {Trash2} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
-import {getNotebooks, deleteNotebook, PUBLIC} from "../api.js";
+import {getNotebooks, deleteNotebook, VISIBILITIES} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange, highlightLanguage} from "../shared.js";
 import {cn} from "../cn.js";
@@ -93,7 +93,7 @@ export default function Page() {
             <Card
               href={`/works/${notebook.id}`}
               title={notebook.title}
-              subtitle={`${notebook.visibility === PUBLIC ? "Public" : "Private"} · Created ${new Date(notebook.created).toLocaleDateString()}`}
+              subtitle={`${VISIBILITIES.find((v) => v.value === notebook.visibility)?.label ?? "Private"} · Created ${new Date(notebook.created).toLocaleDateString()}`}
               thumbnail={
                 <ThumbnailClient
                   code={notebook.content}
