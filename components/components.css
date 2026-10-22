@@ -102,6 +102,9 @@
   .btn-ghost[aria-expanded="true"] .ic {
     color: var(--ink-2);
   }
+  .btn-ghost:disabled .ic {
+    color: var(--ink-4);
+  }
   .btn-icon {
     width: var(--control-h);
     padding: 0;
@@ -1396,22 +1399,16 @@
   .docs .side::-webkit-scrollbar-track:vertical {
     margin-block: var(--radius-lg);
   }
-  /* Groups the menu button with the list, for closing on a click outside;
+  /* Groups the title row with the list, for closing on a click outside;
      it adds no box of its own. */
   .docs-nav {
     display: contents;
   }
-  .docs-toggle {
+  .docs-head {
     display: none;
   }
   .doc {
     min-width: 0;
-  }
-  @media (max-width: 1099px) {
-    .doc {
-      grid-row: 2;
-      grid-column: 1;
-    }
   }
   /* Docs are written to 80 columns, which need about 750px of editor. Beside
      the sidebar that fits from 1100px; below it the sidebar folds into a menu. */
@@ -1420,15 +1417,79 @@
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-4);
     }
-    .docs-toggle {
+    /* The doc's title becomes the menu button, so its own is hidden. */
+    .doc {
+      grid-row: 2;
+      grid-column: 1;
+    }
+    .doc .title-section {
+      display: none;
+    }
+    .docs-head {
       grid-row: 1;
       display: flex;
-      width: 100%;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
     }
-    .docs-toggle > span {
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .docs-group {
+      color: var(--ink-3);
+      font-size: var(--fs-xs);
+    }
+    .docs-head-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+    .docs-head-row .page-title {
+      flex: 1;
+      min-width: 0;
+    }
+    /* Looks like the title until hovered, as an editable title does. */
+    .docs-title {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      max-width: calc(100% + var(--space-2));
+      margin: 0 calc(var(--space-1) * -1);
+      padding: 0 var(--space-1);
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color var(--duration-hover);
+
+      & > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      & .ic {
+        flex: none;
+        color: var(--ink-3);
+        transition: rotate var(--duration-move) var(--ease-move);
+      }
+      &:hover,
+      &[aria-expanded="true"] {
+        background: var(--fill-hover);
+      }
+      &[aria-expanded="true"] .ic {
+        rotate: 180deg;
+      }
+      &:focus-visible {
+        outline: var(--focus-ring);
+      }
+    }
+    .docs-count {
+      margin-right: var(--space-1);
+      color: var(--ink-3);
+      font-size: var(--fs-xs);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
     /* A menu over the doc, in the doc's grid cell so it takes no room of its
        own: the list fades in and drops into place. */
