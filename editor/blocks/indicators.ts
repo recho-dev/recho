@@ -14,10 +14,10 @@ export class BlockIndicator extends GutterMarker {
   }
 }
 
-// One continuous marker per run, `head` and `tail` at its ends. A block that
-// ran marks its output lines (those before its source) as succeeded; a block
-// that failed is marked as failed from its first line to its last, so the
-// failure shows even with no output. Source lines of a block that ran get none.
+// One continuous marker per block, `head` and `tail` at its first and last
+// lines. In a block that ran, its output lines (those before its source) are
+// marked as succeeded and its source lines as source; a block that failed is
+// marked as failed throughout, so the failure shows even with no output.
 const markers = (kind: string) => ({
   head: new BlockIndicator(`cm-block-indicator ${kind} head`),
   tail: new BlockIndicator(`cm-block-indicator ${kind} tail`),
@@ -25,7 +25,7 @@ const markers = (kind: string) => ({
   body: new BlockIndicator(`cm-block-indicator ${kind}`),
 });
 
-const indicatorMarkers = {output: markers("output"), error: markers("error")};
+const indicatorMarkers = {output: markers("output"), source: markers("source"), error: markers("error")};
 const spacer = new BlockIndicator("cm-block-indicator");
 
 export const blockIndicator = gutter({
@@ -55,12 +55,15 @@ export const blockIndicator = gutter({
     const block = blocks[index];
     const currentLine = view.state.doc.lineAt(line.from).number;
 
-    // The run: the whole block if it failed, else its output lines.
+    // The run is the whole block; its colour depends on the line and result.
     const sourceFirstLine = view.state.doc.lineAt(block.source.from).number;
     const runFirstLine = view.state.doc.lineAt(block.from).number;
-    const runLastLine = block.error ? view.state.doc.lineAt(block.to).number : sourceFirstLine - 1;
-    if (currentLine > runLastLine) return null;
-    const group = block.error ? indicatorMarkers.error : indicatorMarkers.output;
+    const runLastLine = view.state.doc.lineAt(block.to).number;
+    const group = block.error
+      ? indicatorMarkers.error
+      : currentLine < sourceFirstLine
+        ? indicatorMarkers.output
+        : indicatorMarkers.source;
 
     // Determine the gutter marker to use.
     if (runFirstLine === currentLine) {
@@ -80,9 +83,9 @@ export const blockIndicator = gutter({
     if (blocks === undefined) return null;
     const index = findEnclosingBlock(blocks, block.from);
     if (index === null || block.from >= blocks[index].source.from) return null;
-    // The output is one widget, so its run ends with it; a failed block's run
-    // goes on through its source, so the widget only starts it.
-    return blocks[index].error ? indicatorMarkers.error.head : indicatorMarkers.output.sole;
+    // The output is one widget at the top of its block; the block's run goes
+    // on through its source, so the widget only starts it.
+    return blocks[index].error ? indicatorMarkers.error.head : indicatorMarkers.output.head;
   },
   initialSpacer() {
     return spacer;

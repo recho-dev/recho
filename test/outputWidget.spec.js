@@ -35,7 +35,7 @@ it("numbers output rows by where the widget is, after lines are inserted above",
   expect(numbers(state)).toEqual([["4", "5"]]);
 });
 
-it("marks a failed block's output widget as the start of a run through its source", () => {
+it("marks an output widget as the start of its block's run through the source", () => {
   const doc = "//➜ 1\n//➜ 2\necho(a);\n";
   const view = new EditorView({
     state: EditorState.create({
@@ -48,12 +48,12 @@ it("marks a failed block's output widget as the start of a run through its sourc
   const block = (error) => new BlockMetadata("a", "", {from: 0, to: source.from}, source, {}, error);
   // The markers drawn, top to bottom.
   const markers = () =>
-    [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator.output, .cm-block-indicator.error")].map(
+    [...view.dom.querySelectorAll(".cm-blockIndicators .cm-block-indicator:is(.output, .source, .error)")].map(
       (element) => element.className.replace("cm-block-indicator ", ""),
     );
 
   view.dispatch({effects: blockMetadataEffect.of([block(false)])});
-  expect(markers()).toEqual(["output head tail"]);
+  expect(markers()).toEqual(["output head", "source tail"]);
   view.dispatch({effects: blockMetadataEffect.of([block(true)])});
   expect(markers()).toEqual(["error head", "error tail"]);
   view.destroy();
