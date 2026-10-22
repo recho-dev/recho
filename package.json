@@ -44,7 +44,7 @@
     "app:dev": "next dev",
     "app:build": "next build",
     "app:start": "next start",
-    "test": "npm run test:lint && npm run test:format && npm run test:typecheck && npm run test:js",
+    "test": "pnpm test:lint && pnpm test:format && pnpm test:typecheck && pnpm test:js",
     "test:js": "TZ=America/New_York vitest",
     "test:fuzz": "TZ=America/New_York FUZZ_SEEDS=${FUZZ_SEEDS:-60} FUZZ_STEPS=${FUZZ_STEPS:-250} vitest run blocks/update.spec.ts",
     "perf": "node test/perf/tui-perf.mjs",
