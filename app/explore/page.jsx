@@ -1,8 +1,7 @@
 import {Suspense} from "react";
 import {getAllJSExamples} from "../utils.js";
-import {cn} from "../cn.js";
+import {cn} from "../../components/cn.js";
 import {COMMUNITY_LABEL} from "../shared.js";
-import {LabelFilters} from "./LabelFilters.jsx";
 import {ExamplesClient} from "./ExamplesClient.jsx";
 import {exampleThumbnail} from "./thumbnails.js";
 
@@ -39,16 +38,9 @@ export default async function Page() {
   // Page is static - no searchParams usage here!
   // All filtering happens client-side via ExamplesClient component
   return (
-    <div className={cn("max-w-screen-xl lg:mx-auto mx-4 my-4")}>
-      <Suspense fallback={<div className={cn("flex flex-wrap gap-2 items-center")}>Loading filters...</div>}>
-        <LabelFilters allLabels={allLabels} />
-      </Suspense>
-      <Suspense
-        fallback={
-          <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>Loading examples...</div>
-        }
-      >
-        <ExamplesClient examples={await cards} />
+    <div className={cn("page wide")}>
+      <Suspense fallback={<p className={cn("status")}>Loading notebooks…</p>}>
+        <ExamplesClient examples={await cards} allLabels={allLabels} />
       </Suspense>
     </div>
   );

@@ -1,0 +1,1599 @@
+/*
+ * Recho component styles. Every value comes from app/tokens.css: no literal
+ * colour, radius or shadow belongs here.
+ */
+
+@layer components {
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    height: var(--control-h);
+    padding: 0 calc(var(--space-unit) * 2.5);
+    border: var(--border-width) solid var(--clear);
+    border-radius: var(--radius-md);
+    background: var(--clear);
+    color: var(--ink);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-hover),
+      border-color var(--duration-hover),
+      color var(--duration-hover),
+      box-shadow var(--duration-hover);
+  }
+  .btn:disabled {
+    cursor: default;
+  }
+  /* Press: the pressed fill lands at once, and release eases back on --duration-hover. */
+  .btn:active:not(:disabled),
+  .seg button:active {
+    transition-duration: 0s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-primary:active:not(:disabled) {
+    background: var(--accent-pressed);
+  }
+  .btn-primary:disabled {
+    background: var(--gray-4);
+    color: var(--ink-4);
+  }
+  /* Confirms an action that loses work. Only inside a dialog. Quiet like a
+     secondary button: the red is in the label, not a fill. */
+  .btn-danger {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--error);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--error-tint);
+    border-color: color-mix(in oklch, var(--error), var(--border) 70%);
+  }
+  .btn-danger:active:not(:disabled) {
+    background: color-mix(in oklch, var(--error-tint), var(--error) 10%);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--gray-2);
+  }
+  .btn-secondary:active:not(:disabled) {
+    background: var(--gray-4);
+  }
+  .btn-secondary:disabled {
+    color: var(--ink-4);
+    background: var(--sunken);
+    border-color: var(--line);
+  }
+  .btn-ghost {
+    color: var(--ink-2);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--fill-hover);
+    color: var(--ink);
+  }
+  .btn-ghost:active:not(:disabled),
+  .btn-ghost[aria-expanded="true"] {
+    background: var(--fill-pressed);
+    color: var(--ink);
+  }
+  .btn-ghost:disabled {
+    color: var(--ink-4);
+  }
+  .btn-ghost .ic {
+    color: var(--ink-3);
+  }
+  .btn-ghost:hover .ic,
+  .btn-ghost[aria-expanded="true"] .ic {
+    color: var(--ink-2);
+  }
+  .btn-ghost:disabled .ic {
+    color: var(--ink-4);
+  }
+  .btn-icon {
+    width: var(--control-h);
+    padding: 0;
+  }
+  .btn-sm {
+    height: var(--control-h-sm);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+  .btn-sm.btn-icon {
+    width: var(--control-h-sm);
+    padding: 0;
+  }
+  .btn .kbd-in {
+    font-weight: var(--fw-body);
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+  }
+  .btn-primary .kbd-in {
+    color: var(--on-accent-quiet);
+  }
+  .btn-primary:disabled .kbd-in {
+    color: var(--ink-4);
+  }
+
+  /* ---------- Pickers ---------- */
+  /* A select's button. Bordered by default; with .btn-ghost it takes the
+     ghost button's look, for toolbars and the title section. */
+  .picker {
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: 0 var(--space-2) 0 calc(var(--space-unit) * 2.5);
+  }
+  .picker .ic {
+    color: var(--ink-3);
+  }
+  .picker:not(.btn-ghost) {
+    border-color: var(--border);
+    background: var(--surface);
+    font-weight: var(--fw-body);
+  }
+  .picker:not(.btn-ghost):hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+  .picker:not(.btn-ghost)[aria-expanded="true"] {
+    border-color: var(--border-strong);
+    background: var(--gray-2);
+  }
+  .picker:not(.btn-ghost):disabled {
+    background: var(--sunken);
+    color: var(--ink-4);
+    border-color: var(--line);
+  }
+
+  /* ---------- Segmented control ---------- */
+  .seg {
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--radius-md);
+    background: var(--gray-3);
+    max-width: 100%;
+  }
+  .seg button {
+    height: var(--control-h-sm);
+    padding: 0 calc(var(--space-unit) * 2.5);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--clear);
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color var(--duration-hover);
+  }
+  .seg button:hover {
+    color: var(--ink);
+    background: var(--fill-hover);
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-1);
+  }
+  .seg button:focus-visible {
+    outline-offset: 0;
+  }
+  /* One pill per group slides to the selected option (see Segmented.jsx). */
+  .seg-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: var(--control-h-sm);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    pointer-events: none;
+    transition:
+      translate var(--duration-move) var(--ease-move),
+      width var(--duration-move) var(--ease-move);
+  }
+  .seg.has-pill button {
+    position: relative;
+    z-index: 1;
+  }
+  .seg.has-pill button[aria-pressed="true"] {
+    background: var(--clear);
+    box-shadow: none;
+  }
+
+  /* ---------- Header and nav ---------- */
+  .appbar {
+    position: relative;
+    /* Above the pinned editor toolbar (10), so the New menu covers it. */
+    z-index: 15;
+    height: calc(var(--space-unit) * 11);
+    border-bottom: var(--border-width) solid var(--line);
+    background: var(--bg);
+  }
+  .appbar-in {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 100%;
+    padding: 0 var(--space-4);
+    min-width: 0;
+  }
+  .wordmark {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-heading);
+    color: var(--ink);
+    text-decoration: none;
+    padding: 0 var(--space-1);
+    margin-right: var(--space-2);
+    border-radius: var(--radius-sm);
+    letter-spacing: -0.01em;
+  }
+  .navlink {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-h);
+    padding: 0 var(--space-2);
+    gap: calc(var(--space-unit) * 1.5);
+    border-radius: var(--radius-md);
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    white-space: nowrap;
+    transition:
+      background-color var(--duration-hover),
+      color var(--duration-hover);
+  }
+  .navlink .ic {
+    color: var(--ink-3);
+  }
+  .navlink[aria-current="page"] .ic,
+  .navlink:hover .ic {
+    color: var(--ink-2);
+  }
+  .navlink:hover {
+    background: var(--fill-hover);
+    color: var(--ink);
+  }
+  .navlink[aria-current="page"] {
+    color: var(--ink);
+    background: var(--fill-pressed);
+  }
+  .nav-links {
+    display: flex;
+    gap: 2px;
+  }
+  .nav-more {
+    display: none;
+  }
+  .appbar .act {
+    padding: 0 var(--space-2);
+  }
+  .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-full);
+  }
+  @media (max-width: 560px) {
+    .nav-links {
+      display: none;
+    }
+    .nav-more {
+      display: block;
+    }
+    .appbar-in {
+      padding: 0 var(--space-2);
+    }
+    .appbar .act {
+      padding: 0 calc(var(--space-unit) * 1.5);
+    }
+  }
+  .tb-sep {
+    flex: none;
+    width: 1px;
+    height: calc(var(--control-h) * 0.6);
+    margin: 0 var(--space-1);
+    background: var(--line);
+  }
+  .spacer {
+    flex: 1;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .side-group {
+    padding: var(--space-4) var(--space-2) var(--space-1);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-heading);
+    color: var(--ink-2);
+  }
+  .side-item {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-h);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: var(--fs-sm);
+    line-height: 1.3;
+  }
+  .side-item:hover {
+    background: var(--fill-hover);
+    color: var(--ink);
+  }
+  .side-item[aria-current="page"] {
+    background: var(--fill-pressed);
+    color: var(--ink);
+    font-weight: var(--fw-label);
+  }
+  .side-item:focus-visible {
+    outline-offset: 0;
+  }
+
+  /* ---------- Menus and listboxes ---------- */
+  .menu-wrap {
+    position: relative;
+  }
+  .menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + var(--space-1));
+    right: 0;
+    min-width: 210px;
+    max-height: min(420px, 70vh);
+    overflow: auto;
+    padding: var(--space-1);
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-3);
+    /* Menus grow from the trigger corner: open on --duration-base, close faster. */
+    transform-origin: top right;
+    transition:
+      opacity var(--duration-fast) var(--ease-exit),
+      scale var(--duration-fast) var(--ease-exit),
+      display var(--duration-fast) allow-discrete;
+  }
+  .menu::-webkit-scrollbar-track:vertical {
+    margin-block: var(--radius-lg);
+  }
+  .menu.left {
+    left: 0;
+    right: auto;
+    transform-origin: top left;
+  }
+  .menu:not([hidden]) {
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-enter);
+  }
+  .menu[hidden] {
+    display: none;
+    opacity: 0;
+    scale: var(--motion-scale-out);
+    pointer-events: none;
+  }
+  @starting-style {
+    .menu:not([hidden]) {
+      opacity: 0;
+      scale: var(--motion-scale-in);
+    }
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    height: var(--control-h);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-nested);
+    background: var(--clear);
+    font-size: var(--fs-sm);
+    color: var(--ink);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .menu-item:hover,
+  .menu-item:focus-visible {
+    background: var(--fill-hover);
+    outline: none;
+  }
+  .menu-item[aria-current="page"] {
+    background: var(--fill-pressed);
+  }
+  .menu-item .ic {
+    color: var(--ink-3);
+  }
+  .menu-item .tick {
+    flex: none;
+    visibility: hidden;
+    color: var(--accent-text);
+  }
+  .menu-item[aria-selected="true"] .tick {
+    visibility: visible;
+  }
+  .menu-item .hint {
+    margin-left: auto;
+    padding-left: var(--space-4);
+    color: var(--ink-3);
+    font-size: var(--fs-xs);
+  }
+  .menu-label {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .menu-sep {
+    height: 1px;
+    margin: var(--space-1) calc(var(--space-1) * -1);
+    background: var(--line);
+  }
+
+  /* ---------- Tooltip ---------- */
+  /* Shows after --delay-tooltip, fades and scales in on --duration-fast, leaves on --duration-instant. */
+  [data-tip] {
+    position: relative;
+  }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--gray-12);
+    color: var(--gray-0);
+    /* Its own face, so a tip on something set in mono (the editor's gutter)
+       reads like every other tip. */
+    font-family: var(--font-ui);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-label);
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    scale: var(--motion-scale-tip);
+    transform-origin: top right;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-instant) var(--ease-exit),
+      scale var(--duration-instant) var(--ease-exit);
+  }
+  [data-tip-align="left"]::after {
+    right: auto;
+    left: 0;
+    transform-origin: top left;
+  }
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    opacity: 1;
+    scale: 1;
+    transition:
+      opacity var(--duration-fast) var(--ease-enter) var(--delay-tooltip),
+      scale var(--duration-fast) var(--ease-enter) var(--delay-tooltip);
+  }
+  [data-tip][aria-expanded="true"]::after {
+    display: none;
+  }
+
+  /* ---------- Toast ---------- */
+  .toaster {
+    position: fixed;
+    z-index: 60;
+    left: 50%;
+    bottom: var(--space-5);
+    transform: translateX(-50%);
+  }
+  .toast {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: calc(100vw - var(--space-6));
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-3);
+    font-size: var(--fs-sm);
+    color: var(--ink);
+    /* Rises and fades in, then leaves faster than it came. */
+    transition:
+      opacity var(--duration-base) var(--ease-exit),
+      translate var(--duration-base) var(--ease-exit),
+      scale var(--duration-base) var(--ease-exit),
+      display var(--duration-base) allow-discrete;
+  }
+  .toast.err {
+    background: var(--error-tint);
+    color: var(--error);
+  }
+  .toast:not([hidden]) {
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-enter);
+  }
+  .toast[hidden] {
+    display: none;
+    opacity: 0;
+    translate: 0 var(--motion-distance-md);
+  }
+  @starting-style {
+    .toast:not([hidden]) {
+      opacity: 0;
+      translate: 0 var(--motion-distance-md);
+      scale: var(--motion-scale-in);
+    }
+  }
+
+  /* ---------- Dialog ---------- */
+  /* A native modal <dialog>: it traps focus, sits above everything and closes
+     on Escape. It rises and scales in like a toast; the page dims behind it. */
+  .dialog {
+    width: min(400px, calc(100vw - var(--space-6)));
+    max-width: none;
+    /* The reset zeroes the browser's centring margin. */
+    margin: auto;
+    padding: 0;
+    border: var(--border-width) solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-3);
+    opacity: 0;
+    translate: 0 var(--motion-distance-sm);
+    scale: var(--motion-scale-in);
+    transition:
+      opacity var(--duration-fast) var(--ease-exit),
+      translate var(--duration-fast) var(--ease-exit),
+      scale var(--duration-fast) var(--ease-exit),
+      overlay var(--duration-fast) allow-discrete,
+      display var(--duration-fast) allow-discrete;
+  }
+  .dialog[open] {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-enter);
+  }
+  @starting-style {
+    .dialog[open] {
+      opacity: 0;
+      translate: 0 var(--motion-distance-sm);
+      scale: var(--motion-scale-in);
+    }
+  }
+  .dialog::backdrop {
+    background: var(--scrim);
+    opacity: 0;
+    transition:
+      opacity var(--duration-fast) var(--ease-exit),
+      overlay var(--duration-fast) allow-discrete,
+      display var(--duration-fast) allow-discrete;
+  }
+  .dialog[open]::backdrop {
+    opacity: 1;
+    transition-duration: var(--duration-base);
+  }
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  .dialog-panel {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-4);
+  }
+  .dialog-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-heading);
+    line-height: var(--lh-ui);
+  }
+  .dialog-message {
+    margin: 0;
+    color: var(--ink-2);
+    line-height: var(--lh-prose);
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  /* ---------- Status text and motion helpers ---------- */
+  .status {
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .status.ok {
+    color: var(--success);
+  }
+  .status.err {
+    color: var(--error);
+  }
+  .status.warn {
+    color: var(--warning);
+  }
+  /* Run state: a small dot carries the colour, the words stay quiet. */
+  .status[data-state]::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    vertical-align: 1px;
+    border-radius: var(--radius-full);
+    background: var(--status-dot, var(--gray-6));
+    transition: background-color var(--duration-hover);
+  }
+  .status[data-state="ok"] {
+    --status-dot: var(--success-marker);
+  }
+  .status[data-state="busy"] {
+    --status-dot: var(--accent);
+  }
+  .status[data-state="waiting"] {
+    --status-dot: var(--warning-marker);
+  }
+  .status[data-state="busy"]::before {
+    animation: status-pulse calc(1.2s / var(--motion-speed)) ease-in-out infinite;
+  }
+  @keyframes status-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .status[data-state="busy"]::before {
+      animation: none;
+    }
+  }
+  /* Status text swaps in place, and new content fades in and rises. */
+  .swap-in {
+    display: inline-block;
+    animation: enter var(--duration-fast) var(--ease-enter) backwards;
+  }
+  .enter {
+    animation: enter var(--duration-base) var(--ease-enter) backwards;
+  }
+  /* A filter change: the new cards rise and fade in one after another,
+     25ms apart and capped at the 12th card, so a long list still settles fast.
+     With reduced motion the rise is 0 and only the fade is left. */
+  .card-grid.reveal > li {
+    animation: enter var(--duration-base) var(--ease-enter) backwards;
+    animation-delay: calc(min(var(--i, 0), 12) * 25ms / var(--motion-speed));
+  }
+  /* Switching docs: the old page fades out on top while the new one plays
+     its own .enter underneath. Same-looking parts (header, sidebar) don't move. */
+  :root.docs-switch::view-transition-old(root) {
+    animation: fade-out var(--duration-fast) var(--ease-exit) both;
+  }
+  :root.docs-switch::view-transition-new(root) {
+    animation: none;
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes enter {
+    from {
+      opacity: 0;
+      translate: 0 var(--motion-distance-sm);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* ---------- Page layout ---------- */
+  .page {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+  @media (min-width: 720px) {
+    .page {
+      padding-left: var(--space-5);
+      padding-right: var(--space-5);
+    }
+  }
+  /* Docs and Explore are browsing pages: they use the wide measure and grow with the screen. */
+  .page.wide {
+    max-width: var(--page-wide);
+  }
+  @media (min-width: 1280px) {
+    .page.wide {
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+  }
+  .page-title {
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-heading);
+  }
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-7) var(--space-4);
+    color: var(--ink-2);
+    text-align: center;
+  }
+  .empty h1 {
+    margin: 0;
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-heading);
+    color: var(--ink);
+  }
+
+  /* ---------- News ---------- */
+  /* A reading-width list. The cover sits beside the words and shrinks to a
+     thumbnail on phones; the newest post is not made bigger than the rest. */
+  .news-page.reading {
+    max-width: calc(760px + 2 * var(--space-4));
+  }
+  @media (min-width: 720px) {
+    .news-page.reading {
+      max-width: calc(760px + 2 * var(--space-5));
+    }
+  }
+  .news-page .news-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .news-page .post {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: var(--space-5);
+    align-items: center;
+    padding: var(--space-4);
+    margin: 0 calc(-1 * var(--space-4));
+    border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--duration-hover);
+  }
+  .news-page .post:hover {
+    background: var(--fill-hover);
+  }
+  .news-page .post:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .news-page .post-meta .dot {
+    color: var(--ink-4);
+  }
+  .news-page .post-meta a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .news-page .post-meta a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+  .news-page .post h2 {
+    margin: var(--space-1) 0 var(--space-1);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-md) + 3px);
+    font-weight: var(--fw-serif);
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .news-page .post p {
+    margin: 0;
+    color: var(--ink-2);
+    line-height: var(--lh-prose);
+  }
+  .news-page .cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: var(--border-width) solid var(--line);
+    background: var(--sunken);
+  }
+  .news-page .post .cover {
+    transition: box-shadow var(--duration-base) var(--ease-move);
+  }
+  .news-page .post:hover .cover {
+    box-shadow: var(--shadow-2);
+  }
+  @media (max-width: 560px) {
+    .news-page .post {
+      grid-template-columns: minmax(0, 1fr) 88px;
+      gap: var(--space-3);
+      align-items: start;
+    }
+    .news-page .post p {
+      display: none;
+    }
+  }
+  .news-page .article {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .news-page .back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-5);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    color: var(--ink-3);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .news-page .back:hover {
+    color: var(--ink);
+  }
+  .news-page .back:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .article h1 {
+    margin: var(--space-2) 0 var(--space-3);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-xl) + 6px);
+    font-weight: var(--fw-serif);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .news-page .article .lede {
+    margin: 0 0 var(--space-5);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: calc(var(--fs-md) + 2px);
+    color: var(--ink-2);
+    line-height: var(--lh-prose);
+  }
+  .news-page .article .cover {
+    height: auto;
+    aspect-ratio: auto;
+    border-radius: var(--radius-lg);
+  }
+  .news-page .article-body {
+    margin-top: var(--space-6);
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-md) + 3px);
+    line-height: var(--lh-prose);
+    color: var(--ink);
+  }
+  .news-page .article-body p {
+    margin: 0 0 var(--space-4);
+  }
+  .news-page .original {
+    margin: var(--space-5) 0 0;
+    font-size: var(--fs-sm);
+  }
+  .news-page .original a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+  .news-page .original a:hover {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+  .news-page .read-on {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--sunken);
+  }
+  .news-page .read-on p {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
+  }
+  .news-page .more {
+    margin-top: var(--space-7);
+    padding-top: var(--space-4);
+    border-top: var(--border-width) solid var(--line);
+  }
+  .news-page .more h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-heading);
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .news-page .more ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .news-page .more a {
+    display: flex;
+    gap: var(--space-4);
+    align-items: baseline;
+    padding: var(--space-2) var(--space-2);
+    margin: 0 calc(-1 * var(--space-2));
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color var(--duration-hover);
+  }
+  .news-page .more a:hover {
+    background: var(--fill-hover);
+  }
+  .news-page .more a:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+  }
+  .news-page .more a span {
+    font-family: var(--font-serif);
+    font-size: calc(var(--fs-ui) + 2px);
+  }
+  .news-page .more time {
+    flex: none;
+    width: 7.5em;
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Without View Transitions a news page fades in when it arrives
+     (app/news/NewsLink.jsx runs the transition where the API exists). */
+  @supports not (view-transition-name: none) {
+    .news-page {
+      animation: fade-in var(--duration-base) var(--ease-swap) backwards;
+    }
+  }
+  ::view-transition-group(root) {
+    animation-duration: var(--duration-base);
+  }
+  ::view-transition-group(news-cover),
+  ::view-transition-group(news-title) {
+    animation-duration: var(--duration-slow);
+    animation-timing-function: var(--ease-move);
+  }
+  /* Keep the cover cropped and the title unstretched while they change size. */
+  ::view-transition-old(news-cover),
+  ::view-transition-new(news-cover) {
+    height: 100%;
+    object-fit: cover;
+  }
+  ::view-transition-old(news-title),
+  ::view-transition-new(news-title) {
+    width: auto;
+    height: 100%;
+  }
+  ::view-transition-old(news-title) {
+    animation-duration: var(--duration-fast);
+  }
+
+  /* ---------- Editor frame and toolbar ---------- */
+  .editor-frame {
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-2);
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    /* One inset on every side and between the buttons, so the space around
+       Run and Stop is the same everywhere. */
+    --tb-inset: calc(var(--space-unit) * 1.5);
+    gap: var(--tb-inset);
+    padding: var(--tb-inset);
+    border-bottom: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--surface);
+    min-width: 0;
+  }
+  .toolbar.pinned {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  /* The status stands a little apart from the buttons. */
+  .toolbar .status {
+    margin-left: var(--tb-inset);
+  }
+  /* Run and Stop: larger, at the left, the first thing to reach for. */
+  .toolbar .tb-action {
+    height: calc(var(--space-unit) * 8);
+    padding: 0 var(--space-3);
+    font-size: var(--fs-md);
+  }
+  /* The file the notebook stands for, as a reminder that it's plain code. */
+  .tb-file {
+    min-width: 0;
+    padding: 0 var(--space-2);
+    overflow: hidden;
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .editor-body {
+    position: relative;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    overflow: hidden;
+  }
+  .load-error {
+    padding: var(--space-4);
+    font-size: var(--fs-sm);
+  }
+  .load-error pre {
+    margin-top: var(--space-4);
+    overflow-x: auto;
+    font: var(--fs-code) / var(--lh-code) var(--font-mono);
+    color: var(--ink-2);
+  }
+
+  /* ---------- Title section, above a notebook ---------- */
+  .title-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .title-main {
+    display: flex;
+    flex: 1 1 240px;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .title-main .status {
+    white-space: normal;
+  }
+  .title-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  /* An editable title looks like any other until it's hovered or focused. */
+  .title-edit {
+    display: inline-block;
+    vertical-align: top;
+    min-width: 4ch;
+    max-width: calc(100% + var(--space-2));
+    margin: 0 calc(var(--space-1) * -1);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    outline: none;
+    overflow-wrap: anywhere;
+    cursor: text;
+    transition: background-color var(--duration-hover);
+  }
+  .title-edit:hover {
+    background: var(--fill-hover);
+  }
+  .title-edit:focus {
+    background: var(--fill-hover);
+    box-shadow: 0 0 0 var(--border-width) var(--line);
+  }
+
+  /* ---------- Docs ---------- */
+  .docs {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .docs .side {
+    position: sticky;
+    top: var(--space-4);
+    max-height: calc(100vh - var(--space-6));
+    overflow: auto;
+    margin: calc(var(--space-2) * -1) 0 0 calc(var(--space-2) * -1);
+    padding: var(--space-1);
+  }
+  .docs .side::-webkit-scrollbar-track:vertical {
+    margin-block: var(--radius-lg);
+  }
+  /* Groups the title row with the list, for closing on a click outside;
+     it adds no box of its own. */
+  .docs-nav {
+    display: contents;
+  }
+  .docs-head {
+    display: none;
+  }
+  .doc {
+    min-width: 0;
+  }
+  /* Docs are written to 80 columns, which need about 750px of editor. Beside
+     the sidebar that fits from 1100px; below it the sidebar folds into a menu. */
+  @media (max-width: 1099px) {
+    .docs {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-4);
+    }
+    /* The doc's title becomes the menu button, so its own is hidden. */
+    .doc {
+      grid-row: 2;
+      grid-column: 1;
+    }
+    .doc .title-section {
+      display: none;
+    }
+    .docs-head {
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+    .docs-group {
+      color: var(--ink-3);
+      font-size: var(--fs-xs);
+    }
+    .docs-head-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+    .docs-head-row .page-title {
+      flex: 1;
+      min-width: 0;
+    }
+    /* Looks like the title until hovered, as an editable title does. */
+    .docs-title {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      max-width: calc(100% + var(--space-2));
+      margin: 0 calc(var(--space-1) * -1);
+      padding: 0 var(--space-1);
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color var(--duration-hover);
+
+      & > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      & .ic {
+        flex: none;
+        color: var(--ink-3);
+        transition: rotate var(--duration-move) var(--ease-move);
+      }
+      &:hover,
+      &[aria-expanded="true"] {
+        background: var(--fill-hover);
+      }
+      &[aria-expanded="true"] .ic {
+        rotate: 180deg;
+      }
+      &:focus-visible {
+        outline: var(--focus-ring);
+      }
+    }
+    .docs-count {
+      margin-right: var(--space-1);
+      color: var(--ink-3);
+      font-size: var(--fs-xs);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    /* A menu over the doc, in the doc's grid cell so it takes no room of its
+       own: the list fades in and drops into place. */
+    .docs .side {
+      grid-row: 2;
+      grid-column: 1;
+      align-self: start;
+      position: relative;
+      z-index: 20;
+      top: auto;
+      max-height: min(560px, 70vh);
+      margin: calc(var(--space-3) * -1) 0 0; /* 4px under the button, as menus sit */
+      border: var(--border-width) solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-3);
+      transition:
+        opacity var(--duration-fast) var(--ease-exit),
+        translate var(--duration-fast) var(--ease-exit),
+        display var(--duration-fast) allow-discrete;
+    }
+    .docs .side.open {
+      transition-duration: var(--duration-base);
+      transition-timing-function: var(--ease-enter);
+    }
+    .docs .side:not(.open) {
+      display: none;
+      opacity: 0;
+      translate: 0 calc(var(--motion-distance-sm) * -1);
+    }
+    @starting-style {
+      .docs .side.open {
+        opacity: 0;
+        translate: 0 calc(var(--motion-distance-sm) * -1);
+      }
+    }
+  }
+
+  /* ---------- Home (logged in) ---------- */
+  /* A sunken band of templates, then recent and community notebooks, on the
+     wide measure. */
+  .home-in {
+    max-width: var(--page-wide);
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4);
+  }
+  @media (min-width: 720px) {
+    .home-in {
+      padding-left: var(--space-5);
+      padding-right: var(--space-5);
+    }
+  }
+  @media (min-width: 1280px) {
+    .home-in {
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+  }
+  .home-band {
+    background: var(--sunken);
+    border-bottom: var(--border-width) solid var(--line);
+  }
+  .home-band .home-in {
+    padding-bottom: var(--space-6);
+  }
+  .home-community {
+    border-top: var(--border-width) solid var(--line);
+    padding-bottom: var(--space-7);
+  }
+  .home-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .home-head .status {
+    flex: 1;
+  }
+  .home-title {
+    flex: 1;
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-heading);
+  }
+  .home-title:has(+ .status) {
+    flex: none;
+  }
+  .home-more {
+    display: inline-flex;
+    margin-left: auto;
+    align-items: center;
+    gap: 2px;
+    color: var(--accent-text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .home-more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .home-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0;
+    color: var(--ink-2);
+  }
+  .home-note p {
+    margin: 0;
+  }
+  /* Templates: three portrait tiles, one per language. */
+  .home-templates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 200px));
+    gap: var(--space-4);
+  }
+  .home-templates .card .thumb {
+    aspect-ratio: 4 / 5;
+  }
+  .home-templates .card:hover .thumb {
+    box-shadow: var(--shadow-2);
+    border-color: var(--accent);
+  }
+  /* Recent and community: at most two rows and one row. */
+  .card-grid.home-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  @media (max-width: 960px) {
+    .card-grid.home-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .home-grid > li:nth-child(n + 7),
+    .home-row > li:nth-child(n + 4) {
+      display: none;
+    }
+  }
+  @media (max-width: 560px) {
+    .home-templates {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-3);
+    }
+    .card-grid.home-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4) var(--space-3);
+    }
+    .home-grid > li:nth-child(n + 5) {
+      display: none;
+    }
+    .home-row > li:nth-child(4) {
+      display: block;
+    }
+    .home-grid .card .s-aside,
+    .home-head .status {
+      display: none;
+    }
+  }
+
+  /* ---------- Explore and cards ---------- */
+  .ex-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .ex-head .status {
+    flex: 1;
+  }
+  .ex-filters,
+  .ex-labels {
+    display: contents;
+  }
+  .ex-labels-select {
+    display: none;
+  }
+  /* Where the label segments would wrap, the labels become a select, on one
+     row with the language one. LabelFilters measures this and sets data-fit;
+     until it has, a width that suits today's labels decides. */
+  .ex-filters[data-fit="no"] {
+    display: flex;
+    flex-basis: 100%;
+    gap: var(--space-2);
+  }
+  .ex-filters[data-fit="no"] .ex-labels-select {
+    display: contents;
+  }
+  /* Out of sight and out of the flow, but still laid out to be measured. */
+  .ex-filters[data-fit="no"] .ex-labels {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: max-content;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  @media (max-width: 519px) {
+    .ex-filters:not([data-fit]) {
+      display: flex;
+      flex-basis: 100%;
+      gap: var(--space-2);
+    }
+    .ex-filters:not([data-fit]) .ex-labels {
+      display: none;
+    }
+    .ex-filters:not([data-fit]) .ex-labels-select {
+      display: contents;
+    }
+  }
+  .card-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
+    gap: var(--space-5);
+  }
+  .card {
+    position: relative;
+    min-width: 0;
+  }
+  .card-link {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    color: var(--ink);
+    text-decoration: none;
+    border-radius: var(--radius-lg);
+  }
+  .card.has-actions .t,
+  .card.has-actions .s {
+    padding-right: calc(var(--control-h-sm) + var(--space-2));
+  }
+  .card-actions {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: var(--space-1);
+  }
+  .card .thumb {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    display: block;
+    border: var(--border-width) solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    /* Card hover: the shadow fades in on --duration-base. No lift. */
+    transition:
+      box-shadow var(--duration-base) var(--ease-move),
+      border-color var(--duration-hover);
+  }
+  .card:hover .thumb {
+    box-shadow: var(--shadow-2);
+    border-color: var(--border);
+  }
+  .card .t {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-label);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card .s {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--fs-xs);
+    color: var(--ink-3);
+  }
+  .card .s-main {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card .s-aside {
+    flex: none;
+  }
+  .card .snap {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* Thumbnail: a cropped code excerpt with no line numbers, faded out at the
+     right and bottom. Its colours come from app/codeTheme.js. */
+  .thumb-code {
+    height: 100%;
+    overflow: hidden;
+    padding: var(--space-2) 0 0 var(--space-3);
+    font-size: var(--fs-thumb);
+    mask:
+      linear-gradient(to right, var(--ink) 72%, var(--clear)), linear-gradient(to bottom, var(--ink) 66%, var(--clear));
+    mask-composite: intersect;
+  }
+  .thumb-code pre {
+    margin: 0;
+    font: inherit;
+    font-family: var(--font-mono);
+    line-height: var(--lh-code);
+    background: var(--clear) !important;
+  }
+  /* A flex column drops the newlines between lines, so each line is one row. */
+  .thumb-code code {
+    display: flex;
+    flex-direction: column;
+  }
+  .thumb-code .line {
+    position: relative;
+    min-height: calc(1em * var(--lh-code));
+    padding-left: calc(var(--out-marker-width) + var(--space-2));
+    white-space: pre;
+  }
+  .thumb-code .line.out > span {
+    color: var(--out-value) !important;
+  }
+  .thumb-code .line.err > span {
+    color: var(--error) !important;
+  }
+  .thumb-code .line.out::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: -1px;
+    bottom: -1px;
+    width: var(--out-marker-width);
+    background: var(--out-success-marker);
+  }
+  .thumb-code .line.err::before {
+    background: var(--error-marker);
+  }
+  .thumb-code .line.first::before {
+    top: var(--out-marker-inset);
+    border-top-left-radius: var(--out-marker-width);
+    border-top-right-radius: var(--out-marker-width);
+  }
+  .thumb-code .line.last::before {
+    bottom: var(--out-marker-inset);
+    border-bottom-left-radius: var(--out-marker-width);
+    border-bottom-right-radius: var(--out-marker-width);
+  }
+  .thumb-code .line.art {
+    min-height: 1em;
+    line-height: var(--lh-art);
+  }
+}
+
+/* Theme swaps are instant: transitions pause for one frame so nothing lags behind. */
+.no-motion *:not(.seg-pill),
+.no-motion *::before,
+.no-motion *::after {
+  transition: none !important;
+}

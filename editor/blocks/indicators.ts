@@ -13,26 +13,19 @@ export class BlockIndicator extends GutterMarker {
   }
 }
 
-const indicatorMarkers = {
-  output: {
-    head: new BlockIndicator("cm-block-indicator output head"),
-    tail: new BlockIndicator("cm-block-indicator output tail"),
-    sole: new BlockIndicator("cm-block-indicator output head tail"),
-    body: new BlockIndicator("cm-block-indicator output"),
-  },
-  source: {
-    head: new BlockIndicator("cm-block-indicator source head"),
-    tail: new BlockIndicator("cm-block-indicator source tail"),
-    sole: new BlockIndicator("cm-block-indicator source head tail"),
-    body: new BlockIndicator("cm-block-indicator source"),
-  },
-  error: {
-    head: new BlockIndicator("cm-block-indicator error head"),
-    tail: new BlockIndicator("cm-block-indicator error tail"),
-    sole: new BlockIndicator("cm-block-indicator error head tail"),
-    body: new BlockIndicator("cm-block-indicator error"),
-  },
-};
+// One continuous marker per block, `head` and `tail` at its first and last
+// lines. In a block that ran, its output lines (those before its source) are
+// marked as succeeded and its source lines as source; a block that failed is
+// marked as failed throughout, so the failure shows even with no output.
+const markers = (kind: string) => ({
+  head: new BlockIndicator(`cm-block-indicator ${kind} head`),
+  tail: new BlockIndicator(`cm-block-indicator ${kind} tail`),
+  sole: new BlockIndicator(`cm-block-indicator ${kind} head tail`),
+  body: new BlockIndicator(`cm-block-indicator ${kind}`),
+});
+
+const indicatorMarkers = {output: markers("output"), source: markers("source"), error: markers("error")};
+const spacer = new BlockIndicator("cm-block-indicator");
 
 export const blockIndicator = gutter({
   class: "cm-blockIndicators",
@@ -61,8 +54,10 @@ export const blockIndicator = gutter({
     const block = blocks[index];
     const currentLine = view.state.doc.lineAt(line.from).number;
 
-    // Determine the positional relationship between the current line and the block.
+    // The run is the whole block; its colour depends on the line and result.
     const sourceFirstLine = view.state.doc.lineAt(block.source.from).number;
+    const runFirstLine = view.state.doc.lineAt(block.from).number;
+    const runLastLine = view.state.doc.lineAt(block.to).number;
     const group = block.error
       ? indicatorMarkers.error
       : currentLine < sourceFirstLine
@@ -70,18 +65,16 @@ export const blockIndicator = gutter({
         : indicatorMarkers.source;
 
     // Determine the gutter marker to use.
-    const blockFirstLine = view.state.doc.lineAt(block.from).number;
-    const blockLastLine = view.state.doc.lineAt(block.to).number;
-    if (blockFirstLine === currentLine) {
-      return blockLastLine === currentLine ? group.sole : group.head;
-    } else if (blockLastLine === currentLine) {
+    if (runFirstLine === currentLine) {
+      return runLastLine === currentLine ? group.sole : group.head;
+    } else if (runLastLine === currentLine) {
       return group.tail;
     } else {
       return group.body;
     }
   },
   initialSpacer() {
-    return indicatorMarkers.source.body;
+    return spacer;
   },
 });
 

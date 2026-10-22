@@ -1,7 +1,7 @@
 import {notFound} from "next/navigation";
 import {getAllJSDocs, removeJSMeta} from "../../utils.js";
 import {Editor} from "../../Editor.jsx";
-import {cn} from "../../cn.js";
+import {TitleSection} from "../../TitleSection.jsx";
 
 export async function generateStaticParams() {
   return getAllJSDocs().map((doc) => ({slug: doc.slug}));
@@ -21,8 +21,9 @@ export default async function Page({params}) {
   const doc = getAllJSDocs().find((doc) => doc.slug === slug);
   if (!doc) notFound();
   return (
-    <div className={cn("mx-4 my-4")}>
-      <Editor initialCode={removeJSMeta(doc.content)} pinToolbar={true} />
-    </div>
+    <>
+      <TitleSection title={<h1 className="page-title">{doc.title}</h1>} />
+      <Editor initialCode={removeJSMeta(doc.content)} fileName={`${doc.slug}.js`} />
+    </>
   );
 }

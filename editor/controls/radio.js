@@ -35,7 +35,6 @@ class RadioWidget extends WidgetType {
     let wrap = document.createElement("span");
     wrap.setAttribute("aria-hidden", "true");
     wrap.className = WIDGET_CLASS_NAME;
-    wrap.style.marginRight = "4px";
 
     let radio = document.createElement("input");
     radio.type = "radio";
@@ -43,8 +42,6 @@ class RadioWidget extends WidgetType {
     radio.checked = this.#isSelected;
     radio.dataset.index = this.#index.toString();
     radio.dataset.groupId = this.#groupId;
-    radio.style.margin = "0";
-    radio.style.verticalAlign = "middle";
 
     wrap.appendChild(radio);
     return wrap;

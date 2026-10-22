@@ -1,7 +1,6 @@
 import {notFound} from "next/navigation";
 import {getAllJSExamples, removeMeta} from "../../utils.js";
-import {cn} from "../../cn.js";
-import {Meta} from "../../Meta.js";
+import {cn} from "../../../components/cn.js";
 import {ExampleEditor} from "../ExampleEditor.jsx";
 
 export async function generateStaticParams() {
@@ -23,10 +22,7 @@ export default async function Page({params}) {
   if (!example) notFound();
   const initialCode = removeMeta(example);
   return (
-    <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4")}>
-      <div className={cn("mb-6")}>
-        <Meta example={example} />
-      </div>
+    <div className={cn("page")}>
       <ExampleEditor example={example} initialCode={initialCode} />
     </div>
   );

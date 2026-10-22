@@ -3,7 +3,7 @@ import {it, expect, describe, afterEach, beforeAll, beforeEach, vi} from "vitest
 import {EditorState} from "@codemirror/state";
 import {createRuntime} from "../runtime/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
-import {RUNTIMES, highlightLanguage, languageOf} from "../app/shared.js";
+import {RUNTIMES, fileNameOf, highlightLanguage, languageOf} from "../app/shared.js";
 import {getAllJSExamples, removeMeta} from "../app/utils.js";
 import {createNotebook} from "../app/api.js";
 
@@ -142,7 +142,7 @@ describe("mlscript", () => {
 
   it("starts a new notebook with MLscript code that runs without errors", async () => {
     const created = createNotebook(RUNTIMES.mlscript);
-    expect(created.title).toMatch(/\.mls$/);
+    expect(fileNameOf(created.title, created.runtime)).toBe("untitled.mls");
     expect(created.runtime).toBe(RUNTIMES.mlscript);
     run(created.content);
     await wait();

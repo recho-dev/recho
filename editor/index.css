@@ -1,19 +1,20 @@
 @reference "tailwindcss";
 
+/*
+ * Editor styles. Colours, radii and shadows come from app/tokens.css. The
+ * editor's chrome (gutters, selection, active line) is in the theme in
+ * ./index.js, which CodeMirror scopes above its base theme.
+ */
+
 .cm-editor {
   width: 100%;
   height: 100%;
 
-  --output-border-color: #19130029;
-  --output-content-color: #21201c;
+  &.cm-focused {
+    outline: none;
+  }
 
-  --button-border-color: #bcbbb5;
-  --button-background-color: #f1f0ef;
-  --button-background-color-hover: #e9e8e6;
-  --button-background-color-active: #e2e1de;
-  --disabled-button-background-color: #bcbbb5;
-  --disabled-button-border-color: #82827c;
-
+  /* recho.toggle: a checkbox drawn from tokens. The tick wipes in. */
   .cm-boolean-toggle {
     display: inline-flex;
     align-items: center;
@@ -22,23 +23,87 @@
     vertical-align: text-top;
 
     > input {
-      width: 1rem;
-      height: 1rem;
+      appearance: none;
+      position: relative;
+      width: 1em;
+      height: 1em;
+      margin: 0;
+      border: var(--border-width) solid var(--border-strong);
+      border-radius: calc(var(--radius-sm) * 0.67);
+      background: var(--surface);
+      cursor: pointer;
+      transition:
+        background-color var(--duration-hover),
+        border-color var(--duration-hover);
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--on-accent);
+        opacity: 0;
+        clip-path: inset(0 calc(100% * var(--motion-travel)) 0 0);
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+          center / 100% no-repeat;
+        transition:
+          opacity var(--duration-fast) var(--ease-exit),
+          clip-path var(--duration-fast) var(--ease-exit);
+      }
+
+      &:hover {
+        border-color: var(--ink-4);
+      }
+
+      &:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      &:checked::before {
+        opacity: 1;
+        clip-path: inset(0);
+        transition:
+          opacity var(--duration-fast) var(--ease-enter),
+          clip-path var(--duration-base) var(--ease-enter);
+      }
     }
   }
 
+  /* recho.radio: a round option whose dot changes colour only. */
   .cm-radio-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    margin-right: var(--space-1);
     vertical-align: text-top;
 
     > input {
-      width: 1rem;
-      height: 1rem;
+      appearance: none;
+      width: 1em;
+      height: 1em;
+      margin: 0;
+      border: var(--border-width) solid var(--border-strong);
+      border-radius: var(--radius-full);
+      background: var(--surface);
+      cursor: pointer;
+      transition:
+        background-color var(--duration-hover),
+        border-color var(--duration-hover),
+        box-shadow var(--duration-hover);
+
+      &:hover {
+        border-color: var(--ink-4);
+      }
+
+      &:checked {
+        border-color: var(--accent);
+        background: var(--accent);
+        box-shadow: inset 0 0 0 3px var(--surface);
+      }
     }
   }
 
+  /* recho.number: step buttons on either side of the number. */
   .cm-number-input {
     display: inline-flex;
     align-items: center;
@@ -46,46 +111,78 @@
     vertical-align: text-top;
 
     &.cm-number-inc {
-      margin-left: 0.25rem;
-      > button {
-        /*width: 15px;*/
-        /*height: 15px;*/
-        background-image: url("data:image/svg+xml,%3Csvg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 2.75C8 2.47386 7.77614 2.25 7.5 2.25C7.22386 2.25 7 2.47386 7 2.75V7H2.75C2.47386 7 2.25 7.22386 2.25 7.5C2.25 7.77614 2.47386 8 2.75 8H7V12.25C7 12.5261 7.22386 12.75 7.5 12.75C7.77614 12.75 8 12.5261 8 12.25V8H12.25C12.5261 8 12.75 7.77614 12.75 7.5C12.75 7.22386 12.5261 7 12.25 7H8V2.75Z' fill='currentColor' fill-rule='evenodd' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
+      margin-left: var(--space-1);
+      > button::before {
+        mask-image: url("data:image/svg+xml,%3Csvg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 2.75C8 2.47386 7.77614 2.25 7.5 2.25C7.22386 2.25 7 2.47386 7 2.75V7H2.75C2.47386 7 2.25 7.22386 2.25 7.5C2.25 7.77614 2.47386 8 2.75 8H7V12.25C7 12.5261 7.22386 12.75 7.5 12.75C7.77614 12.75 8 12.5261 8 12.25V8H12.25C12.5261 8 12.75 7.77614 12.75 7.5C12.75 7.22386 12.5261 7 12.25 7H8V2.75Z' fill='currentColor' fill-rule='evenodd' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
       }
     }
 
     &.cm-number-dec {
-      margin-right: 0.25rem;
-      > button {
-        /*width: 15px;*/
-        /*height: 15px;*/
-        background-image: url("data:image/svg+xml,%3Csvg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.25 7.5C2.25 7.22386 2.47386 7 2.75 7H12.25C12.5261 7 12.75 7.22386 12.75 7.5C12.75 7.77614 12.5261 8 12.25 8H2.75C2.47386 8 2.25 7.77614 2.25 7.5Z' fill='currentColor' fill-rule='evenodd' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
+      margin-right: var(--space-1);
+      > button::before {
+        mask-image: url("data:image/svg+xml,%3Csvg width='15' height='15' viewBox='0 0 15 15' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.25 7.5C2.25 7.22386 2.47386 7 2.75 7H12.25C12.5261 7 12.75 7.22386 12.75 7.5C12.75 7.77614 12.5261 8 12.25 8H2.75C2.47386 8 2.25 7.77614 2.25 7.5Z' fill='currentColor' fill-rule='evenodd' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
       }
     }
 
     > button {
+      display: grid;
+      place-items: center;
       box-sizing: content-box;
       width: 15px;
       height: 15px;
-      border: 1px solid var(--button-border-color);
-      border-radius: 0.125rem;
-      background-color: var(--button-background-color);
+      border: var(--border-width) solid var(--border);
+      border-radius: var(--radius-sm);
+      background-color: var(--surface);
+      color: var(--ink-2);
       cursor: pointer;
-      transition: background-color 0.2s ease-in-out;
+      transition: background-color var(--duration-hover);
+
+      &::before {
+        content: "";
+        width: 15px;
+        height: 15px;
+        background: currentColor;
+        mask-size: 100%;
+      }
 
       &[data-disabled] {
-        background-color: var(--disabled-button-background-color);
-        border-color: var(--disabled-button-border-color);
+        background-color: var(--sunken);
+        border-color: var(--line);
+        color: var(--ink-4);
         cursor: not-allowed;
       }
 
       &:not([data-disabled]):hover {
-        background-color: var(--button-background-color-hover);
+        background-color: var(--fill-hover);
       }
 
       &:not([data-disabled]):active {
-        background-color: var(--button-background-color-active);
+        background-color: var(--fill-pressed);
+        transition-duration: 0s;
       }
+    }
+  }
+
+  /* recho.button: a small secondary button. */
+  .cm-button-widget {
+    margin: 0 var(--space-1);
+    padding: 1px var(--space-2);
+    border: var(--border-width) solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface);
+    color: var(--ink);
+    font: var(--fw-label) var(--fs-xs) / var(--lh-ui) var(--font-ui);
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background-color var(--duration-hover);
+
+    &:hover {
+      background-color: var(--fill-hover);
+    }
+
+    &:active {
+      background-color: var(--fill-pressed);
+      transition-duration: 0s;
     }
   }
 
@@ -93,12 +190,6 @@
   .cm-lineNumbers,
   .cm-tooltip.cm-tooltip-autocomplete > ul {
     @apply font-mono;
-  }
-
-  .cm-tooltip {
-    background: #f9f9f8;
-    border-color: #dad9d6;
-    border-radius: 0.25rem;
   }
 
   .cm-tooltip.cm-completionInfo {
@@ -109,145 +200,162 @@
     }
   }
 
-  .cm-line {
-    .cm-output-line-prefix {
-      opacity: 0.5;
-      font-weight: bold;
-    }
-
-    .cm-output-line-content > * {
-      color: var(--output-content-color);
-    }
-  }
-
-  .cm-output-line:first-child,
-  :not(.cm-output-line) + .cm-output-line {
-    /* The first of a contiguous sequence. */
-    /*padding-top: 1px;*/
-    /*margin-top: -1px;*/
-    border-top: 1px dashed var(--output-border-color);
-  }
-
-  .cm-output-line:last-child,
-  .cm-output-line:not(:last-child):not(:has(+ .cm-output-line)) {
-    /* The last element of a contiguous sequence. */
-    /*padding-bottom: 1px;*/
-    /*margin-bottom: -1px;*/
-    border-bottom: 1px dashed var(--output-border-color);
-  }
-
-  /* Set the background pattern for output lines. */
+  /* Output recedes behind the code: a quiet //➜ prefix and quiet values. */
   .cm-output-line {
     line-height: 1.25;
-    border-left: 1px dashed var(--output-border-color);
-    /*background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%237d7d7d' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");*/
+    color: var(--out-value);
+
+    span {
+      color: inherit;
+    }
+
+    .cm-output-line-prefix {
+      color: var(--out-prefix);
+    }
   }
 
-  .cm-output-line.cm-compact-line {
-    line-height: 1;
+  /* ASCII art with box drawing or blocks, and `@compact` output: one em per
+     row, so glyphs on adjacent lines touch. */
+  .cm-output-line.cm-compact-line,
+  .cm-output-line.cm-art-line {
+    line-height: var(--lh-art);
+  }
+
+  /* Errors are red and wrap, so the whole message shows. */
+  .cm-output-line.cm-error-line {
+    color: var(--error);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    .cm-output-line-prefix {
+      color: var(--error);
+    }
+  }
+
+  /* A warning is output, in the warning colour. */
+  .cm-output-line.cm-warning-line {
+    color: var(--warning);
+
+    .cm-output-line-prefix {
+      color: var(--warning);
+    }
   }
 
   .cm-debug-mark {
     &.red {
-      background-color: #fbbf2440;
+      background-color: var(--error-tint);
     }
     &.green {
-      background-color: #009a5753;
+      background-color: var(--success-tint);
     }
     &.blue {
-      background-color: #0088f653;
+      background-color: var(--selection);
     }
   }
 
+  /* Lets the play button's tooltip out of its gutter, which CodeMirror's base
+     theme clips, and above the gutters to its right. */
+  .cm-gutter.cm-runButtons {
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* A cell's play button, in the gutter: quiet until hovered or focused. */
   .cm-run-button {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 1rem;
     height: 100%;
+    /* Room between the triangle and the block marker on its right. */
+    margin-right: var(--space-1);
     padding: 0;
     border: 0;
+    border-radius: var(--radius-sm);
     background: none;
-    color: #6e7781;
-    opacity: 0.35;
+    color: var(--ink-3);
+    opacity: 0.45;
     cursor: pointer;
-    transition: opacity 0.1s ease-in-out;
+    transition:
+      opacity var(--duration-hover),
+      color var(--duration-hover);
+
+    /* An outline at rest; it fills in when it's about to act. */
+    & svg {
+      transition: fill var(--duration-hover);
+    }
 
     &:hover,
     &:focus-visible {
       opacity: 1;
-      color: #1f2328;
-    }
+      color: var(--ink);
 
-    &:focus-visible {
-      outline: 2px solid #0969da;
-      outline-offset: -2px;
-      border-radius: 2px;
-    }
-  }
-
-  .cm-blockIndicators {
-    padding-left: 0.25rem;
-
-    --gap-between-blocks: 2px;
-  }
-
-  .cm-gutterElement .cm-block-indicator {
-    width: 0.25rem;
-    height: 100%;
-
-    &.output {
-      background: #72aa006e;
-    }
-
-    &.source {
-      background: #1f180021;
-    }
-
-    &.error {
-      background: #df2600d1;
-    }
-
-    &.head {
-      height: calc(100% - var(--gap-between-blocks));
-      /*border-top-left-radius: 0.25rem;
-      border-top-right-radius: 0.25rem;*/
-
-      &:not(.tail) {
-        transform: translate(0, var(--gap-between-blocks));
+      & svg {
+        fill: currentColor;
       }
     }
 
-    &.tail {
-      height: calc(100% - var(--gap-between-blocks));
-      /*border-bottom-left-radius: 0.25rem;
-      border-bottom-right-radius: 0.25rem;*/
+    &:focus-visible {
+      outline: var(--focus-ring);
+      outline-offset: -2px;
     }
   }
 
-  /* We can't see background color, which is conflict with selection background color.
-   * So we use svg pattern to simulate the background color.
-   */
-  .cm-output-line.cm-error-line {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4' %3E%3Cpath fill='%23ff0000' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+  /* One continuous marker per block, left of the code: green beside the
+     output of a block that ran and grey beside its code, red along a block
+     that failed. Each row's segment reaches 1px into the next, which is drawn
+     over it, so no seam shows at fractional line heights or any zoom, and
+     colours change exactly between lines. Only the run's ends are inset and
+     rounded. */
+  /* The space before the code is padding, not margin, so the active line's
+     background reaches the code without a gap. */
+  .cm-blockIndicators .cm-gutterElement {
+    width: var(--out-marker-width);
+    padding-right: var(--space-3);
   }
 
-  .cm-output-line.cm-error-line span {
-    color: #c83f30 !important;
-  }
+  .cm-gutterElement .cm-block-indicator {
+    position: relative;
+    width: var(--out-marker-width);
+    height: calc(100% + 1px);
 
-  /* A warning is output, muted. */
-  .cm-output-line.cm-warning-line span {
-    color: #9a6700 !important;
-    opacity: 0.75;
+    &.output {
+      background: var(--out-success-marker);
+    }
+
+    &.source {
+      background: var(--out-marker);
+    }
+
+    &.error {
+      background: var(--error-marker);
+    }
+
+    &.head {
+      top: var(--out-marker-inset);
+      height: calc(100% + 1px - var(--out-marker-inset));
+      border-top-left-radius: var(--out-marker-width);
+      border-top-right-radius: var(--out-marker-width);
+    }
+
+    &.tail {
+      height: calc(100% - var(--out-marker-inset));
+      border-bottom-left-radius: var(--out-marker-width);
+      border-bottom-right-radius: var(--out-marker-width);
+    }
+
+    &.head.tail {
+      height: calc(100% - 2 * var(--out-marker-inset));
+    }
   }
 
   .cm-doc-tag span {
-    color: #cf222e;
+    color: var(--syn-tag);
   }
 
   .cm-comment-link {
-    color: #6a737d;
+    color: var(--syn-comment);
     text-decoration: underline;
     cursor: text;
   }
@@ -257,6 +365,10 @@
   }
 
   .cm-comment-link.cmd-clickable:hover > span {
-    color: #0550ae !important;
+    color: var(--accent-text) !important;
   }
+}
+
+.editor-page .cm-editor {
+  min-height: 332px;
 }

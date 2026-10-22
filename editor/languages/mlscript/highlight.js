@@ -35,29 +35,30 @@ export function captureSpans(query, tree, classify, from = 0, to = tree.rootNode
     .map(({from, to, capture, value}) => ({from, to, capture, value}));
 }
 
-const TEXT = "#24292E";
+const TEXT = "var(--ink)";
 
 /**
- * Shiki's github-light colours for the captures of the highlights query, as it
- * colours the JavaScript equivalents: keywords and operators red, function and
- * type names purple, literals blue, strings navy, comments grey, and names,
- * members and punctuation in the text colour.
+ * The syntax tokens of the app's theme (app/tokens.css) for the captures of
+ * the highlights query, as app/codeTheme.js colours the JavaScript
+ * equivalents: keywords, function and type names, literals, strings and
+ * comments each in their token, operators and punctuation quiet, and names in
+ * the text colour.
  */
 const COLORS = {
-  comment: "#6A737D",
-  string: "#032F62",
-  "string.escape": "#005CC5",
-  number: "#005CC5",
-  "constant.builtin": "#005CC5",
-  "variable.builtin": "#005CC5",
-  keyword: "#D73A49",
-  operator: "#D73A49",
-  attribute: "#6F42C1",
-  function: "#6F42C1",
-  type: "#6F42C1",
-  module: "#6F42C1",
+  comment: "var(--syn-comment)",
+  string: "var(--syn-string)",
+  "string.escape": "var(--syn-number)",
+  number: "var(--syn-number)",
+  "constant.builtin": "var(--syn-number)",
+  "variable.builtin": "var(--syn-keyword)",
+  keyword: "var(--syn-keyword)",
+  operator: "var(--syn-operator)",
+  attribute: "var(--syn-function)",
+  function: "var(--syn-function)",
+  type: "var(--syn-function)",
+  module: "var(--syn-function)",
   variable: TEXT,
-  punctuation: TEXT,
+  punctuation: "var(--syn-operator)",
 };
 
 export const captureColor = (name) => captureValue(COLORS, name);
@@ -65,7 +66,7 @@ export const captureColor = (name) => captureValue(COLORS, name);
 const escapeHtml = (text) => text.replace(/&/g, "&#x26;").replace(/</g, "&#x3C;").replace(/>/g, "&#x3E;");
 
 /**
- * MLscript code as the HTML Shiki makes with the github-light theme: a `<pre>`
+ * MLscript code as the HTML Shiki makes with app/codeTheme.js: a `<pre>`
  * with a `<span class="line">` per line, each made of coloured `<span>`s.
  * @param {import("web-tree-sitter").Parser} parser
  * @param {import("web-tree-sitter").Query} query
@@ -93,7 +94,7 @@ export function highlightHtml(parser, query, code) {
     lines.push(`<span class="line">${html}</span>`);
     start += text.length + 1;
   }
-  return `<pre class="shiki github-light" style="background-color:#fff;color:#24292e" tabindex="0"><code>${lines.join("\n")}</code></pre>`;
+  return `<pre class="shiki recho" style="background-color:var(--clear);color:var(--ink)" tabindex="0"><code>${lines.join("\n")}</code></pre>`;
 }
 
 /**

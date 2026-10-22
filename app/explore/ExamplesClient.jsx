@@ -2,15 +2,16 @@
 
 import {useEffect, useMemo, useState} from "react";
 import {useSearchParams} from "next/navigation";
-import {Meta} from "../Meta.js";
-import {cn} from "../cn.js";
-import {BASE_PATH, COMMUNITY_LABEL} from "../shared.js";
+import {Card} from "../../components/Card.jsx";
+import {LabelFilters} from "./LabelFilters.jsx";
+import {Thumbnail} from "../Thumbnail.jsx";
+import {COMMUNITY_LABEL, languageOf, languageName} from "../shared.js";
 import {getPublicNotebooks} from "../api.js";
 import {NotebookCard} from "./NotebookCard.jsx";
 
-const cardFrame = cn("w-full pt-[62.5%] relative border border-gray-200 rounded-md overflow-hidden");
+const LANGUAGE_LABELS = {MLscript: "mlscript", Wenyan: "wenyan"};
 
-export function ExamplesClient({examples}) {
+export function ExamplesClient({examples, allLabels}) {
   const searchParams = useSearchParams();
   const [notebooks, setNotebooks] = useState([]);
   const [notebooksError, setNotebooksError] = useState(false);
@@ -26,63 +27,63 @@ export function ExamplesClient({examples}) {
       });
     return () => (cancelled = true);
   }, []);
+  // Older links may carry several labels; a notebook with any of them shows.
+  // MLscript and Wenyan used to be labels; those links now pick the language.
+  const rawLabels = searchParams.getAll("labels");
+  const labels = rawLabels.filter((label) => label !== "All" && !LANGUAGE_LABELS[label]);
+  const label = labels.length === 0 ? "All" : labels.length === 1 ? labels[0] : null;
+  const language = searchParams.get("lang") ?? rawLabels.map((label) => LANGUAGE_LABELS[label]).find(Boolean) ?? "all";
 
-  // Get selected labels from URL searchParams
-  const selectedLabels = useMemo(() => {
-    const labels = searchParams.getAll("labels");
-    return labels.length > 0 ? labels : [];
-  }, [searchParams]);
-
-  // Filter examples based on selected labels. Public notebooks are labeled Community.
-  const cards = useMemo(() => {
-    const showAll = selectedLabels.length === 0 || selectedLabels.includes("All");
-    const filteredExamples = showAll
-      ? examples
-      : examples.filter((example) => {
-          if (!example.label || !Array.isArray(example.label)) return false;
-          return selectedLabels.some((selectedLabel) => example.label.includes(selectedLabel));
-        });
-    const showNotebooks = showAll || selectedLabels.includes(COMMUNITY_LABEL);
+  // Examples and public notebooks in one list, newest first. Public notebooks
+  // are labeled Community.
+  const shown = useMemo(() => {
+    const ofLanguage = ({runtime}) => language === "all" || languageOf(runtime) === language;
+    const listed = labels.length === 0 || labels.includes(COMMUNITY_LABEL);
     return [
-      ...filteredExamples.map((example) => ({key: `example-${example.slug}`, created: example.created, example})),
-      ...(showNotebooks ? notebooks : []).map((notebook) => ({
-        key: `notebook-${notebook.id}`,
-        created: notebook.listed,
-        notebook,
-      })),
-    ].sort((a, b) => new Date(b.created) - new Date(a.created));
-  }, [examples, notebooks, selectedLabels]);
+      ...examples
+        .filter(
+          (example) =>
+            labels.length === 0 || (Array.isArray(example.label) && labels.some((l) => example.label.includes(l))),
+        )
+        .filter(ofLanguage)
+        .map((example) => ({key: `example-${example.slug}`, date: example.created, example})),
+      ...(listed ? notebooks : [])
+        .filter(ofLanguage)
+        .map((notebook) => ({key: `notebook-${notebook.id}`, date: notebook.listed, notebook})),
+    ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examples, notebooks, labels.join("\n"), language]);
 
   return (
     <>
-      {notebooksError && (
-        <p className={cn("mt-6 text-sm text-gray-500")}>
-          Community notebooks could not be loaded. Showing examples only.
-        </p>
-      )}
-      <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>
-        {cards.map(({key, example, notebook}) =>
-          notebook ? (
-            <NotebookCard key={key} notebook={notebook} frameClassName={cardFrame} />
-          ) : (
-            <div key={key}>
-              <Meta example={example} />
-              <div className={cardFrame}>
-                <div className={cn("absolute inset-0 px-3")}>
-                  {example.snap ? (
-                    <div
-                      className={cn("w-full h-full bg-cover bg-center")}
-                      style={{backgroundImage: `url(${BASE_PATH}/examples/${example.snap})`}}
-                    />
-                  ) : (
-                    <div dangerouslySetInnerHTML={{__html: example.thumbnail}} className={cn("w-full h-full")} />
-                  )}
-                </div>
-              </div>
-            </div>
-          ),
-        )}
+      <div className="ex-head">
+        <h1 className="page-title">Explore</h1>
+        <span className="status">
+          {shown.length} notebook{shown.length === 1 ? "" : "s"}
+        </span>
+        <LabelFilters allLabels={allLabels} label={label} language={language} />
       </div>
+      {notebooksError && <p className="status">Community notebooks couldn&apos;t be loaded. Showing examples only.</p>}
+      {shown.length === 0 && <p className="status">No notebooks match these filters yet.</p>}
+      {/* The new grid is remounted when a filter changes, so its cards play the reveal. */}
+      <ul key={`${labels.join(",")}:${language}`} className="card-grid reveal">
+        {shown.map(({key, example, notebook}, i) => (
+          <li key={key} style={{"--i": i}}>
+            {notebook ? (
+              <NotebookCard notebook={notebook} aside={language === "all" ? languageName(notebook.runtime) : null} />
+            ) : (
+              <Card
+                href={`/explore/${example.slug}`}
+                title={example.title}
+                subtitle={`${example.author} · ${example.created}`}
+                // With every language shown, each card says which one it is.
+                aside={language === "all" ? languageName(example.runtime) : null}
+                thumbnail={<Thumbnail snap={example.snap} excerpt={example.thumbnail} />}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }

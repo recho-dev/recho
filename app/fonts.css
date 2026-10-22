@@ -1,0 +1,23 @@
+/* Box drawing and block elements come from Geist Mono, which Spline Sans Mono lacks. The face
+   covers just those code points, so everything else falls through to Spline Sans Mono (see
+   --font-mono). Fontsource's Geist Mono subsets have U+2500-259F and the bullet, but none of the
+   geometric shapes (U+25A0-25FF, ★ ☆), which keep falling back to the system font. */
+@font-face {
+  font-family: "Recho Glyphs";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../node_modules/@fontsource-variable/geist-mono/files/geist-mono-symbols2-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range: U+2500-259F;
+}
+
+@font-face {
+  font-family: "Recho Glyphs";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range: U+2022;
+}

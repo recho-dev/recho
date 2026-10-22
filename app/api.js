@@ -1,8 +1,8 @@
 import {generate} from "short-uuid";
 import {collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, writeBatch} from "firebase/firestore";
 import {getFirebase} from "./firebase.js";
-import {predicates, objects} from "friendly-words";
 import {RUNTIMES, languageOf} from "./shared.js";
+import {confirmDialog} from "../components/Dialog.jsx";
 
 const LEGACY_FILE_NAME = "obs-files";
 
@@ -18,11 +18,14 @@ export const UNLISTED = "unlisted";
 // Anyone with the link can view, and it is listed on the Explore page.
 export const PUBLIC = "public";
 
-function generateProjectName(extension = ".js") {
-  const adj = predicates[~~(Math.random() * predicates.length)];
-  const obj = objects[~~(Math.random() * objects.length)];
-  return `${adj}-${obj}${extension}`;
-}
+/** How each visibility is named, and what it means, where it's chosen. */
+export const VISIBILITIES = [
+  {value: PRIVATE, label: "Private", hint: "Only you"},
+  {value: UNLISTED, label: "Unlisted", hint: "Anyone with the link"},
+  {value: PUBLIC, label: "Public", hint: "Listed on Explore"},
+];
+
+export const UNTITLED = "Untitled";
 
 const DEFAULT_CONTENT = `
 /*
@@ -103,21 +106,25 @@ fun odd(n) = if n == 0 then false else even(n - 1)
 echo(even(10), odd(10))
 `;
 
-// A new notebook's file extension and starter code, by language.
+// A new notebook's starter code, by language.
 const STARTERS = {
-  javascript: {extension: ".js", content: DEFAULT_CONTENT},
-  wenyan: {extension: ".wy", content: WENYAN_CONTENT},
-  mlscript: {extension: ".mls", content: MLSCRIPT_CONTENT},
+  javascript: DEFAULT_CONTENT,
+  wenyan: WENYAN_CONTENT,
+  mlscript: MLSCRIPT_CONTENT,
 };
 
+/** The code a new notebook in `runtime` starts with. */
+export function starterContent(runtime = DEFAULT_RUNTIME) {
+  return (STARTERS[languageOf(runtime)] ?? STARTERS.javascript).trimStart();
+}
+
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const {extension, content} = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
   return {
     id: generate(),
-    title: generateProjectName(extension),
+    title: UNTITLED,
     created: null,
     updated: null,
-    content: content.trimStart(),
+    content: starterContent(runtime),
     autoRun: true,
     runtime,
     visibility: PRIVATE,
@@ -257,7 +264,13 @@ export async function getNotebookById(id) {
 }
 
 export async function deleteNotebook(id) {
-  if (!confirm("Are you sure you want to delete this notebook?")) return false;
+  const ok = await confirmDialog({
+    title: "Delete this notebook?",
+    message: "This can't be undone.",
+    confirmLabel: "Delete",
+    danger: true,
+  });
+  if (!ok) return false;
   requireUser();
   await deleteDoc(notebookDoc(id));
   // Also delete a local copy that failed to upload, so it doesn't reappear.

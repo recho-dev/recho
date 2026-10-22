@@ -2,6 +2,7 @@ import {createRequire} from "node:module";
 import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {codeToHtml} from "shiki";
+import {codeTheme} from "../codeTheme.js";
 import {Parser, Language} from "web-tree-sitter";
 import {createHighlighter} from "../../editor/languages/mlscript/highlight.js";
 import {highlightLanguage} from "../shared.js";
@@ -38,8 +39,6 @@ export async function exampleThumbnail({content, runtime, outputStartLine, snap}
   if (snap) return null;
   const lang = highlightLanguage(runtime);
   const html =
-    lang === "mlscript"
-      ? (await mlscriptHighlighter())(content)
-      : await codeToHtml(content, {lang, theme: "github-light"});
+    lang === "mlscript" ? (await mlscriptHighlighter())(content) : await codeToHtml(content, {lang, theme: codeTheme});
   return thumbnailHtml(html, outputStartLine, MAX_THUMBNAIL_LINES);
 }

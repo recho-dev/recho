@@ -1,12 +1,15 @@
 "use client";
 import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
-import {Trash, Globe, Link as LinkIcon} from "lucide-react";
+import {Trash2} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
-import {getNotebooks, deleteNotebook, PUBLIC, UNLISTED} from "../api.js";
+import {getNotebooks, deleteNotebook, VISIBILITIES} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange, highlightLanguage} from "../shared.js";
-import {cn} from "../cn.js";
+import {cn} from "../../components/cn.js";
+import {Button} from "../../components/Button.jsx";
+import {Card} from "../../components/Card.jsx";
+import {toast} from "../../components/Toast.jsx";
 
 export default function Page() {
   const [notebooks, setNotebooks] = useState(null);
@@ -38,90 +41,77 @@ export default function Page() {
       setNotebooks((notebooks) => notebooks.filter((notebook) => notebook.id !== id));
     } catch (error) {
       console.error(error);
-      alert(`Failed to delete notebook: ${error.message}`);
+      toast(`Failed to delete notebook: ${error.message}`, {error: true});
     }
   }
 
-  const buttonClassName = cn("mt-4", "inline-block bg-black text-white rounded-md px-3 py-1 text-sm hover:bg-gray-800");
-
   if (loadError) {
     return (
-      <div className={cn("text-center mt-20")}>
-        <p className={cn("mt-4")}>Failed to load notebooks.</p>
-        <button onClick={() => setReloadKey((key) => key + 1)} className={buttonClassName}>
-          Retry
-        </button>
+      <div className={cn("empty")}>
+        <p>Failed to load notebooks.</p>
+        <Button onClick={() => setReloadKey((key) => key + 1)}>Retry</Button>
       </div>
     );
   }
 
   if (notebooks === null) {
-    return <div className={cn("text-center mt-20")}>Loading...</div>;
+    return (
+      <div className={cn("empty")}>
+        <p className={cn("status")}>Loading…</p>
+      </div>
+    );
   }
 
   if (notebooks.length === 0) {
     return (
-      <div className={cn("text-center mt-20")}>
-        <p className={cn("mt-4")}>{user ? "No notebooks found." : "Log in to see your notebooks."}</p>
+      <div className={cn("empty")}>
+        <p>{user ? "No notebooks found." : "Log in to see your notebooks."}</p>
         {user ? (
-          <Link href="/" className={buttonClassName}>
+          <Button as={Link} variant="primary" href="/">
             New
-          </Link>
+          </Button>
         ) : (
-          <button onClick={ensureUser} className={buttonClassName}>
+          <Button variant="primary" onClick={ensureUser}>
             Log in
-          </button>
+          </Button>
         )}
       </div>
     );
   }
 
   return (
-    <div className={cn("max-w-screen-xl lg:mx-auto mx-4 my-4")}>
-      <div className={cn("grid gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-10")}>
+    <div className={cn("page wide")}>
+      <div className={cn("ex-head")}>
+        <h1 className={cn("page-title")}>Your notebooks</h1>
+        <span className={cn("status")}>
+          {notebooks.length} notebook{notebooks.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <ul className={cn("card-grid")}>
         {notebooks.map((notebook) => (
-          <div key={notebook.id}>
-            <div className={cn("flex items-center justify-between mb-3")}>
-              <div className={cn("flex-1 min-w-0")}>
-                <div className={cn("flex items-center gap-1")}>
-                  <Link
-                    href={`/works/${notebook.id}`}
-                    className={cn("font-semibold hover:underline text-blue-500 block truncate")}
-                  >
-                    <span>{notebook.title}</span>
-                  </Link>
-                  {notebook.visibility === PUBLIC && (
-                    <Globe className={cn("w-3 h-3 text-gray-500 flex-shrink-0")} aria-label="Public" />
-                  )}
-                  {notebook.visibility === UNLISTED && (
-                    <LinkIcon className={cn("w-3 h-3 text-gray-500 flex-shrink-0")} aria-label="Unlisted" />
-                  )}
-                </div>
-                <div className={cn("text-sm text-gray-500")}>
-                  Created {new Date(notebook.created).toLocaleDateString()}
-                </div>
-              </div>
-              {user && (
-                <button
-                  onClick={() => onDelete(notebook.id)}
-                  className={cn("hover:scale-110 transition-transform duration-100 ml-2 flex-shrink-0")}
-                >
-                  <Trash className={cn("w-4 h-4")} />
-                </button>
-              )}
-            </div>
-            <div className={cn("w-full pt-[62.5%] relative border border-gray-200 rounded-md overflow-hidden")}>
-              <div className={cn("absolute inset-0 px-3")}>
+          <li key={notebook.id}>
+            <Card
+              href={`/works/${notebook.id}`}
+              title={notebook.title}
+              subtitle={`${VISIBILITIES.find((v) => v.value === notebook.visibility)?.label ?? "Private"} · Created ${new Date(notebook.created).toLocaleDateString("en-CA")}`}
+              thumbnail={
                 <ThumbnailClient
                   code={notebook.content}
                   lang={highlightLanguage(notebook.runtime)}
                   outputStartLine={findFirstOutputRange(notebook.content).startLine}
                 />
-              </div>
-            </div>
-          </div>
+              }
+              actions={
+                user && (
+                  <Button variant="ghost" size="sm" icon tip="Delete notebook" onClick={() => onDelete(notebook.id)}>
+                    <Trash2 className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
+                  </Button>
+                )
+              }
+            />
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

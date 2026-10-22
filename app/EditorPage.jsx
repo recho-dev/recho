@@ -1,8 +1,10 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Pencil, Lock, Globe, Link} from "lucide-react";
+import {Copy} from "lucide-react";
 import {Editor} from "./Editor.jsx";
+import {TitleSection} from "./TitleSection.jsx";
+import {NotebookTitle} from "./NotebookTitle.jsx";
 import {
   getNotebookById,
   createNotebook,
@@ -11,47 +13,44 @@ import {
   saveNotebookDebounced,
   flushPendingSave,
   hasUnsavedChanges,
-  getNotebooks,
   duplicateNotebook,
   markRunning,
   clearRunning,
   PRIVATE,
-  UNLISTED,
   PUBLIC,
+  VISIBILITIES,
 } from "./api.js";
 import {isDirtyStore, countStore} from "./store.js";
+import {confirmDialog} from "../components/Dialog.jsx";
 import {authStore, ensureUser} from "./auth.js";
-import {cn} from "./cn.js";
-import {SafeLink} from "./SafeLink.jsx";
-import {BASE_PATH, RUNTIMES} from "./shared.js";
+import {cn} from "../components/cn.js";
+import {Button} from "../components/Button.jsx";
+import {Listbox} from "../components/Listbox.jsx";
+import {toast} from "../components/Toast.jsx";
+import {isMac} from "../components/shortcut.js";
+import {BASE_PATH, LANGUAGES, fileNameOf} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
-
-const VISIBILITIES = {
-  [PRIVATE]: {label: "Private", Icon: Lock, description: "Only you can view."},
-  [UNLISTED]: {label: "Unlisted", Icon: Link, description: "Anyone with the link can view."},
-  [PUBLIC]: {label: "Public", Icon: Globe, description: "Anyone can view, and it's listed on Explore."},
-};
 
 // Local and new notebooks have no owner yet, so they belong to whoever is editing.
 function isOwnedBy(notebook, uid) {
   return !notebook?.ownerId || notebook.ownerId === uid;
 }
 
-export function EditorPage({id: initialId}) {
+/**
+ * A saved notebook when `id` is given, otherwise a new, unsaved one. A new
+ * notebook is in `runtime` unless the New menu asks for another language.
+ */
+export function EditorPage({id: initialId, runtime: initialRuntime}) {
   const router = useRouter();
   const [notebook, setNotebook] = useState(UNSET);
-  const [notebookList, setNotebookList] = useState([]);
-  const [showInput, setShowInput] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
-  const [title, setTitle] = useState("");
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const titleRef = useRef(null);
-  const linkCopiedTimer = useRef(null);
+  // Bumped to focus and select the title, for a notebook made from the New menu.
+  const [titleFocus, setTitleFocus] = useState(null);
   const count = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot, countStore.getServerSnapshot);
   const isDirty = useSyncExternalStore(
     isDirtyStore.subscribe,
@@ -88,7 +87,7 @@ export function EditorPage({id: initialId}) {
       isDirtyStore.setDirty(false);
     } catch (error) {
       console.error(error);
-      alert(`Failed to save notebook: ${error.message}`);
+      toast(`Failed to save notebook: ${error.message}`, {error: true});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notebook, isOthers]);
@@ -98,13 +97,16 @@ export function EditorPage({id: initialId}) {
     if (!initialNotebook) return;
     setInitialCode(initialNotebook.content);
     setAutoRun(initialNotebook.autoRun);
-    setTitle(initialNotebook.title);
   }
 
-  // This effect is triggered when the count changes,
-  // which happens when user clicks the "New" nav link.
+  // This effect is triggered when the count changes, which happens when the
+  // user picks a language from the New menu or clicks the wordmark.
   useEffect(() => {
-    if (!isAdded) loadNotebook(createNotebook());
+    if (isAdded) return;
+    const runtime = countStore.runtimeFor(count) ?? initialRuntime;
+    loadNotebook(createNotebook(runtime));
+    // Only a template or the New menu asks for a runtime; the wordmark also starts a notebook.
+    if (runtime) setTitleFocus(count);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
@@ -135,23 +137,12 @@ export function EditorPage({id: initialId}) {
   // Save pending changes when leaving the page.
   useEffect(() => () => flushPendingSave(), []);
 
-  useEffect(() => () => clearTimeout(linkCopiedTimer.current), []);
-
   useEffect(() => {
     // Use setTimeout to avoid changing to default title.
     setTimeout(() => {
       document.title = `${isAdded ? notebook.title : "New"} | Recho`;
     }, 100);
   }, [notebook, isAdded]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    let cancelled = false;
-    getNotebooks()
-      .then((notebooks) => !cancelled && setNotebookList(notebooks.slice(0, 4)))
-      .catch((error) => console.error(error));
-    return () => (cancelled = true);
-  }, [isAdded, authLoading, uid]);
 
   useEffect(() => {
     const onBeforeUnload = (e) => {
@@ -164,36 +155,44 @@ export function EditorPage({id: initialId}) {
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.metaKey && e.key === "s") onSave();
+      if ((isMac() ? e.metaKey : e.ctrlKey) && e.key === "s") onSave();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onSave]);
 
-  useEffect(() => {
-    if (showInput) titleRef.current.focus();
-  }, [showInput]);
-
   if (loadError) {
     return (
-      <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>
-        Failed to load notebook.{" "}
-        <button className={cn("text-blue-500 hover:underline")} onClick={() => setReloadKey((key) => key + 1)}>
-          Retry
-        </button>
+      <div className={cn("page editor-page")}>
+        <div className={cn("empty")}>
+          <p>Failed to load notebook.</p>
+          <Button onClick={() => setReloadKey((key) => key + 1)}>Retry</Button>
+        </div>
       </div>
     );
   }
 
-  if (notebook === UNSET) return <div className={cn("max-w-screen-lg mx-auto my-10 editor-page")}>Loading...</div>;
+  if (notebook === UNSET)
+    return (
+      <div className={cn("page editor-page")}>
+        <p className={cn("status")}>Loading…</p>
+      </div>
+    );
 
   if (!notebook) return notFound();
 
-  const visibility = VISIBILITIES[notebook.visibility] ?? VISIBILITIES[PRIVATE];
-
   // A new notebook starts over in the chosen language.
-  function onChangeRuntime(runtime) {
-    if (isDirtyStore.getSnapshot() && !confirm("Discard your changes and start a new notebook in this language?"))
+  async function onChangeRuntime(runtime) {
+    if (
+      isDirtyStore.getSnapshot() &&
+      !(await confirmDialog({
+        title: "Start a new notebook?",
+        message: "Switching the language starts a new notebook, and your changes will be lost.",
+        confirmLabel: "Discard and switch",
+        cancelLabel: "Keep editing",
+        danger: true,
+      }))
+    )
       return;
     isDirtyStore.setDirty(false);
     loadNotebook(createNotebook(runtime));
@@ -206,31 +205,11 @@ export function EditorPage({id: initialId}) {
     else isDirtyStore.setDirty(true);
   }
 
-  function onRename() {
-    setShowInput(true);
-    setTitle(notebook.title);
-  }
-
-  // Only submit rename when blur with valid title.
-  function onTitleBlur() {
-    setShowInput(false);
-    // The title can't be empty.
-    if (!title) return setTitle(notebook.title);
+  function onRename(title) {
     const newNotebook = {...notebook, title};
     setNotebook(newNotebook);
     if (canSave) saveNotebookDebounced(newNotebook);
     else isDirtyStore.setDirty(true);
-  }
-
-  function onTitleChange(e) {
-    setTitle(e.target.value);
-  }
-
-  function onTitleKeyDown(e) {
-    if (e.key === "Enter") {
-      onTitleBlur();
-      titleRef.current.blur();
-    }
   }
 
   // If long-running code is detected, disable auto run next time
@@ -251,22 +230,19 @@ export function EditorPage({id: initialId}) {
     // Explore lists notebooks by when they were made public.
     if (visibility === PUBLIC) newNotebook.published = new Date().toISOString();
     setNotebook(newNotebook);
-    clearTimeout(linkCopiedTimer.current);
-    setLinkCopied(false);
     try {
       // Save right away so the link works as soon as it's copied.
       await saveNotebook(newNotebook);
     } catch (error) {
       console.error(error);
-      setNotebook((current) => ({...current, visibility: notebook.visibility}));
-      alert(`Failed to change visibility: ${error.message}`);
+      setNotebook((current) => ({...current, visibility: notebook.visibility, published: notebook.published}));
+      toast(`Failed to change visibility: ${error.message}`, {error: true});
       return;
     }
     if (visibility === PRIVATE) return;
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+      toast("Link copied");
     } catch (error) {
       console.error("Failed to copy link", error);
     }
@@ -280,64 +256,67 @@ export function EditorPage({id: initialId}) {
       router.push(`/works/${duplicated.id}`);
     } catch (error) {
       console.error(error);
-      alert(`Failed to duplicate notebook: ${error.message}`);
+      toast(`Failed to duplicate notebook: ${error.message}`, {error: true});
     }
   }
 
+  const languages = LANGUAGES.map(({runtime, label}) => ({value: runtime, label}));
+
+  // Who made the notebook and when. Only the owner's own name is known.
+  const author = !isOthers && user ? (user.displayName ?? user.email) : null;
+  const details = [
+    author,
+    isAdded && notebook.created ? `Created ${new Date(notebook.created).toLocaleDateString("en-CA")}` : "Not saved yet",
+    isOthers && "View only",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div>
-      {!isAdded && notebookList.length > 0 && (
-        <div className={cn("flex h-[72px] bg-gray-100 p-2 w-full border-b border-gray-200")}>
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2 h-full max-w-screen-lg lg:mx-auto mx-4 w-full hidden md:flex",
-            )}
-          >
-            {notebookList.map((notebook) => (
-              <div key={notebook.id} className={cn("flex items-start flex-col gap-1")}>
-                <SafeLink
-                  href={`/works/${notebook.id}`}
-                  className={cn(
-                    "font-semibold hover:underline text-blue-500 whitespace-nowrap line-clamp-1 max-w-[150px] text-ellipsis",
-                  )}
-                >
-                  {notebook.title}
-                </SafeLink>
-                <span
-                  className={cn("text-xs text-gray-500 line-clamp-1 whitespace-nowrap max-w-[150px] text-ellipsis")}
-                >
-                  Created {new Date(notebook.created).toLocaleDateString()}
-                </span>
-              </div>
-            ))}
-            <SafeLink href="/works" className={cn("font-semibold text-blue-500 hover:underline")}>
-              View your notebooks
-            </SafeLink>
-          </div>
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2 h-full max-w-screen-lg lg:mx-auto mx-4 w-full md:hidden",
-            )}
-          >
-            <SafeLink
-              href="/works"
-              className={cn(
-                "font-medium w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-center hover:bg-gray-200",
+      {/* The list of recent notebooks is hidden until its redesign (#254). */}
+      <div className={cn("page editor-page")}>
+        <TitleSection
+          title={
+            isOthers ? (
+              <h1 className={cn("page-title")}>{notebook.title}</h1>
+            ) : (
+              <NotebookTitle value={notebook.title} onChange={onRename} focusKey={titleFocus} />
+            )
+          }
+          details={details}
+          actions={
+            <>
+              {!isAdded && (
+                <Listbox
+                  label="Language"
+                  ghost
+                  align="right"
+                  options={languages}
+                  value={notebook.runtime}
+                  onChange={onChangeRuntime}
+                />
               )}
-            >
-              View your notebooks
-            </SafeLink>
-          </div>
-        </div>
-      )}
-      {!isAdded && notebookList.length === 0 && (
-        <div className={cn("flex items-center justify-center h-[72px] mt-6 mb-10 lg:mb-0")}>
-          <p className={cn("text-3xl text-gray-800 font-light text-center mx-10")}>
-            Explore code and art with instant feedback.
-          </p>
-        </div>
-      )}
-      <div className={cn("max-w-screen-lg lg:mx-auto mx-4 lg:my-10 my-4 editor-page")}>
+              {!isAdded && <Button onClick={onSave}>Create</Button>}
+              {canSave && (
+                <Listbox
+                  label="Visibility"
+                  ghost
+                  align="right"
+                  options={VISIBILITIES}
+                  value={notebook.visibility}
+                  onChange={onChangeVisibility}
+                />
+              )}
+              {isAdded && (
+                <Button onClick={onDuplicate} tip="Duplicate notebook">
+                  <Copy className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span className={cn("lbl")}>Duplicate</span>
+                </Button>
+              )}
+            </>
+          }
+        />
         <Editor
           initialCode={initialCode}
           runtime={notebook.runtime}
@@ -345,73 +324,7 @@ export function EditorPage({id: initialId}) {
           onUserInput={onUserInput}
           onBeforeEachRun={onBeforeEachRun}
           autoRun={autoRun}
-          onDuplicate={isAdded ? onDuplicate : null}
-          toolBarStart={
-            <div className={cn("flex items-center gap-2")}>
-              {!isAdded && (
-                <select
-                  aria-label="Language"
-                  value={notebook.runtime}
-                  onChange={(e) => onChangeRuntime(e.target.value)}
-                  className={cn("border border-gray-300 rounded-md px-2 py-1 text-sm bg-white")}
-                >
-                  <option value={RUNTIMES.javascript}>JavaScript</option>
-                  <option value={RUNTIMES.wenyan}>文言 wenyan</option>
-                  <option value={RUNTIMES.mlscript}>MLscript</option>
-                </select>
-              )}
-              {!isAdded && (
-                <button
-                  onClick={onSave}
-                  className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-                >
-                  Create
-                </button>
-              )}
-              {!showInput && isAdded && !isOthers && (
-                <button onClick={onRename}>
-                  <Pencil className="w-4 h-4" />
-                </button>
-              )}
-              {showInput || !isAdded ? (
-                <input
-                  type="text"
-                  value={title}
-                  onChange={onTitleChange}
-                  onBlur={onTitleBlur}
-                  onKeyDown={onTitleKeyDown}
-                  ref={titleRef}
-                  className={cn("border border-gray-200 rounded-md px-3 py-1 text-sm bg-white")}
-                />
-              ) : (
-                <span className={cn("text-sm py-1 border border-gray-100 rounded-md")}>{notebook.title}</span>
-              )}
-              {canSave && (
-                <label
-                  title={visibility.description}
-                  className={cn(
-                    "inline-flex items-center gap-1 border border-gray-200 rounded-md px-2 py-1 text-xs hover:bg-gray-100",
-                  )}
-                >
-                  <visibility.Icon className="w-3 h-3" />
-                  <select
-                    aria-label="Visibility"
-                    value={notebook.visibility}
-                    onChange={(e) => onChangeVisibility(e.target.value)}
-                    className={cn("bg-transparent outline-none cursor-pointer")}
-                  >
-                    {Object.entries(VISIBILITIES).map(([value, {label}]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  {linkCopied && <span className={cn("text-gray-500")}>Link copied</span>}
-                </label>
-              )}
-              {isAdded && isOthers && <span className={cn("text-xs text-gray-500")}>View only</span>}
-            </div>
-          }
+          fileName={fileNameOf(notebook.title, notebook.runtime)}
         />
       </div>
     </div>

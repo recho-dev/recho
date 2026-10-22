@@ -17,7 +17,7 @@ import {
   UndoDotIcon,
   type LucideIcon,
 } from "lucide-react";
-import {cn} from "../../app/cn.js";
+import {cn} from "../../components/cn.js";
 
 export function UserEvent({userEvent}: {userEvent: string}) {
   let Icon: LucideIcon;

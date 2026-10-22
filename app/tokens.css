@@ -1,0 +1,334 @@
+/*
+ * Recho design tokens.
+ *
+ * A few primitives drive everything else. Change a primitive and the derived
+ * tokens follow, because every derived value is a calc() or oklch() of them.
+ * Light values sit on bare :root. Dark mode only swaps lightness steps and
+ * alpha levels, so the formulas are written once.
+ */
+
+:root {
+  /* ---- Primitives ------------------------------------------------------ */
+  --gray-hue: 70; /* hue of the neutrals, 70 = slightly warm */
+  --gray-chroma: 0.006; /* warmth: 0 is pure grey */
+  --accent-hue: 250; /* muted steel blue */
+  --accent-chroma: 0.07;
+  --radius-base: 8px;
+  --space-unit: 4px;
+  --shadow-opacity: 1; /* multiplier on shadow alpha */
+  --shadow-blur: 1; /* multiplier on shadow offset and blur */
+  --shadow-hue: 50; /* shadows take a warm brown, not the grey hue */
+  --shadow-chroma: 0.045;
+  --fs-ui: 14px;
+  --fs-code: 13.5px;
+  --fw-label: 500;
+  --fw-heading: 600;
+  --line-height: 1.55;
+  --out-emphasis: 0; /* output rows: 0 recede behind the code, 1 full ink */
+  --motion-speed: 1; /* divides every duration: 2 is twice as fast */
+  --motion-reduce: 0; /* 1 = reduced motion: no travel or scale, fades only */
+
+  /* ---- Lightness steps (light theme) ----------------------------------- */
+  --gray-l-0: 1;
+  --gray-l-1: 0.985;
+  --gray-l-2: 0.968;
+  --gray-l-3: 0.952;
+  --gray-l-4: 0.932;
+  --gray-l-5: 0.912;
+  --gray-l-6: 0.885;
+  --gray-l-7: 0.82;
+  --gray-l-8: 0.72;
+  --gray-l-9: 0.62;
+  --gray-l-10: 0.53;
+  --gray-l-11: 0.45;
+  --gray-l-12: 0.24;
+  --accent-l: 0.48;
+  --accent-l-hover: 0.43;
+  --accent-l-pressed: 0.39;
+  --accent-l-text: 0.46;
+  --focus-l: 0.58;
+  --selection-l: 0.9;
+  --semantic-l: 0.5;
+  --semantic-marker-l: 0.6;
+  --tint-l: 0.97;
+  --syntax-l: 0.48;
+  --hairline-alpha: 0.1;
+  --hairline-strong-alpha: 0.17;
+  --fill-alpha: 0.05;
+  --shadow-l: 0.36;
+  --shadow-near-alpha: 0.08;
+  --shadow-far-alpha: 0.11;
+  --scrim-alpha: 0.18;
+
+  /* ---- Grey scale ------------------------------------------------------ */
+  /* 0 raised surface, 1 page, 2 sunken, 3-6 fills, 7-8 borders and markers,
+     9-11 text from quiet to secondary, 12 ink. */
+  --gray-0: oklch(var(--gray-l-0) calc(var(--gray-chroma) * 0.5) var(--gray-hue));
+  --gray-1: oklch(var(--gray-l-1) var(--gray-chroma) var(--gray-hue));
+  --gray-2: oklch(var(--gray-l-2) var(--gray-chroma) var(--gray-hue));
+  --gray-3: oklch(var(--gray-l-3) var(--gray-chroma) var(--gray-hue));
+  --gray-4: oklch(var(--gray-l-4) var(--gray-chroma) var(--gray-hue));
+  --gray-5: oklch(var(--gray-l-5) var(--gray-chroma) var(--gray-hue));
+  --gray-6: oklch(var(--gray-l-6) var(--gray-chroma) var(--gray-hue));
+  --gray-7: oklch(var(--gray-l-7) var(--gray-chroma) var(--gray-hue));
+  --gray-8: oklch(var(--gray-l-8) var(--gray-chroma) var(--gray-hue));
+  --gray-9: oklch(var(--gray-l-9) var(--gray-chroma) var(--gray-hue));
+  --gray-10: oklch(var(--gray-l-10) var(--gray-chroma) var(--gray-hue));
+  --gray-11: oklch(var(--gray-l-11) var(--gray-chroma) var(--gray-hue));
+  --gray-12: oklch(var(--gray-l-12) var(--gray-chroma) var(--gray-hue));
+
+  /* Translucent neutrals: hairlines and hover fills work on any surface. */
+  --hairline: oklch(var(--gray-l-12) var(--gray-chroma) var(--gray-hue) / var(--hairline-alpha));
+  --hairline-strong: oklch(var(--gray-l-12) var(--gray-chroma) var(--gray-hue) / var(--hairline-strong-alpha));
+  --fill-hover: oklch(var(--gray-l-12) var(--gray-chroma) var(--gray-hue) / var(--fill-alpha));
+  --fill-pressed: oklch(var(--gray-l-12) var(--gray-chroma) var(--gray-hue) / calc(var(--fill-alpha) * 1.8));
+  --clear: oklch(var(--gray-l-0) 0 0 / 0);
+
+  /* ---- Roles ----------------------------------------------------------- */
+  --bg: var(--gray-1);
+  --surface: var(--gray-0);
+  --sunken: var(--gray-2);
+  --line: var(--hairline);
+  --border: var(--hairline-strong);
+  --border-strong: var(--gray-7);
+  --ink: var(--gray-12);
+  --ink-2: var(--gray-11);
+  --ink-3: var(--gray-10); /* quiet text and the //➜ prefix, at least 4.5:1 */
+  --ink-4: var(--gray-9); /* line numbers */
+  --marker: var(--gray-8); /* output marker at full emphasis */
+  --active-line: var(--fill-hover); /* translucent, so a selection behind it still shows */
+  --scrollbar-thumb: var(--gray-7); /* custom scrollbars, never the OS default */
+  --scrollbar-thumb-hover: var(--gray-8);
+  --scrollbar-size: 10px;
+
+  /* ---- Output rows: quieter than the code they belong to ---------------- */
+  /* --out-emphasis blends each one from its quiet level to the next step up. */
+  --out-prefix: color-mix(
+    in oklch,
+    var(--ink-4),
+    var(--ink-3) calc(var(--out-emphasis) * 100%)
+  ); /* //➜, line-number level */
+  --out-value: color-mix(
+    in oklch,
+    var(--ink-3),
+    var(--ink) calc(var(--out-emphasis) * 100%)
+  ); /* output text, at least 4.5:1 */
+  --out-marker: color-mix(in oklch, var(--gray-7), var(--marker) calc(var(--out-emphasis) * 100%)); /* gutter bar */
+  --out-marker-width: 2px;
+  --out-marker-inset: 1.5px; /* how far a marker's ends stop short of their line's edge */
+  --out-success-marker: color-mix(in oklab, var(--success-marker), var(--out-marker) 50%); /* green, half way to grey */
+
+  /* ---- Accent: interaction only ---------------------------------------- */
+  --accent: oklch(var(--accent-l) var(--accent-chroma) var(--accent-hue));
+  --accent-hover: oklch(var(--accent-l-hover) var(--accent-chroma) var(--accent-hue));
+  --accent-pressed: oklch(var(--accent-l-pressed) var(--accent-chroma) var(--accent-hue));
+  --accent-text: oklch(var(--accent-l-text) var(--accent-chroma) var(--accent-hue));
+  --on-accent: oklch(1 0 0);
+  --on-accent-quiet: oklch(1 0 0 / 0.72);
+  --focus: oklch(var(--focus-l) calc(var(--accent-chroma) * 1.3) var(--accent-hue));
+  --selection: oklch(var(--selection-l) calc(var(--accent-chroma) * 0.5) var(--accent-hue));
+
+  /* ---- Semantic -------------------------------------------------------- */
+  --error: oklch(var(--semantic-l) 0.15 27);
+  --error-marker: oklch(var(--semantic-marker-l) 0.15 27);
+  --error-tint: oklch(var(--tint-l) 0.015 27);
+  --warning: oklch(var(--semantic-l) 0.1 75);
+  --warning-marker: oklch(var(--semantic-marker-l) 0.12 75);
+  --warning-tint: oklch(var(--tint-l) 0.02 75);
+  --success: oklch(var(--semantic-l) 0.09 150);
+  --success-marker: oklch(var(--semantic-marker-l) 0.09 150);
+  --success-tint: oklch(var(--tint-l) 0.015 150);
+
+  /* ---- Syntax (same lightness, separated by hue) ----------------------- */
+  --syn-keyword: oklch(var(--syntax-l) 0.1 345);
+  --syn-string: oklch(var(--syntax-l) 0.08 155);
+  --syn-number: oklch(var(--syntax-l) 0.09 70);
+  --syn-function: oklch(var(--syntax-l) 0.08 250);
+  --syn-property: var(--ink-2);
+  --syn-operator: var(--ink-3);
+  --syn-comment: var(--ink-3);
+  --syn-tag: var(--syn-number);
+
+  /* ---- Space ----------------------------------------------------------- */
+  --space-1: var(--space-unit); /* 4 */
+  --space-2: calc(var(--space-unit) * 2); /* 8 */
+  --space-3: calc(var(--space-unit) * 3); /* 12 */
+  --space-4: calc(var(--space-unit) * 4); /* 16 */
+  --space-5: calc(var(--space-unit) * 6); /* 24 */
+  --space-6: calc(var(--space-unit) * 8); /* 32 */
+  --space-7: calc(var(--space-unit) * 12); /* 48 */
+  --control-h: calc(var(--space-unit) * 7); /* 28: buttons, inputs */
+  --control-h-sm: calc(var(--space-unit) * 6); /* 24: segments, menu rows */
+
+  /* ---- Page widths ----------------------------------------------------- */
+  --page-max: 1040px; /* notebook: a focused reading measure */
+  --page-wide: min(1600px, 100%); /* docs and examples: grow on wide screens */
+  --sidebar-w: 240px; /* docs navigation */
+  --card-min: 260px; /* example cards: more columns as the page widens */
+
+  /* ---- Radius ---------------------------------------------------------- */
+  --radius-sm: calc(var(--radius-base) * 0.75); /* 6: segments, kbd, menu rows */
+  --radius-md: var(--radius-base); /* 8: buttons, inputs */
+  --radius-lg: calc(var(--radius-base) * 1.5); /* 12: cards, editor, popovers */
+  --radius-xl: calc(var(--radius-base) * 2); /* 16: panels */
+  --radius-full: 999px;
+  /* Concentric: a control inset by --space-1 inside a --radius-lg frame
+     (toolbar in the editor, item in a menu) shares the frame's corner centre. */
+  --radius-nested: max(0px, calc(var(--radius-lg) - var(--space-1) - var(--border-width)));
+
+  /* ---- Borders and focus ----------------------------------------------- */
+  --border-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-ring: var(--focus-width) solid var(--focus);
+
+  /* ---- Shadow: raised things only -------------------------------------- */
+  /* Behind a modal dialog: the page dims in the shadow colour. */
+  --scrim: oklch(var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / var(--scrim-alpha));
+  --shadow-near: oklch(
+    var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / calc(var(--shadow-near-alpha) * var(--shadow-opacity))
+  );
+  --shadow-far: oklch(
+    var(--shadow-l) var(--shadow-chroma) var(--shadow-hue) / calc(var(--shadow-far-alpha) * var(--shadow-opacity))
+  );
+  /* A tight contact layer plus soft, wide layers pulled in by negative
+     spread, so the shadow pools under the surface instead of ringing it. */
+  --shadow-1: 0 1px calc(2px * var(--shadow-blur)) var(--shadow-near); /* resting: selected segment */
+  --shadow-2:
+    0 1px 1px var(--shadow-near),
+    0 calc(3px * var(--shadow-blur)) calc(8px * var(--shadow-blur)) calc(-2px * var(--shadow-blur)) var(--shadow-near),
+    0 calc(14px * var(--shadow-blur)) calc(32px * var(--shadow-blur)) calc(-10px * var(--shadow-blur)) var(--shadow-far); /* editor, card hover */
+  --shadow-3:
+    0 1px 2px var(--shadow-near),
+    0 calc(6px * var(--shadow-blur)) calc(14px * var(--shadow-blur)) calc(-4px * var(--shadow-blur)) var(--shadow-near),
+    0 calc(20px * var(--shadow-blur)) calc(44px * var(--shadow-blur)) calc(-12px * var(--shadow-blur)) var(--shadow-far); /* menus, popovers, toasts */
+
+  /* ---- Type ------------------------------------------------------------ */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Spline Sans Mono for code. It has no box-drawing, block or shape glyphs, so "Recho Glyphs"
+     (Geist Mono, declared in app/fonts.css for just those code points) comes first and the
+     rest of the text falls through to Spline Sans Mono. Both have a 0.6em advance, so ASCII
+     art stays on one grid. */
+  --font-mono:
+    "Recho Glyphs", "Spline Sans Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+    monospace;
+  /* Newsreader for news titles and article text. */
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Charter, "Palatino Linotype", Georgia, serif;
+  --fw-serif: 500;
+  --fs-xs: calc(var(--fs-ui) * 0.857); /* 12: captions, kbd */
+  --fs-sm: calc(var(--fs-ui) * 0.929); /* 13: controls */
+  --fs-base: var(--fs-ui); /* 14: body */
+  --fs-md: calc(var(--fs-ui) * 1.071); /* 15: wordmark, section labels */
+  --fs-lg: calc(var(--fs-ui) * 1.214); /* 17: h2 */
+  --fs-xl: calc(var(--fs-ui) * 1.5); /* 21: page title */
+  --fs-gutter: var(--fs-code); /* line numbers, the same size as the code */
+  --fs-thumb: 9.5px; /* card thumbnails: code excerpt */
+  --fw-body: 400;
+  --lh-code: var(--line-height);
+  --lh-prose: calc(var(--line-height) + 0.05);
+  --lh-ui: calc(var(--line-height) - 0.1);
+  /* ASCII and box-drawing output: one em per row so █ │ ╱ glyphs on adjacent
+     lines touch. Fixed on purpose; it does not follow --line-height. */
+  --lh-art: 1;
+
+  /* ---- Motion ---------------------------------------------------------- */
+  /* After transitions.dev: things enter on a smooth ease-out and leave faster
+     than they came. No bounce, no blur. --motion-reduce turns travel and scale
+     off, so every pattern falls back to a plain fade and moves snap. */
+  --motion-travel: calc(1 - var(--motion-reduce));
+  --duration-instant: calc(50ms / var(--motion-speed)); /* tooltip out */
+  --duration-hover: calc(120ms / var(--motion-speed)); /* colour, fill and border changes */
+  --duration-fast: calc(150ms / var(--motion-speed)); /* exits, tooltip in, tick, text swap */
+  --duration-base: calc(250ms / var(--motion-speed)); /* menu open, toast out, content enter */
+  --duration-slow: calc(350ms / var(--motion-speed)); /* panel and toast in, value settle */
+  --duration-move: calc(250ms / var(--motion-speed) * var(--motion-travel)); /* pill and thumb travel, 0 when reduced */
+  --delay-tooltip: 400ms; /* hover time before a tooltip shows */
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1); /* arriving: fast start, long soft landing */
+  --ease-exit: ease-out; /* leaving */
+  --ease-move: cubic-bezier(0.22, 1, 0.36, 1); /* moving between two places on screen */
+  --ease-swap: ease-in-out; /* fading in place */
+  --motion-distance-sm: calc(4px * var(--motion-travel)); /* text swap, content enter, disclosure */
+  --motion-distance-md: calc(8px * var(--motion-travel)); /* toast rise */
+  --motion-scale-in: calc(1 - 0.03 * var(--motion-travel)); /* menu and toast start */
+  --motion-scale-out: calc(1 - 0.01 * var(--motion-travel)); /* menu end */
+  --motion-scale-tip: calc(1 - 0.02 * var(--motion-travel)); /* tooltip start */
+  color-scheme: light;
+}
+
+/* Dark: only lightness steps and alpha levels change. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --gray-l-0: 0.235;
+    --gray-l-1: 0.2;
+    --gray-l-2: 0.255;
+    --gray-l-3: 0.28;
+    --gray-l-4: 0.305;
+    --gray-l-5: 0.33;
+    --gray-l-6: 0.36;
+    --gray-l-7: 0.42;
+    --gray-l-8: 0.5;
+    --gray-l-9: 0.6;
+    --gray-l-10: 0.7;
+    --gray-l-11: 0.81;
+    --gray-l-12: 0.94;
+    --accent-l: 0.5;
+    --accent-l-hover: 0.55;
+    --accent-l-pressed: 0.46;
+    --accent-l-text: 0.78;
+    --focus-l: 0.72;
+    --selection-l: 0.36;
+    --semantic-l: 0.77;
+    --semantic-marker-l: 0.65;
+    --tint-l: 0.27;
+    --syntax-l: 0.8;
+    --hairline-alpha: 0.12;
+    --hairline-strong-alpha: 0.2;
+    --fill-alpha: 0.06;
+    --shadow-l: 0.08;
+    --shadow-near-alpha: 0.3;
+    --shadow-far-alpha: 0.45;
+    --scrim-alpha: 0.5;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --gray-l-0: 0.235;
+  --gray-l-1: 0.2;
+  --gray-l-2: 0.255;
+  --gray-l-3: 0.28;
+  --gray-l-4: 0.305;
+  --gray-l-5: 0.33;
+  --gray-l-6: 0.36;
+  --gray-l-7: 0.42;
+  --gray-l-8: 0.5;
+  --gray-l-9: 0.6;
+  --gray-l-10: 0.7;
+  --gray-l-11: 0.81;
+  --gray-l-12: 0.94;
+  --accent-l: 0.5;
+  --accent-l-hover: 0.55;
+  --accent-l-pressed: 0.46;
+  --accent-l-text: 0.78;
+  --focus-l: 0.72;
+  --selection-l: 0.36;
+  --semantic-l: 0.77;
+  --semantic-marker-l: 0.65;
+  --tint-l: 0.27;
+  --syntax-l: 0.8;
+  --hairline-alpha: 0.12;
+  --hairline-strong-alpha: 0.2;
+  --fill-alpha: 0.06;
+  --shadow-l: 0.08;
+  --shadow-near-alpha: 0.3;
+  --shadow-far-alpha: 0.45;
+  --scrim-alpha: 0.5;
+  color-scheme: dark;
+}
+
+/* Reduced motion: travel and scale go, fades stay. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-reduce: 1;
+  }
+}

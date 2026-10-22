@@ -27,29 +27,12 @@ class ButtonWidget extends WidgetType {
     button.textContent = this.#label;
     button.dataset.buttonId = this.#id;
 
-    // Styling to make it look nice
-    button.style.marginLeft = "4px";
-    button.style.marginRight = "4px";
-    button.style.padding = "2px 8px";
-    button.style.fontSize = "12px";
-    button.style.border = "1px solid #ccc";
-    button.style.borderRadius = "4px";
-    button.style.backgroundColor = "#f6f8fa";
-    button.style.cursor = "pointer";
-    button.style.verticalAlign = "middle";
+    // Styled by .cm-button-widget in ../index.css.
 
     // Prevent editor from handling mouse events on the button
     button.onmousedown = (e) => {
       e.preventDefault();
       e.stopPropagation();
-    };
-
-    // Hover effect
-    button.onmouseenter = () => {
-      button.style.backgroundColor = "#e1e4e8";
-    };
-    button.onmouseleave = () => {
-      button.style.backgroundColor = "#f6f8fa";
     };
 
     return button;

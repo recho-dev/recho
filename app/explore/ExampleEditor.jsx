@@ -1,9 +1,13 @@
 "use client";
 import {useRouter} from "next/navigation";
+import {Copy} from "lucide-react";
 import {Editor} from "../Editor.jsx";
-import {cn} from "../cn.js";
+import {Meta} from "../Meta.js";
+import {Button} from "../../components/Button.jsx";
+import {toast} from "../../components/Toast.jsx";
 import {duplicateNotebook, addNotebook} from "../api.js";
 import {ensureUser} from "../auth.js";
+import {extensionOf} from "../shared.js";
 
 export function ExampleEditor({example, initialCode}) {
   const router = useRouter();
@@ -22,30 +26,27 @@ export function ExampleEditor({example, initialCode}) {
       router.push(`/works/${duplicated.id}`);
     } catch (error) {
       console.error(error);
-      alert(`Failed to duplicate notebook: ${error.message}`);
+      toast(`Failed to duplicate notebook: ${error.message}`, {error: true});
     }
   }
 
   return (
-    <Editor
-      initialCode={initialCode}
-      runtime={example.runtime}
-      key={example.title}
-      onDuplicate={onDuplicate}
-      toolBarStart={
-        example.pull_request && (
-          <div className={cn("flex items-center")} key={example.slug}>
-            <a
-              href={`https://github.com/recho-dev/notebook/pull/${example.pull_request}`}
-              target="_blank"
-              rel="noreferrer"
-              className={cn("bg-green-700 text-white rounded-md px-3 py-1 text-sm hover:bg-green-800")}
-            >
-              Comment
-            </a>
-          </div>
-        )
-      }
-    />
+    <>
+      <Meta
+        example={example}
+        actions={
+          <Button onClick={onDuplicate} tip="Duplicate notebook">
+            <Copy className="ic" size={14} strokeWidth={1.75} aria-hidden="true" />
+            <span className="lbl">Duplicate</span>
+          </Button>
+        }
+      />
+      <Editor
+        initialCode={initialCode}
+        runtime={example.runtime}
+        key={example.title}
+        fileName={example.slug + extensionOf(example.runtime)}
+      />
+    </>
   );
 }
