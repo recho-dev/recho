@@ -253,6 +253,36 @@
     }
   }
 
+  /* A cell's play button, in the gutter: quiet until hovered or focused. */
+  .cm-run-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--ink-3);
+    opacity: 0.45;
+    cursor: pointer;
+    transition:
+      opacity var(--duration-hover),
+      color var(--duration-hover);
+
+    &:hover,
+    &:focus-visible {
+      opacity: 1;
+      color: var(--ink);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-ring);
+      outline-offset: -2px;
+    }
+  }
+
   /* One continuous marker per output run, left of the code. Each row's
      segment overlaps its neighbours by 1px, so no seam shows at fractional
      line heights or any zoom. Only the run's ends are inset and rounded. */

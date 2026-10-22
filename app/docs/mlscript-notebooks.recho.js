@@ -50,5 +50,5 @@
  *
  *   echo(Option.Some(1))
  *
- * See the MLscript examples on https://recho.dev/examples for more.
+ * See the MLscript examples on https://recho.dev/explore for more.
  */

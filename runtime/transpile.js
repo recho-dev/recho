@@ -80,9 +80,14 @@ function rewriteArrowFunction(input) {
     },
   });
   for (const node of arrowExpressions) {
-    const arrayIndex = input.slice(node.start, node.end).indexOf("=>");
-    output.insertLeft(node.start + arrayIndex + 2, "{return ");
-    output.insertLeft(node.end, ";}");
+    // The arrow comes after the last parameter, which may hold arrows of its
+    // own, e.g. `(f = () => 1) => f()`.
+    const params = node.params.length ? node.params[node.params.length - 1].end : node.start;
+    const arrow = input.indexOf("=>", params);
+    // The body is wrapped in parentheses: it may start on the next line, where
+    // a bare `return` would end the statement and return undefined.
+    output.insertLeft(arrow + 2, "{return (");
+    output.insertLeft(node.end, ");}");
   }
   return String(output);
 }

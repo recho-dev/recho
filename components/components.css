@@ -935,7 +935,7 @@
       padding-right: var(--space-5);
     }
   }
-  /* Docs and Examples are browsing pages: they use the wide measure and grow with the screen. */
+  /* Docs and Explore are browsing pages: they use the wide measure and grow with the screen. */
   .page.wide {
     max-width: var(--page-wide);
   }
@@ -1333,16 +1333,6 @@
     background: var(--fill-hover);
     box-shadow: 0 0 0 var(--border-width) var(--line);
   }
-  .vis-switch {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 0 var(--space-2);
-    color: var(--ink-2);
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-label);
-    cursor: pointer;
-  }
 
   /* ---------- Notebook page ---------- */
   .recent {
@@ -1456,7 +1446,7 @@
     }
   }
 
-  /* ---------- Examples and cards ---------- */
+  /* ---------- Explore and cards ---------- */
   .ex-head {
     display: flex;
     flex-wrap: wrap;

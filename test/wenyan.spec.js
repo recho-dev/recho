@@ -1,4 +1,4 @@
-import {it, expect, describe, afterEach, beforeAll} from "vitest";
+import {it, expect, describe, afterEach, beforeAll, beforeEach, vi} from "vitest";
 import {EditorState} from "@codemirror/state";
 import {createRuntime} from "../runtime/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
@@ -33,6 +33,15 @@ function start(code) {
     },
   };
 }
+
+// Tests here break notebooks on purpose, and the runtime logs every error it
+// shows. Keep those logs out of the test output.
+beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("wenyan", () => {
   let notebook;

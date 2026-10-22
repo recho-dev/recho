@@ -56,6 +56,12 @@ export function Editor({
     setNeedRerun(true);
   };
 
+  const onRunCellRef = useRef(null);
+  onRunCellRef.current = () => {
+    onBeforeEachRun();
+    setNeedRerun(false);
+  };
+
   useEffect(() => {
     // Languages other than JavaScript load their compiler and editor support
     // on demand, so creating the editor waits for them.
@@ -81,6 +87,8 @@ export function Editor({
         editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, language, languageSupport});
         editorRef.current.on("userInput", (code) => onInputRef.current(code));
         editorRef.current.on("status", ({compiling}) => !cancelled && setCompiling(compiling));
+        // A block's play button runs the code too.
+        editorRef.current.on("run", () => onRunCellRef.current());
         if (autoRun) onRun();
       },
       (error) => {

@@ -76,6 +76,18 @@ export function trimChange(oldText, change) {
   return {from: from + p, to: to - s, insert: insert.slice(p, insert.length - s)};
 }
 
+// Where `pos` moves to with `changes` (specs of the same document, as
+// dispatched), or null when they replace it. An insertion at `pos` goes
+// before it, as output goes above its cell. Exported for tests.
+export function mapPos(changes, pos) {
+  let delta = 0;
+  for (const {from, to = from, insert = ""} of changes) {
+    if (to <= pos) delta += insert.length - (to - from);
+    else if (from < pos) return null;
+  }
+  return pos + delta;
+}
+
 // How long a language's `nodes` may take before the editor says it's compiling.
 const COMPILING_DELAY = 1000;
 
@@ -124,6 +136,10 @@ export function createRuntime(initialCode, options = {}) {
   // exists (a missing input rejects at once); the new mutator then counts it
   // as run, so later writers and readers don't wait on it forever.
   const writers = new Map();
+
+  // Positions of cells to run again once the nodes match the code (see
+  // runCells).
+  let runAt = [];
 
   const trackInputs = (fn, inputs) => {
     const reads = new Set(inputs);
@@ -247,9 +263,13 @@ export function createRuntime(initialCode, options = {}) {
 
   function setIsRunning(value) {
     isRunning = value;
+    // Stopped, e.g. by an edit, which runAt can't follow.
+    if (!value) runAt = [];
   }
 
   function dispatch(changes, effects = []) {
+    // Cells to run again move with the output written above them.
+    if (runAt.length) runAt = runAt.map((pos) => mapPos(changes, pos)).filter((pos) => pos !== null);
     dispatcher.call("changes", null, {changes, effects});
   }
 
@@ -325,6 +345,8 @@ export function createRuntime(initialCode, options = {}) {
   }
 
   function splitError(code, error) {
+    // The code doesn't split, so there are no cells to run again.
+    runAt = [];
     console.error(error);
     // Display the syntax error at the appropriate location.
     const from = language.errorOffset(code, error);
@@ -494,7 +516,10 @@ export function createRuntime(initialCode, options = {}) {
     if (disposed) return;
     if (code === prevCode) {
       // The current nodes are for an earlier code until the split ends.
-      if (!splitting) refresh(code);
+      if (!splitting) {
+        forcePending();
+        refresh(code);
+      }
       return;
     }
 
@@ -608,16 +633,27 @@ export function createRuntime(initialCode, options = {}) {
       // Create echo variable for every node to support internal echo calls.
       // This ensures echo functionality works even when not explicitly used in code,
       // such as `add(1, 2)`, because the evaluated code may call echo internally.
-      let echoVersion = -1;
+      // The echo of the latest run; calls to earlier ones (e.g. from a timer
+      // of a previous run) are stale.
+      let echoGeneration = 0;
+      // How many times the cell has been run on its own (see runCells). The
+      // echo reads it, so running the cell again makes a new echo, as when an
+      // input changes: the old echo is disposed of, and calls to it are stale.
+      const runs = `${vid}:runs`;
+      let runCount = 0;
+      const vr = main.variable().define(runs, [], runCount);
       const vd = new v.constructor(2, v._module);
-      vd.define(["invalidation", ...inputs.filter((i) => i !== "echo" && i !== "invalidation")], (invalidation) => {
+      const echoInputs = ["invalidation", ...inputs.filter((i) => i !== "echo" && i !== "invalidation"), runs];
+      vd.define(echoInputs, (invalidation) => {
         const options = {};
-        const version = v._version; // Capture version on input change.
+        const generation = ++echoGeneration;
+        // The previous run's output stays until this run echoes.
+        let cleared = false;
         const __echo__ = (value, ...args) => {
-          if (version < echoVersion) throw new Error("stale echo");
+          if (generation !== echoGeneration) throw new Error("stale echo");
           else if (state.variables[0] !== v) throw new Error("stale echo");
-          else if (version > echoVersion) clear(state);
-          echoVersion = version;
+          else if (!cleared) clear(state);
+          cleared = true;
           echo(state, {...options}, value, ...args);
           return args.length ? [value, ...args] : value;
         };
@@ -650,7 +686,10 @@ export function createRuntime(initialCode, options = {}) {
       // previous writer.
       const newInputs = [...new Set([...inputs, ...extraInputs]), "echo"];
       const definition = trackInputs(node.definition(newInputs), reads);
-      state.variables.push(v.define(vid, newInputs, definition));
+      // The cell's own variable comes first (see __echo__).
+      state.variables.push(v.define(vid, newInputs, definition), vr);
+      // Runs the cell, and the cells that read it, again.
+      state.force = () => vr.define(runs, [], ++runCount);
 
       // Export cell-level variables for external access. A promoted `let`
       // is exported as its mutator plus the mutator's live value.
@@ -687,10 +726,35 @@ export function createRuntime(initialCode, options = {}) {
       }
     }
 
+    forcePending(enter);
     refresh(code);
   }
 
+  // Runs the cells at `runAt` again, except those that just entered (and so
+  // run anyway) and positions with no cell (e.g. it was deleted).
+  function forcePending(entered = []) {
+    if (!runAt.length) return;
+    const positions = runAt;
+    runAt = [];
+    const nodes = Array.from(nodesByKey.values()).flat(Infinity);
+    for (const node of nodes) {
+      if (entered.includes(node)) continue;
+      if (positions.some((pos) => node.start <= pos && pos < node.end)) node.state.force();
+    }
+  }
+
   function run() {
+    rerun(code);
+  }
+
+  /**
+   * Runs the code, as `run` does, and then the cells whose source contains
+   * one of `positions` again, even if unchanged, along with the cells that
+   * read them.
+   */
+  function runCells(positions) {
+    isRunning = true;
+    runAt = [...positions];
     rerun(code);
   }
 
@@ -698,6 +762,7 @@ export function createRuntime(initialCode, options = {}) {
     setCode,
     setIsRunning,
     run,
+    runCells,
     onChanges,
     onError,
     onStatus,

@@ -12,7 +12,18 @@ const DEFAULT_RUNTIME = RUNTIMES.javascript;
 
 export const PRIVATE = "private";
 
+// Anyone with the link can view.
+export const UNLISTED = "unlisted";
+
+// Anyone with the link can view, and it is listed on the Explore page.
 export const PUBLIC = "public";
+
+/** How each visibility is named, and what it means, where it's chosen. */
+export const VISIBILITIES = [
+  {value: PRIVATE, label: "Private", hint: "Only you"},
+  {value: UNLISTED, label: "Unlisted", hint: "Anyone with the link"},
+  {value: PUBLIC, label: "Public", hint: "Listed on Explore"},
+];
 
 export const UNTITLED = "Untitled";
 
@@ -53,7 +64,7 @@ echo("~".repeat(x1) + "(๑•̀ㅂ•́)و✧");
 
 // Refer to the links (cmd/ctrl + click) to learn more about Recho:
 // - Docs: https://recho.dev/docs
-// - Examples: https://recho.dev/examples
+// - Explore: https://recho.dev/explore
 // - Github: https://github.com/recho-dev/notebook
 `;
 
@@ -154,7 +165,8 @@ function normalizeNotebook(notebook) {
 }
 
 // Cloud notebooks are stored at notebooks/{id} with an owner and a
-// visibility. Public notebooks can be read by anyone with the link.
+// visibility. Unlisted and public notebooks can be read by anyone with the
+// link, and public notebooks are also listed on the Explore page.
 
 function currentUser() {
   return getFirebase().auth.currentUser;
@@ -174,9 +186,17 @@ function ownedNotebooks(user) {
   return query(collection(getFirebase().db, "notebooks"), where("ownerId", "==", user.uid));
 }
 
-function toDoc(user, notebook) {
+// The author shown on the Explore page, refreshed on every save. It's read
+// from the ID token, which is what the security rules check it against.
+async function authorOf(user) {
+  const {claims} = await user.getIdTokenResult();
+  return {name: claims.name ?? null, photoURL: claims.picture ?? null};
+}
+
+function toDoc(user, author, notebook) {
   return {
     ownerId: user.uid,
+    author,
     visibility: notebook.visibility ?? PRIVATE,
     title: notebook.title,
     content: notebook.content,
@@ -184,11 +204,13 @@ function toDoc(user, notebook) {
     runtime: notebook.runtime ?? DEFAULT_RUNTIME,
     created: notebook.created,
     updated: notebook.updated ?? notebook.created,
+    // When the notebook was last made public, to order Explore by newly listed.
+    published: notebook.published ?? null,
   };
 }
 
-function writeNotebook(user, notebook) {
-  return setDoc(notebookDoc(notebook.id), toDoc(user, notebook));
+async function writeNotebook(user, notebook) {
+  return setDoc(notebookDoc(notebook.id), toDoc(user, await authorOf(user), notebook));
 }
 
 export async function getNotebooks() {
@@ -202,6 +224,22 @@ export async function getNotebooks() {
   const ids = new Set(notebooks.map((notebook) => notebook.id));
   const leftovers = localNotebooks.filter((notebook) => !ids.has(notebook.id));
   return [...notebooks, ...leftovers].sort((a, b) => new Date(b.updated) - new Date(a.updated)).map(normalizeNotebook);
+}
+
+// Public notebooks, listed on the Explore page, newest listed first.
+export async function getPublicNotebooks() {
+  const snapshot = await getDocs(query(collection(getFirebase().db, "notebooks"), where("visibility", "==", PUBLIC)));
+  return (
+    snapshot.docs
+      .map((d) => ({...d.data(), id: d.id}))
+      // Skip malformed documents rather than failing the whole page.
+      .filter((notebook) => typeof notebook.content === "string" && typeof notebook.title === "string")
+      .map((notebook) => {
+        const listed = notebook.published ?? notebook.created ?? notebook.updated ?? null;
+        return {...normalizeNotebook(notebook), listed};
+      })
+      .sort((a, b) => new Date(b.listed ?? 0) - new Date(a.listed ?? 0))
+  );
 }
 
 export async function getNotebookById(id) {
@@ -308,7 +346,10 @@ export async function uploadLocalNotebooks(user) {
   const existing = await getDocs(ownedNotebooks(user));
   const ids = new Set(existing.docs.map((d) => d.id));
   const notebooks = localNotebooks.filter((notebook) => !ids.has(notebook.id)).map(normalizeNotebook);
-  await commitInBatches(notebooks, (batch, notebook) => batch.set(notebookDoc(notebook.id), toDoc(user, notebook)));
+  const author = await authorOf(user);
+  await commitInBatches(notebooks, (batch, notebook) =>
+    batch.set(notebookDoc(notebook.id), toDoc(user, author, notebook)),
+  );
   clearNotebooksFromLocalStorage();
   return notebooks.length;
 }

@@ -12,7 +12,7 @@ export const LANGUAGES = [
   {value: "mlscript", label: "MLscript"},
 ];
 
-/** The label filter and language switcher of the examples page, kept in the URL. */
+/** The label filter and language switcher of the Explore page, kept in the URL. */
 export function LabelFilters({allLabels, label, language}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,7 +23,7 @@ export function LabelFilters({allLabels, label, language}) {
     if (value === fallback) params.delete(key);
     else params.set(key, value);
     const query = params.toString();
-    router.push(query ? `/examples?${query}` : "/examples", {scroll: false});
+    router.push(query ? `/explore?${query}` : "/explore", {scroll: false});
   }
 
   return (
