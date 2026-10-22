@@ -142,7 +142,7 @@ export function Editor({
           Run {shortcut && <span className="kbd-in hide-sm">{shortcut}</span>}
         </Button>
         <Button className="tb-run" tip="Stop updating" onClick={onStop}>
-          <Square className="ic" size={10} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
+          <Square className="ic" size={9} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           <span className="lbl">Stop</span>
         </Button>
         {shownStatus && (
