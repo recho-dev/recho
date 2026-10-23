@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Copy} from "lucide-react";
+import {Copy, Trash2} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {TitleSection} from "./TitleSection.jsx";
 import {NotebookTitle} from "./NotebookTitle.jsx";
@@ -14,6 +14,7 @@ import {
   flushPendingSave,
   hasUnsavedChanges,
   duplicateNotebook,
+  deleteNotebook,
   markRunning,
   clearRunning,
   PRIVATE,
@@ -48,6 +49,7 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
   const [id, setId] = useState(initialId);
   const [initialCode, setInitialCode] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   // Bumped to focus and select the title, for a notebook made from the New menu.
   const [titleFocus, setTitleFocus] = useState(null);
@@ -260,6 +262,18 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
     }
   }
 
+  // The header's actions are locked while deleting, so none of them can save the notebook again.
+  async function onDelete() {
+    setDeleting(true);
+    try {
+      if (await deleteNotebook(notebook.id)) return router.push("/works");
+    } catch (error) {
+      console.error(error);
+      toast(`Failed to delete notebook: ${error.message}`, {error: true});
+    }
+    setDeleting(false);
+  }
+
   const languages = LANGUAGES.map(({runtime, label}) => ({value: runtime, label}));
 
   // Who made the notebook and when. Only the owner's own name is known.
@@ -306,12 +320,18 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
                   options={VISIBILITIES}
                   value={notebook.visibility}
                   onChange={onChangeVisibility}
+                  disabled={deleting}
                 />
               )}
               {isAdded && (
-                <Button onClick={onDuplicate} tip="Duplicate notebook">
+                <Button onClick={onDuplicate} tip="Duplicate notebook" disabled={deleting}>
                   <Copy className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
                   <span className={cn("lbl")}>Duplicate</span>
+                </Button>
+              )}
+              {canSave && (
+                <Button variant="ghost" icon onClick={onDelete} tip="Delete notebook" disabled={deleting}>
+                  <Trash2 className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
                 </Button>
               )}
             </>

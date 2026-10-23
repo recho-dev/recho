@@ -97,17 +97,17 @@ it("shows templates, recent notebooks and the community's when logged in", async
   expect(links()).toEqual(
     expect.arrayContaining(["/new?lang=javascript", "/new?lang=wenyan", "/new?lang=mlscript", "/works"]),
   );
-  // Eight of twelve, newest first as getNotebooks returns them.
+  // Ten of twelve (two rows of five), newest first as getNotebooks returns them.
   const recent = [...container.querySelectorAll("[aria-labelledby=home-recent] ul a")].map((a) =>
     a.getAttribute("href"),
   );
-  expect(recent).toEqual(Array.from({length: 8}, (_, i) => `/works/n${i}`));
+  expect(recent).toEqual(Array.from({length: 10}, (_, i) => `/works/n${i}`));
   expect(container.textContent).toContain("12 in all");
   // One row of other people's notebooks; the user's own public one is left out.
   const community = [...container.querySelectorAll("#home-community")].length;
   expect(community).toBe(1);
   expect(links()).not.toContain("/works/nmine");
-  expect(links().filter((href) => /^\/works\/np/.test(href))).toHaveLength(4);
+  expect(links().filter((href) => /^\/works\/np/.test(href))).toHaveLength(5);
 });
 
 it("hides the community row when there is nothing to show", async () => {

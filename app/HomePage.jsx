@@ -13,8 +13,8 @@ import {Card} from "../components/Card.jsx";
 
 // Two rows of recent notebooks at the widest, so the community row stays in
 // reach however many notebooks there are. The rest are on /works.
-const RECENT = 8;
-const COMMUNITY = 4;
+const RECENT = 10;
+const COMMUNITY = 5;
 
 const chevron = {size: 14, strokeWidth: 1.75, className: "ic", "aria-hidden": true};
 

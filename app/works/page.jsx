@@ -1,15 +1,13 @@
 "use client";
 import {useState, useEffect, useSyncExternalStore} from "react";
 import Link from "next/link";
-import {Trash2} from "lucide-react";
 import {ThumbnailClient} from "../ThumbnailClient.js";
-import {getNotebooks, deleteNotebook, VISIBILITIES} from "../api.js";
+import {getNotebooks, VISIBILITIES} from "../api.js";
 import {authStore, ensureUser} from "../auth.js";
 import {findFirstOutputRange, highlightLanguage} from "../shared.js";
 import {cn} from "../../components/cn.js";
 import {Button} from "../../components/Button.jsx";
 import {Card} from "../../components/Card.jsx";
-import {toast} from "../../components/Toast.jsx";
 
 export default function Page() {
   const [notebooks, setNotebooks] = useState(null);
@@ -34,16 +32,6 @@ export default function Page() {
   useEffect(() => {
     document.title = "Notebooks | Recho";
   }, []);
-
-  async function onDelete(id) {
-    try {
-      if (!(await deleteNotebook(id))) return;
-      setNotebooks((notebooks) => notebooks.filter((notebook) => notebook.id !== id));
-    } catch (error) {
-      console.error(error);
-      toast(`Failed to delete notebook: ${error.message}`, {error: true});
-    }
-  }
 
   if (loadError) {
     return (
@@ -100,13 +88,6 @@ export default function Page() {
                   lang={highlightLanguage(notebook.runtime)}
                   outputStartLine={findFirstOutputRange(notebook.content).startLine}
                 />
-              }
-              actions={
-                user && (
-                  <Button variant="ghost" size="sm" icon tip="Delete notebook" onClick={() => onDelete(notebook.id)}>
-                    <Trash2 className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
-                  </Button>
-                )
               }
             />
           </li>

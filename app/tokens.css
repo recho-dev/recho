@@ -164,7 +164,6 @@
   --page-max: 1040px; /* notebook: a focused reading measure */
   --page-wide: min(1600px, 100%); /* docs and examples: grow on wide screens */
   --sidebar-w: 240px; /* docs navigation */
-  --card-min: 260px; /* example cards: more columns as the page widens */
 
   /* ---- Radius ---------------------------------------------------------- */
   --radius-sm: calc(var(--radius-base) * 0.75); /* 6: segments, kbd, menu rows */
