@@ -1363,6 +1363,12 @@
     border-color: var(--accent);
   }
   /* Recent and community: at most two rows and one row of the card grid's columns. */
+  @media (max-width: 1400px) {
+    .home-grid > li:nth-child(n + 9),
+    .home-row > li:nth-child(n + 5) {
+      display: none;
+    }
+  }
   @media (max-width: 960px) {
     .home-grid > li:nth-child(n + 7),
     .home-row > li:nth-child(n + 4) {
@@ -1442,10 +1448,15 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-5);
   }
-  /* Same columns on Home, Explore and Notebooks: 4, then 3 on tablets, 2 on phones. */
+  /* Same columns on Home, Explore and Notebooks: 5, then 4 on laptops, 3 on tablets, 2 on phones. */
+  @media (max-width: 1400px) {
+    .card-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
   @media (max-width: 960px) {
     .card-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
