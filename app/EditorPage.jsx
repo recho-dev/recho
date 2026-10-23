@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef, useCallback, useSyncExternalStore} from "react";
 import {notFound, useRouter} from "next/navigation";
-import {Copy} from "lucide-react";
+import {Copy, Trash2} from "lucide-react";
 import {Editor} from "./Editor.jsx";
 import {TitleSection} from "./TitleSection.jsx";
 import {NotebookTitle} from "./NotebookTitle.jsx";
@@ -14,6 +14,7 @@ import {
   flushPendingSave,
   hasUnsavedChanges,
   duplicateNotebook,
+  deleteNotebook,
   markRunning,
   clearRunning,
   PRIVATE,
@@ -260,6 +261,17 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
     }
   }
 
+  async function onDelete() {
+    try {
+      if (!(await deleteNotebook(notebook.id))) return;
+      isDirtyStore.setDirty(false);
+      router.push("/works");
+    } catch (error) {
+      console.error(error);
+      toast(`Failed to delete notebook: ${error.message}`, {error: true});
+    }
+  }
+
   const languages = LANGUAGES.map(({runtime, label}) => ({value: runtime, label}));
 
   // Who made the notebook and when. Only the owner's own name is known.
@@ -312,6 +324,11 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
                 <Button onClick={onDuplicate} tip="Duplicate notebook">
                   <Copy className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
                   <span className={cn("lbl")}>Duplicate</span>
+                </Button>
+              )}
+              {canSave && (
+                <Button variant="ghost" icon onClick={onDelete} tip="Delete notebook">
+                  <Trash2 className={cn("ic")} size={14} strokeWidth={1.75} aria-hidden="true" />
                 </Button>
               )}
             </>

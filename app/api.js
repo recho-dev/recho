@@ -272,6 +272,11 @@ export async function deleteNotebook(id) {
   });
   if (!ok) return false;
   requireUser();
+  // Drop a queued save of this notebook, so it doesn't write the notebook back.
+  if (pendingSave?.notebook.id === id) {
+    clearTimeout(pendingSave.timer);
+    pendingSave = null;
+  }
   await deleteDoc(notebookDoc(id));
   // Also delete a local copy that failed to upload, so it doesn't reappear.
   const localNotebooks = getLocalNotebooks();
