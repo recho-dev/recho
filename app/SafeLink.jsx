@@ -26,7 +26,8 @@ export function SafeLink({href, children, className, onClick, newRuntime, ...pro
       if (!leave) return;
     }
     isDirtyStore.setDirty(false);
-    if (href === "/") countStore.increment(newRuntime);
+    // The wordmark and the New menu start a new notebook.
+    if (href === "/" || newRuntime) countStore.increment(newRuntime);
     router.push(href);
     onClick?.();
   };
