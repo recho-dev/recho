@@ -58,7 +58,12 @@ export const outputLinesField = StateField.define<OutputLine[]>({
     return state.facet(outputLineFinder)(state);
   },
   update(value, tr) {
-    return tr.docChanged ? tr.state.facet(outputLineFinder)(tr.state) : value;
+    // The syntax tree can be partial (the parser stops after a time budget
+    // and the first 3000 characters). It's finished later in a transaction
+    // that changes the tree but not the document, so a long notebook's later
+    // output isn't missed until the next edit.
+    const treeChanged = syntaxTree(tr.state) !== syntaxTree(tr.startState);
+    return tr.docChanged || treeChanged ? tr.state.facet(outputLineFinder)(tr.state) : value;
   },
 });
 
@@ -286,7 +291,8 @@ export const outputWidgetField = StateField.define({
   create: createWidgets,
   update(widgets, tr) {
     const blocksChanged = tr.startState.field(blockMetadataField, false) !== tr.state.field(blockMetadataField, false);
-    return tr.docChanged || blocksChanged ? createWidgets(tr.state) : widgets;
+    const linesChanged = tr.startState.field(outputLinesField) !== tr.state.field(outputLinesField);
+    return tr.docChanged || blocksChanged || linesChanged ? createWidgets(tr.state) : widgets;
   },
   provide: (field) => EditorView.decorations.from(field),
 });
