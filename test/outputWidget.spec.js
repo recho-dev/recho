@@ -1,8 +1,8 @@
-import {it, expect} from "vitest";
+import {it, expect, vi} from "vitest";
 import {EditorState} from "@codemirror/state";
 import {EditorView, lineNumberWidgetMarker} from "@codemirror/view";
 import {javascript} from "@codemirror/lang-javascript";
-import {ensureSyntaxTree} from "@codemirror/language";
+import {ensureSyntaxTree, syntaxTree} from "@codemirror/language";
 import {outputDecoration, outputLines, outputWidgetField} from "../editor/blocks/output.ts";
 import {blockIndicator} from "../editor/blocks/indicators.ts";
 import {blockMetadataEffect} from "../editor/blocks/effect.ts";
@@ -57,4 +57,28 @@ it("marks an output widget as the start of its block's run through the source", 
   view.dispatch({effects: blockMetadataEffect.of([block(true)])});
   expect(markers()).toEqual(["error head", "error tail"]);
   view.destroy();
+});
+
+it("finds output past a partial syntax tree once the parser finishes", () => {
+  // Frozen, so the parse stops only at the initial parse viewport (3000
+  // characters), on every machine.
+  vi.spyOn(Date, "now").mockReturnValue(Date.now());
+  const code = Array.from({length: 300}, (_, i) => `const v${i} = ${i};`).join("\n");
+  const state = EditorState.create({
+    doc: `${code}\n//➜ \x1b[31mred\x1b[39m\necho(v0);\n`,
+    extensions: [javascript(), outputLines, outputDecoration],
+  });
+  const widgets = (state) => {
+    const result = [];
+    state.field(outputWidgetField).between(0, state.doc.length, (from) => result.push(from));
+    return result;
+  };
+  expect(syntaxTree(state).length).toBeLessThan(state.doc.length);
+  expect(widgets(state)).toEqual([]);
+  // The background parser finishes and dispatches a transaction with the
+  // complete tree and no document change.
+  ensureSyntaxTree(state, state.doc.length, 1e9);
+  const done = state.update({}).state;
+  expect(widgets(done)).toEqual([code.length + 1]);
+  vi.restoreAllMocks();
 });
