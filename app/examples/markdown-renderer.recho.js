@@ -90,16 +90,16 @@ const fruits = [
 
 const total = fruits.reduce((sum, fruit) => sum + fruit.count, 0);
 
-const rows = fruits.map(({name, count}) => `| ${name} | ${count} | \`${"■".repeat(count)}\` |`).join("\n");
+const rows = fruits.map(({name, count}) => `| ${name} | ${count} | \`${"#".repeat(count)}\` |`).join("\n");
 
 //➜ The basket has [1m43[22m fruits, the most of them cherry.
 //➜                                                   
 //➜ [2m|[22m [1mfruit[22m  [2m|[22m [1mcount[22m [2m|[22m                 [2m|[22m              
 //➜ [2m|--------|-------|-----------------|[22m              
-//➜ [2m|[22m cherry [2m|[22m    15 [2m|[22m [31m■■■■■■■■■■■■■■■[39m [2m|[22m              
-//➜ [2m|[22m apple  [2m|[22m    12 [2m|[22m [31m■■■■■■■■■■■■[39m    [2m|[22m              
-//➜ [2m|[22m kiwi   [2m|[22m     9 [2m|[22m [31m■■■■■■■■■[39m       [2m|[22m              
-//➜ [2m|[22m banana [2m|[22m     7 [2m|[22m [31m■■■■■■■[39m         [2m|[22m              
+//➜ [2m|[22m cherry [2m|[22m    15 [2m|[22m [31m###############[39m [2m|[22m              
+//➜ [2m|[22m apple  [2m|[22m    12 [2m|[22m [31m############[39m    [2m|[22m              
+//➜ [2m|[22m kiwi   [2m|[22m     9 [2m|[22m [31m#########[39m       [2m|[22m              
+//➜ [2m|[22m banana [2m|[22m     7 [2m|[22m [31m#######[39m         [2m|[22m              
 echo(recho.md`
   The basket has **${total}** fruits, the most of them ${fruits[0].name}.
 
