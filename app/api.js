@@ -113,14 +113,18 @@ const STARTERS = {
   mlscript: MLSCRIPT_CONTENT,
 };
 
+/** The code a new notebook in `runtime` starts with. */
+export function starterContent(runtime = DEFAULT_RUNTIME) {
+  return (STARTERS[languageOf(runtime)] ?? STARTERS.javascript).trimStart();
+}
+
 export function createNotebook(runtime = DEFAULT_RUNTIME) {
-  const content = STARTERS[languageOf(runtime)] ?? STARTERS.javascript;
   return {
     id: generate(),
     title: UNTITLED,
     created: null,
     updated: null,
-    content: content.trimStart(),
+    content: starterContent(runtime),
     autoRun: true,
     runtime,
     visibility: PRIVATE,
@@ -268,7 +272,25 @@ export async function deleteNotebook(id) {
   });
   if (!ok) return false;
   requireUser();
-  await deleteDoc(notebookDoc(id));
+  // Hold this notebook's saves, so none of them can write the notebook back after the delete.
+  deleting.add(id);
+  if (pendingSave?.notebook.id === id) {
+    clearTimeout(pendingSave.timer);
+    pendingSave.timer = null;
+  }
+  try {
+    // A save already on its way lands first.
+    await Promise.allSettled(writes);
+    await deleteDoc(notebookDoc(id));
+  } catch (error) {
+    // The notebook stays, so save the edits held during the delete.
+    deleting.delete(id);
+    if (pendingSave?.notebook.id === id) pendingSave.timer = setTimeout(flushPendingSave, SAVE_DELAY);
+    throw error;
+  }
+  deleting.delete(id);
+  deleted.add(id);
+  if (pendingSave?.notebook.id === id) pendingSave = null;
   // Also delete a local copy that failed to upload, so it doesn't reappear.
   const localNotebooks = getLocalNotebooks();
   if (localNotebooks.some((f) => f.id === id)) saveLocalNotebooks(localNotebooks.filter((f) => f.id !== id));
@@ -281,50 +303,64 @@ export async function addNotebook(notebook) {
 }
 
 export async function saveNotebook(notebook) {
+  if (deleting.has(notebook.id) || deleted.has(notebook.id)) return;
   if (pendingSave?.notebook.id === notebook.id) {
     clearTimeout(pendingSave.timer);
     pendingSave = null;
   }
   const time = new Date().toISOString();
   // Prevent creating a new notebook if the created timestamp is not set.
-  await writeNotebook(requireUser(), {...notebook, created: notebook.created ?? time, updated: time});
+  const write = writeNotebook(requireUser(), {...notebook, created: notebook.created ?? time, updated: time});
+  writes.add(write);
+  try {
+    await write;
+  } finally {
+    writes.delete(write);
+  }
 }
 
 const SAVE_DELAY = 800;
 
 const RETRY_DELAY = 5000;
 
+// The next save to write: {notebook, timer}. Its timer is null while the notebook is being deleted.
 let pendingSave = null;
 
-let savesInFlight = 0;
+// Writes on their way to the cloud.
+const writes = new Set();
+
+// Notebooks being deleted, whose saves wait for the delete, and deleted ones, whose saves are dropped.
+const deleting = new Set();
+const deleted = new Set();
+
+function queueSave(notebook, delay) {
+  const timer = deleting.has(notebook.id) ? null : setTimeout(flushPendingSave, delay);
+  pendingSave = {notebook, timer};
+}
 
 // Save on typing without writing to the cloud on every keystroke.
 export function saveNotebookDebounced(notebook) {
+  if (deleted.has(notebook.id)) return;
   if (pendingSave?.notebook.id === notebook.id) clearTimeout(pendingSave.timer);
   else flushPendingSave();
-  pendingSave = {notebook, timer: setTimeout(flushPendingSave, SAVE_DELAY)};
+  queueSave(notebook, SAVE_DELAY);
 }
 
 export function flushPendingSave() {
-  if (!pendingSave) return;
+  if (!pendingSave || deleting.has(pendingSave.notebook.id)) return;
   const {notebook, timer} = pendingSave;
   clearTimeout(timer);
   pendingSave = null;
-  savesInFlight++;
-  saveNotebook(notebook)
-    .catch((error) => {
-      console.error("Failed to save notebook, retrying", error);
-      // Retry unless a newer change is already queued or the user logged out.
-      if (!pendingSave && currentUser()) {
-        pendingSave = {notebook, timer: setTimeout(flushPendingSave, RETRY_DELAY)};
-      }
-    })
-    .finally(() => savesInFlight--);
+  saveNotebook(notebook).catch((error) => {
+    console.error("Failed to save notebook, retrying", error);
+    // Retry unless a newer change is already queued, the user logged out, or the notebook is gone.
+    if (!pendingSave && currentUser() && !deleted.has(notebook.id)) queueSave(notebook, RETRY_DELAY);
+  });
 }
 
 // Whether some edits are queued, being written, or waiting for a retry.
 export function hasUnsavedChanges() {
-  return pendingSave !== null || savesInFlight > 0;
+  return pendingSave !== null || writes.size > 0;
 }
 
 // Batched writes are limited to 500 operations.
