@@ -17,15 +17,20 @@ import {
 import {SafeLink} from "./SafeLink.jsx";
 import {authStore} from "./auth.js";
 import {LANGUAGES} from "./shared.js";
-import {Button} from "../components/Button.jsx";
 import {Menu, MenuItem, MenuLabel, MenuSeparator} from "../components/Menu.jsx";
 import {ThemeSwitch} from "../components/ThemeSwitch.jsx";
 
 const PAGES = [
+  {href: "/works", label: "Notebooks", Icon: FolderOpen},
   {href: "/explore", label: "Explore", Icon: LayoutGrid},
   {href: "/docs", label: "Docs", Icon: BookOpen},
   {href: "/news", label: "News", Icon: Newspaper},
+  {href: "https://github.com/recho-dev/notebook", label: "GitHub", Icon: Github, external: true},
 ];
+
+// External pages open in a new tab and skip the unsaved-changes check.
+const linkProps = ({href, external}, current) =>
+  external ? {as: "a", href, target: "_blank", rel: "noreferrer"} : {as: SafeLink, href, "aria-current": current(href)};
 
 const icon = {size: 16, strokeWidth: 1.75, className: "ic", "aria-hidden": true};
 
@@ -42,18 +47,21 @@ export function Nav() {
           Recho
         </SafeLink>
         <nav className="nav-links" aria-label="Main">
-          {PAGES.map(({href, label, Icon}) => (
-            <SafeLink key={href} href={href} className="navlink" aria-current={current(href)}>
-              <Icon {...icon} size={15} />
-              {label}
-            </SafeLink>
-          ))}
+          {PAGES.map((page) => {
+            const {as: Link, ...props} = linkProps(page, current);
+            return (
+              <Link key={page.href} className="navlink" {...props}>
+                <page.Icon {...icon} size={15} />
+                {page.label}
+              </Link>
+            );
+          })}
         </nav>
         <Menu className="nav-more" label="Pages" icon align="left" trigger={<MenuIcon {...icon} />}>
-          {PAGES.map(({href, label, Icon}) => (
-            <MenuItem as={SafeLink} key={href} href={href} aria-current={current(href)}>
-              <Icon {...icon} size={15} />
-              {label}
+          {PAGES.map((page) => (
+            <MenuItem key={page.href} {...linkProps(page, current)}>
+              <page.Icon {...icon} size={15} />
+              {page.label}
             </MenuItem>
           ))}
         </Menu>
@@ -69,29 +77,14 @@ export function Nav() {
             </>
           }
         >
-          {LANGUAGES.map(({runtime, label}) => (
-            <MenuItem as={SafeLink} key={runtime} href="/" newRuntime={runtime}>
+          {LANGUAGES.map(({value, runtime, label}) => (
+            <MenuItem as={SafeLink} key={runtime} href={`/new?lang=${value}`} newRuntime={runtime}>
               {label}
             </MenuItem>
           ))}
         </Menu>
-        <Button as={SafeLink} variant="ghost" className="act" href="/works" aria-current={current("/works")}>
-          <FolderOpen {...icon} />
-          <span className="lbl">Open</span>
-        </Button>
         <span className="tb-sep" aria-hidden="true" />
         <ThemeSwitch iconProps={icon} />
-        <Button
-          as="a"
-          variant="ghost"
-          icon
-          href="https://github.com/recho-dev/notebook"
-          target="_blank"
-          rel="noreferrer"
-          tip="Contribute to Recho"
-        >
-          <Github {...icon} />
-        </Button>
         <Menu
           label={auth.user ? "Account" : "Log in"}
           tip={auth.user ? "Account" : "Log in to save notebooks"}
