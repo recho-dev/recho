@@ -14,6 +14,14 @@
     outline: none;
   }
 
+  /* The editor grows with its content and the page scrolls, so the editor
+     never scrolls vertically. Line heights are fractional (13.5px × 1.55), so
+     the content can be a fraction of a pixel taller than the scroller once
+     the horizontal scrollbar takes its room, which would add a vertical one. */
+  .cm-scroller {
+    overflow-y: hidden;
+  }
+
   /* recho.toggle: a checkbox drawn from tokens. The tick wipes in. */
   .cm-boolean-toggle {
     display: inline-flex;
