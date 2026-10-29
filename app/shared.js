@@ -82,3 +82,14 @@ export function findFirstOutputRange(content) {
   }
   return {startLine, endLine};
 }
+
+/** The line under a notebook's title: who made it, when, and whether it's view only. */
+export function notebookDetails({author, created, isOthers}) {
+  return [
+    author,
+    created ? `Created ${new Date(created).toLocaleDateString("en-CA")}` : "Not saved yet",
+    isOthers && "View only",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}

@@ -29,7 +29,7 @@ import {Button} from "../components/Button.jsx";
 import {Listbox} from "../components/Listbox.jsx";
 import {toast} from "../components/Toast.jsx";
 import {isMac} from "../components/shortcut.js";
-import {BASE_PATH, LANGUAGES, fileNameOf} from "./shared.js";
+import {BASE_PATH, LANGUAGES, fileNameOf, notebookDetails} from "./shared.js";
 
 const UNSET = Symbol("UNSET");
 
@@ -276,15 +276,10 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
 
   const languages = LANGUAGES.map(({runtime, label}) => ({value: runtime, label}));
 
-  // Who made the notebook and when. Only the owner's own name is known.
-  const author = !isOthers && user ? (user.displayName ?? user.email) : null;
-  const details = [
-    author,
-    isAdded && notebook.created ? `Created ${new Date(notebook.created).toLocaleDateString("en-CA")}` : "Not saved yet",
-    isOthers && "View only",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Your own notebooks show your current name. Others' show the author saved
+  // with the notebook (from the owner's sign-in), which older notebooks lack.
+  const author = isOthers ? notebook.author?.name : (user?.displayName ?? notebook.author?.name);
+  const details = notebookDetails({author, created: isAdded && notebook.created, isOthers});
 
   return (
     <div>
