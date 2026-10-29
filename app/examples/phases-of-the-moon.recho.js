@@ -88,6 +88,6 @@ function getMoonEmoji(date) {
   return String.fromCodePoint(0x1f311 + (index === 8 ? 0 : index));
 }
 
-const suncalc = recho.require("suncalc");
+const suncalc = recho.require("suncalc@1.9.0");
 const d3 = recho.require("d3-time", "d3-time-format");
 const _ = recho.require("lodash");
