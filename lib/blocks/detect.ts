@@ -11,9 +11,6 @@ const ERROR_MARK_CODE_POINT = ERROR_MARK.codePointAt(0);
 type Tree = ReturnType<typeof syntaxTree>;
 type SyntaxNode = Tree["topNode"];
 
-/** Box drawing and block elements: a run of output with them is ASCII art. */
-export const ART = /[\u2500-\u259F]/;
-
 /** The marks that end an output line's prefix, e.g. `//➜` or wenyan's `批曰。「「➜`. */
 export const PREFIX_END = /^.{0,8}?[➜✗]/u;
 

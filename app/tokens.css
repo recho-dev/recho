@@ -250,9 +250,9 @@
   --lh-code: var(--line-height);
   --lh-prose: calc(var(--line-height) + 0.05);
   --lh-ui: calc(var(--line-height) - 0.1);
-  /* ASCII and box-drawing output: one em per row so █ │ ╱ glyphs on adjacent
-     lines touch. Fixed on purpose; it does not follow --line-height. */
-  --lh-art: 1;
+  /* `compact` output: one em per row so █ │ ╱ glyphs on adjacent lines touch.
+     Fixed on purpose; it does not follow --line-height. */
+  --lh-compact: 1;
 
   /* ---- Motion ---------------------------------------------------------- */
   /* After transitions.dev: things enter on a smooth ease-out and leave faster
