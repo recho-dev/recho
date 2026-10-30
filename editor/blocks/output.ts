@@ -59,6 +59,33 @@ export const outputLinesField = StateField.define<OutputLine[]>({
   },
 });
 
+/**
+ * The changes that remove every output line, whole, as the editor finds them
+ * (so look-alike lines inside strings stay). A run of output lines goes with
+ * its newline, or the one before it at the end of the document.
+ */
+export function clearOutputChanges(state: EditorState): {from: number; to: number}[] {
+  const changes: {from: number; to: number}[] = [];
+  let run: {first: number; last: number} | null = null;
+  const flush = () => {
+    if (!run) return;
+    const first = state.doc.line(run.first);
+    const last = state.doc.line(run.last);
+    if (last.number < state.doc.lines) changes.push({from: first.from, to: last.to + 1});
+    else changes.push({from: Math.max(0, first.from - 1), to: last.to});
+  };
+  for (const {from} of state.field(outputLinesField)) {
+    const n = state.doc.lineAt(from).number;
+    if (run && n === run.last + 1) run.last = n;
+    else {
+      flush();
+      run = {first: n, last: n};
+    }
+  }
+  flush();
+  return changes;
+}
+
 const LINE_CLASS = {
   output: "cm-output-line",
   error: "cm-output-line cm-error-line",
