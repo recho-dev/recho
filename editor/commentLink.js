@@ -9,8 +9,7 @@ export const linkTitle = `Open in a new tab (${isWindows ? "Ctrl" : "Cmd"} + Cli
 export function findLinks(text) {
   const links = [];
   // Match URLs, allowing common URL characters, then trim trailing punctuation.
-  // A link in output ends where an escape sequence (e.g. a colour) starts.
-  const httpRegex = /https?:\/\/[^\s\)\]\}\x1b\x9b]+/g;
+  const httpRegex = /https?:\/\/[^\s\)\]\}]+/g;
   let m;
   while ((m = httpRegex.exec(text))) {
     // Trim trailing punctuation that shouldn't be part of URL.
