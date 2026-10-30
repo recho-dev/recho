@@ -1,4 +1,5 @@
-import {StreamLanguage} from "@codemirror/language";
+import {HighlightStyle, StreamLanguage, syntaxHighlighting} from "@codemirror/language";
+import {Tag, tags as t} from "@lezer/highlight";
 import {KEYWORDS, NUMBER_KEYWORDS} from "wenyan";
 import {wenyan} from "../../runtime/languages/wenyan.js";
 import {blockMetadataExtension, blockUpdate, mapBlocks} from "../blocks/state.ts";
@@ -8,6 +9,12 @@ import {outputDecoration, outputLineFinder, outputLines} from "../blocks/output.
 const keywords = Object.entries(KEYWORDS).sort(([a], [b]) => b.length - a.length);
 const numerals = new Set(NUMBER_KEYWORDS);
 const COMMENT = /^(批曰|注曰|疏曰)/;
+
+// The runtime's names for parts of the stdlib (刻漏), bold like JavaScript's
+// echo. Their tag is a variable name's, so they keep its colour.
+const BUILTINS = new Set(Object.keys(wenyan.builtins({})));
+const builtinTag = Tag.define(t.variableName);
+const builtinStyle = syntaxHighlighting(HighlightStyle.define([{tag: builtinTag, fontWeight: "bold"}]));
 
 const styleOf = (type) => {
   switch (type) {
@@ -61,13 +68,20 @@ function token(stream, state) {
   }
   // Anything else means the comment is over (or wasn't well-formed).
   state.comment = null;
-  if (stream.match(/^「[^」]*」/)) return "variableName";
+  // 名之曰 names what follows, so a notebook's own 刻漏 isn't a builtin there.
+  const naming = state.naming;
+  state.naming = false;
+  const name = stream.match(/^「([^」]*)」/);
+  if (name) return !naming && BUILTINS.has(name[1]) ? "rechoBuiltin" : "variableName";
   if (numerals.has(stream.peek())) {
     while (numerals.has(stream.peek())) stream.next();
     return "number";
   }
   for (const [word, [type]] of keywords) {
-    if (stream.match(word)) return styleOf(type);
+    if (stream.match(word)) {
+      state.naming = word === "名之曰";
+      return styleOf(type);
+    }
   }
   stream.next();
   return null;
@@ -75,8 +89,9 @@ function token(stream, state) {
 
 const language = StreamLanguage.define({
   name: "wenyan",
-  startState: () => ({string: null, comment: null}),
+  startState: () => ({string: null, comment: null, naming: false}),
   token,
+  tokenTable: {rechoBuiltin: builtinTag},
   languageData: {
     // Wenyan has no line comments: a comment is a statement wrapping a
     // string. Cmd+/ wraps lines in 注曰。『…』。, since code often holds
@@ -95,12 +110,13 @@ function findOutputLines(state) {
 }
 
 /**
- * Editor support for wenyan-lang: syntax highlighting, the blocks behind the
+ * Editor support for wenyan-lang: syntax highlighting (built-ins bold), the blocks behind the
  * gutter's block indicator (moved along with edits until the next run), and
  * the box around output lines.
  */
 export const wenyanSupport = () => [
   language,
+  builtinStyle,
   blockMetadataExtension,
   blockUpdate.of(mapBlocks),
   outputLines,

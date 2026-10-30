@@ -5,6 +5,7 @@ import * as eslint from "eslint-linter-browserify";
 import {controls} from "../controls/index.js";
 import {rechoCompletion} from "../completion.js";
 import {docStringTag} from "../docStringTag.js";
+import {builtinHighlight} from "../builtinHighlight.js";
 import {commentLink, commentLinkClickHandler} from "../commentLink.js";
 import {blockExtensions} from "../blocks";
 
@@ -24,7 +25,7 @@ const eslintConfig = {
 
 /**
  * Editor support for JavaScript: highlighting, completion, blocks, controls
- * (sliders, buttons, ...), doc tags, comment links and linting. Controls talk
+ * (sliders, buttons, ...), built-in names, doc tags, comment links and linting. Controls talk
  * to the editor's runtime through `runtimeRef`.
  */
 export function javascriptSupport(runtimeRef) {
@@ -36,6 +37,7 @@ export function javascriptSupport(runtimeRef) {
     // Disable this for now, because it prevents copying/pasting the code.
     // outputProtection(),
     docStringTag,
+    builtinHighlight,
     commentLink,
     commentLinkClickHandler,
     linter(esLint(new eslint.Linter(), eslintConfig)),

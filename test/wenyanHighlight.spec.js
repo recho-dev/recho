@@ -41,6 +41,24 @@ describe("wenyan highlighting", () => {
     ]);
   });
 
+  it("marks 刻漏 as a builtin, except where the notebook names its own", () => {
+    expect(tokens("施「刻漏」於一百。")).toEqual([
+      "施=keyword",
+      "「刻漏」=rechoBuiltin",
+      "於=keyword",
+      "一百=number",
+      "。=punctuation",
+    ]);
+    expect(tokens("名之曰「刻漏」。夫「刻漏」。")).toEqual([
+      "名之曰=keyword",
+      "「刻漏」=variableName",
+      "。=punctuation",
+      "夫=keyword",
+      "「刻漏」=rechoBuiltin",
+      "。=punctuation",
+    ]);
+  });
+
   it("highlights 獨行此 blocks", () => {
     expect(tokens("獨行此。\n\t夫三。示之。\n云云。")).toEqual([
       "獨行此=keyword",
