@@ -77,6 +77,10 @@ export const docsNavConfig = [
       },
       {
         type: "page",
+        slug: "api-md",
+      },
+      {
+        type: "page",
         slug: "api-now",
       },
       {

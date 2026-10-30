@@ -56,6 +56,13 @@ const builtinFunctions = [
     apply: toApplyCompletion("recho.inspect($, {})"),
   },
   {
+    label: "md",
+    type: "function",
+    detail: "`markdown`",
+    info: "Renders Markdown as coloured text, for echo to show.",
+    apply: toApplyCompletion("recho.md`$`"),
+  },
+  {
     label: "now",
     type: "function",
     detail: "()",
