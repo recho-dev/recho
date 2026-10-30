@@ -223,7 +223,7 @@
       color: var(--out-prefix);
     }
 
-    /* CodeMirror puts these 1em images beside hidden escapes and widgets.
+    /* CodeMirror puts these 1em images beside the coloured text widget.
        Aligned to the text top they stick out of a one-em compact row and
        make it taller, so animated rows would jump as their colours change. */
     .cm-widgetBuffer {

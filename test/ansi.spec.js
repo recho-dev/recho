@@ -3,7 +3,6 @@ import {
   DEFAULT_STYLE,
   cssColor,
   hasSGR,
-  locate,
   normalize,
   padEnd,
   parse,
@@ -21,26 +20,6 @@ describe("lib/ansi", () => {
     expect(hasSGR(red("x"))).toBe(true);
     expect(hasSGR("plain")).toBe(false);
     expect(hasSGR("\x1b[2J")).toBe(false);
-  });
-
-  it("locates escapes and styled runs by their offsets", () => {
-    const text = `a${red("bc")}\x1b[1m\x1b[31md\x1b[0me`;
-    const {escapes, runs} = locate(text);
-    expect(escapes.map(({from, to}) => text.slice(from, to))).toEqual([
-      "\x1b[31m",
-      "\x1b[39m",
-      "\x1b[1m",
-      "\x1b[31m",
-      "\x1b[0m",
-    ]);
-    expect(runs.map(({from, to, style}) => [text.slice(from, to), style.fg, style.bold])).toEqual([
-      ["bc", 1, false],
-      ["d", 1, true],
-    ]);
-    // Runs in one style that only escapes split are one run.
-    const split = `\x1b[31ma\x1b[31mb`;
-    expect(locate(split).runs.map(({from, to}) => split.slice(from, to))).toEqual(["a\x1b[31mb"]);
-    expect(locate("plain")).toEqual({escapes: [], runs: []});
   });
 
   it("measures and pads by visible characters", () => {

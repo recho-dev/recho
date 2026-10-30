@@ -48,49 +48,38 @@ it("keeps output as text, so part of it can be selected and deleted", () => {
   expect(view.state.doc.toString()).toBe("//➜ @\n//➜ @\nbars(x);\n");
 });
 
-it("ends a selection at the line's end when only escapes follow it", () => {
-  createView("//➜ \x1b[31m@\x1b[39m\n//➜ \x1b[32m@\x1b[39m\n{\n}\n");
-  const second = view.state.doc.line(2);
-  const beforeReset = second.to - "\x1b[39m".length;
-  // Where a drag past the end of the line stops: before the hidden reset.
-  view.dispatch({selection: EditorSelection.range(0, beforeReset)});
-  expect(view.state.selection.main.to).toBe(second.to);
-  deleteCharBackward(view);
-  expect(view.state.doc.toString()).toBe("\n{\n}\n");
-  // Backwards too, and not when visible text follows.
-  view.dispatch({changes: {from: 0, insert: "//➜ \x1b[31m@\x1b[39m"}});
+it("keeps plain output as text, and the cursor moves through it", () => {
+  createView("//➜ abc\n");
   const line = view.state.doc.line(1);
-  view.dispatch({selection: EditorSelection.range(line.to - 5, 0)});
-  expect(view.state.selection.main.anchor).toBe(line.to);
-  view.dispatch({selection: EditorSelection.range(0, line.to - 6)});
-  expect(view.state.selection.main.to).toBe(line.to - 6);
-});
-
-it("steps over an escape in one move", () => {
-  createView("//➜ \x1b[31mred\x1b[39m\n");
-  const line = view.state.doc.line(1);
-  // After "red", before the hidden reset.
-  const afterRed = line.text.indexOf("\x1b[39m");
+  expect(view.contentDOM.querySelector(".cm-output-colored")).toBe(null);
   view.dispatch({selection: {anchor: line.to}});
   cursorCharLeft(view);
-  expect(view.state.selection.main.head).toBe(afterRed);
-  cursorCharLeft(view);
-  expect(view.state.selection.main.head).toBe(afterRed - 1);
+  expect(view.state.selection.main.head).toBe(line.to - 1);
 });
 
-it("draws a line dense with colour in a widget that is selected and deleted as a whole", () => {
-  const dense = Array.from({length: 20}, (_, i) => `\x1b[38;5;${i + 16}m#`).join("") + "\x1b[39m";
-  createView(`//➜ ${dense}\n//➜ \x1b[31mred\x1b[39m\nbars(x);\n`);
+it("draws coloured text in a widget that is stepped over and deleted as a whole", () => {
+  createView("//➜ \x1b[31mred\x1b[39m plain\n//➜ \x1b[32mgreen\x1b[39m\nbars(x);\n");
   const [first, second] = view.contentDOM.querySelectorAll(".cm-output-line");
-  // The dense line's text, after its prefix, is in a widget without escapes.
-  expect(first.querySelector(".cm-output-dense").textContent).toBe(" " + "#".repeat(20));
+  // Even one colour: the text after the prefix is in a widget, without escapes.
+  expect(first.querySelector(".cm-output-colored").textContent).toBe(" red plain");
+  expect(second.querySelector(".cm-output-colored").textContent).toBe(" green");
   expect(first.querySelector(".cm-output-line-prefix").textContent).toBe("//➜");
-  // A sparse line stays editable text.
-  expect(second.querySelector(".cm-output-dense")).toBe(null);
-  // Backspace at the end of the dense line removes its text in one go.
-  view.dispatch({selection: {anchor: view.state.doc.line(1).to}});
+  // The cursor steps over the coloured text in one move, so it never stops among escapes.
+  const line = view.state.doc.line(1);
+  view.dispatch({selection: {anchor: line.to}});
+  cursorCharLeft(view);
+  expect(view.state.selection.main.head).toBe(line.from + "//➜".length);
+  // Backspace at the end of the line removes its coloured text in one go.
+  view.dispatch({selection: {anchor: line.to}});
   deleteCharBackward(view);
   expect(view.state.doc.line(1).text).toBe("//➜");
+});
+
+it("deletes whole coloured lines without leaving escapes behind", () => {
+  createView("//➜ \x1b[31m@\x1b[39m\n//➜ \x1b[32m@\x1b[39m\n{\n}\n");
+  view.dispatch({selection: EditorSelection.range(0, view.state.doc.line(2).to)});
+  deleteCharBackward(view);
+  expect(view.state.doc.toString()).toBe("\n{\n}\n");
 });
 
 it("marks a block's output lines, then its source, as one run", () => {

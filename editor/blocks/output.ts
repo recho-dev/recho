@@ -1,9 +1,9 @@
 import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate} from "@codemirror/view";
 import {syntaxTree} from "@codemirror/language";
-import {EditorSelection, EditorState, Facet, Prec, StateField, type Extension, type Range} from "@codemirror/state";
+import {EditorState, Facet, Prec, StateField, type Extension, type Range} from "@codemirror/state";
 import {ART, PREFIX_END, markLineType} from "../../lib/blocks/detect.ts";
 import {findLinks, linkTitle} from "../commentLink.js";
-import {hasEscape, locate, parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
+import {hasEscape, parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
 import {blockMetadataField} from "./state.ts";
 import {createTypefaceStyle} from "./fonts.ts";
 
@@ -98,7 +98,7 @@ function artLines(state: EditorState, lines: OutputLine[]) {
   return art;
 }
 
-// Decorations are shared by every line or span that looks the same, so
+// Line decorations are shared by every line that looks the same, so
 // CodeMirror can tell unchanged lines apart cheaply.
 const lineDecorations = new Map<string, Decoration>();
 function lineDecoration(className: string, font: string) {
@@ -111,30 +111,8 @@ function lineDecoration(className: string, font: string) {
   return decoration;
 }
 
-const styleMarks = new Map<string, Decoration>();
-function styleMark(css: string) {
-  let decoration = styleMarks.get(css);
-  if (!decoration) {
-    // Animated truecolor output makes new styles every frame.
-    if (styleMarks.size > 1000) styleMarks.clear();
-    decoration = Decoration.mark({attributes: {style: css}});
-    styleMarks.set(css, decoration);
-  }
-  return decoration;
-}
-
 // The `//➜` (or `//✗`) at the start of a line, quieter than the output after it.
 const prefixMark = Decoration.mark({class: "cm-output-line-prefix"});
-// Escape sequences are in the document but don't show.
-const hiddenEscape = Decoration.replace({});
-
-/**
- * A line with more styled runs than this is drawn by a DenseOutputWidget.
- * Chrome slows down a lot with thousands of styled spans in editable text
- * (e.g. 80×40 truecolor animation: 800ms an update, against 12ms in a
- * widget). Coloured logs and tables stay well under it.
- */
-const DENSE_RUNS = 12;
 
 // A span with the inline style and link it was last given, so a redraw only
 // touches what changed.
@@ -171,24 +149,27 @@ function textParts(text: string) {
 }
 
 /**
- * The text of an output line dense with colour, after its prefix, drawn as
- * spans outside the editable text. The line keeps its place in the document,
- * so it is selected and deleted like other lines; the cursor goes before or
- * after it. A redraw reuses the spans, so an animation frame only changes
- * the text and styles that changed.
+ * The text of a coloured output line, after its prefix, drawn as styled spans
+ * with its escapes left out. The escapes stay in the document, but never in
+ * editable text, so the cursor and selections can't stop among them. The line
+ * keeps its place in the document, so it is selected and deleted like other
+ * lines; the cursor goes before or after the coloured text, which is deleted
+ * as a whole. A redraw reuses the spans, so an animation frame only changes
+ * the text and styles that changed, and thousands of coloured characters
+ * stay fast (Chrome slows down a lot with that many spans in editable text).
  */
-class DenseOutputWidget extends WidgetType {
+class ColoredOutputWidget extends WidgetType {
   constructor(readonly text: string) {
     super();
   }
 
-  eq(other: DenseOutputWidget) {
+  eq(other: ColoredOutputWidget) {
     return other.text === this.text;
   }
 
   toDOM() {
     const dom = document.createElement("span");
-    dom.className = "cm-output-dense";
+    dom.className = "cm-output-colored";
     this.render(dom);
     return dom;
   }
@@ -226,6 +207,14 @@ class DenseOutputWidget extends WidgetType {
     }
   }
 
+  // The cursor goes at the widget's start or end. CodeMirror would measure
+  // the end from the first span, which put the cursor inside the text.
+  coordsAt(dom: HTMLElement, pos: number) {
+    const {left, right, top, bottom} = dom.getBoundingClientRect();
+    const x = pos === 0 ? left : right;
+    return {left: x, right: x, top, bottom};
+  }
+
   // The editor handles clicks and drags, so they select lines as in code.
   ignoreEvent() {
     return false;
@@ -233,11 +222,11 @@ class DenseOutputWidget extends WidgetType {
 }
 
 /**
- * The decorations of the output lines in view: a class per line, the prefix
- * in the quiet prefix colour, the text in its SGR styles (see lib/ansi.js),
- * and the escapes hidden. The output stays text in the document, so it is
- * selected, edited and scrolled to like code. `atomic` are the hidden escapes
- * and dense lines, which the cursor steps over and deletes in one go.
+ * The decorations of the output lines in view: a class per line and the
+ * prefix in the quiet prefix colour. Plain output stays editable text, like
+ * code. A line with escapes has the text after its prefix drawn by a
+ * ColoredOutputWidget, which is also `atomic`: the cursor steps over it and
+ * deleting takes it in one go.
  */
 function createDecorations(view: EditorView) {
   const {state} = view;
@@ -262,23 +251,11 @@ function createDecorations(view: EditorView) {
       const textFrom = prefix ? prefix[0].length : 0;
       if (prefix) decorations.push(prefixMark.range(from, from + textFrom));
 
-      const located = locate(line.text);
-      if (located.runs.length > DENSE_RUNS) {
-        const widget = new DenseOutputWidget(line.text.slice(textFrom));
-        const dense = Decoration.replace({widget}).range(from + textFrom, line.to);
-        decorations.push(dense);
-        atomic.push(dense);
-        continue;
-      }
-      for (const run of located.runs) {
-        const css = styleToCss(run.style);
-        if (css) decorations.push(styleMark(css).range(from + run.from, from + run.to));
-      }
-      for (const escape of located.escapes) {
-        const hidden = hiddenEscape.range(from + escape.from, from + escape.to);
-        decorations.push(hidden);
-        atomic.push(hidden);
-      }
+      const text = line.text.slice(textFrom);
+      if (!hasEscape(text)) continue;
+      const colored = Decoration.replace({widget: new ColoredOutputWidget(text)}).range(from + textFrom, line.to);
+      decorations.push(colored);
+      atomic.push(colored);
     }
   }
   return {decorations: Decoration.set(decorations, true), atomic: Decoration.set(atomic, true)};
@@ -308,37 +285,12 @@ export const outputDecorationPlugin = ViewPlugin.fromClass(
   },
 );
 
-/**
- * A selection that ends just before hidden escapes at the end of a line ends
- * at the line's end instead. Dragging past the end of a coloured line stops
- * before its last escape (usually a reset), which deleting would leave
- * behind, joined to the next line as raw text. Trailing escapes show
- * nothing, so taking them along is always safe.
- */
-const selectTrailingEscapes = EditorState.transactionFilter.of((tr) => {
-  if (!tr.selection) return tr;
-  const doc = tr.newDoc;
-  let extended = false;
-  const ranges = tr.selection.ranges.map((range) => {
-    if (range.empty) return range;
-    const line = doc.lineAt(range.to);
-    const rest = doc.sliceString(range.to, line.to);
-    if (!rest || !hasEscape(rest) || stripAnsi(rest) !== "") return range;
-    extended = true;
-    return range.head === range.to
-      ? EditorSelection.range(range.anchor, line.to)
-      : EditorSelection.range(line.to, range.head);
-  });
-  if (!extended) return tr;
-  return [tr, {selection: EditorSelection.create(ranges, tr.selection.mainIndex), sequential: true}];
-});
-
 // Copied output is plain text: its colours stay in the editor.
 const plainCopy = EditorView.clipboardOutputFilter.of((text) => stripAnsi(text));
 
 export const outputLines = outputLinesField.extension;
 
 /** Output lines styled in place, with their colours, copied without them. */
-// Above the basic setup's special characters, which would draw the hidden
-// escapes' ESC as a placeholder.
-export const outputDecoration: Extension = [Prec.high(outputDecorationPlugin), selectTrailingEscapes, plainCopy];
+// Above the basic setup's special characters, which would draw a placeholder
+// for the ESC of escapes the widget covers.
+export const outputDecoration: Extension = [Prec.high(outputDecorationPlugin), plainCopy];
