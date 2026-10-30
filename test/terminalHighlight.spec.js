@@ -45,6 +45,12 @@ describe("terminal highlighting", () => {
     expect(styled).not.toContain(keywordStyle);
   });
 
+  it("bolds Recho's built-ins, but not as properties", () => {
+    expect(highlightLine("echo(1)")).toContain(fg(COLORS.fn) + bold + "echo");
+    expect(highlightLine("recho.now()")).toContain(fg(COLORS.fg) + bold + "recho");
+    expect(highlightLine("obj.echo")).not.toContain(bold);
+  });
+
   it("keeps the line-number gutter intact while horizontally scrolled", () => {
     const app = new App({initialPath: null, initialCode: "const answer = 42;", examplesDir: null});
     app.cols = 14;

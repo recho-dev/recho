@@ -5,6 +5,7 @@
 
 import {fg, italic, reset, bold} from "./screen.ts";
 import {OUTPUT_PREFIX, ERROR_PREFIX} from "../runtime/output.js";
+import {BUILTINS} from "../runtime/builtins.js";
 
 // Theme palettes (256-color indices). DARK is the default; setTheme swaps
 // the palette in place so every `COLORS.x` reference picks up the change.
@@ -145,6 +146,8 @@ function styleToken(tok: string, line: string, index: number): string {
     const next = line[index + tok.length];
     if (next === "(") style = fg(C.fn);
     else style = fg(C.fg);
+    // Recho's own names are bold, unless read as a property (`obj.echo`).
+    if (BUILTINS.has(tok) && line[index - 1] !== ".") style += bold;
   } else style = fg(C.punct);
 
   return style + tok + reset + fg(C.fg);

@@ -369,6 +369,11 @@
     color: var(--syn-tag);
   }
 
+  /* Recho's own names (echo, invalidation, recho). */
+  .cm-recho-builtin {
+    font-weight: bold;
+  }
+
   .cm-comment-link {
     color: var(--syn-comment);
     text-decoration: underline;
