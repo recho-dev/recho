@@ -32,12 +32,6 @@ it("styles output lines in place, with the escapes hidden", () => {
   expect(red.style.color).toBe("var(--ansi-red)");
 });
 
-it("sets runs of output with box drawing as art", () => {
-  createView("//➜ ┌─┐\n//➜ └─┘\necho(a);\n");
-  const lines = [...view.contentDOM.querySelectorAll(".cm-output-line")];
-  expect(lines.map((line) => line.classList.contains("cm-art-line"))).toEqual([true, true]);
-});
-
 it("keeps output as text, so part of it can be selected and deleted", () => {
   createView("//➜ @\n//➜ @@\n//➜ @@@\nbars(x);\n");
   const second = view.state.doc.line(2);

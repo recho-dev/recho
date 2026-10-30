@@ -1,7 +1,7 @@
 import {load} from "cheerio";
 import {OUTPUT_MARK, ERROR_MARK} from "../runtime/constant.js";
 import {hasEscape, parse, styleToCss} from "../lib/ansi.js";
-import {ART, PREFIX_END} from "../lib/blocks/detect.ts";
+import {PREFIX_END} from "../lib/blocks/detect.ts";
 
 // Output lines in JavaScript and MLscript (//➜) and wenyan (批曰。「「➜) notebooks.
 const OUTPUT = [`//${OUTPUT_MARK}`, `批曰。「「${OUTPUT_MARK}`];
@@ -36,7 +36,7 @@ function colorOutput($, line) {
 /**
  * Marks the output lines of Shiki's HTML like the editor does: `out` (and
  * `err` for errors) on each, `first` and `last` at the ends of a run, so the
- * run gets one continuous marker, and `art` on runs with box drawing.
+ * run gets one continuous marker.
  */
 function markOutput($, lines) {
   const type = (line) => {
@@ -51,13 +51,11 @@ function markOutput($, lines) {
     }
     let j = i;
     while (j < lines.length && type(lines[j])) j++;
-    const art = lines.slice(i, j).some((line) => ART.test($(line).text()));
     for (let k = i; k < j; k++) {
       const line = $(lines[k]);
       line.addClass("out");
       colorOutput($, lines[k]);
       if (type(lines[k]) === "err") line.addClass("err");
-      if (art) line.addClass("art");
       if (k === i) line.addClass("first");
       if (k === j - 1) line.addClass("last");
     }

@@ -1,7 +1,7 @@
 import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate} from "@codemirror/view";
 import {syntaxTree} from "@codemirror/language";
 import {EditorState, Facet, Prec, StateField, type Extension, type Range} from "@codemirror/state";
-import {ART, PREFIX_END, markLineType} from "../../lib/blocks/detect.ts";
+import {PREFIX_END, markLineType} from "../../lib/blocks/detect.ts";
 import {findLinks, linkTitle} from "../commentLink.js";
 import {hasEscape, parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
 import {blockMetadataField} from "./state.ts";
@@ -82,20 +82,6 @@ function attributeRows(state: EditorState) {
     }
   }
   return {compact, fonts};
-}
-
-/** The starts of output lines in runs (consecutive lines) with box drawing: they are set as art. */
-function artLines(state: EditorState, lines: OutputLine[]) {
-  const {doc} = state;
-  const art = new Set<number>();
-  for (let i = 0; i < lines.length; ) {
-    let j = i + 1;
-    while (j < lines.length && doc.lineAt(lines[j].from).number === doc.lineAt(lines[j - 1].from).number + 1) j++;
-    const run = lines.slice(i, j).filter(({type}) => type === "output");
-    if (run.some(({from}) => ART.test(doc.lineAt(from).text))) run.forEach(({from}) => art.add(from));
-    i = j;
-  }
-  return art;
 }
 
 // Line decorations are shared by every line that looks the same, so
@@ -232,7 +218,6 @@ function createDecorations(view: EditorView) {
   const {state} = view;
   const {doc} = state;
   const lines = state.field(outputLinesField);
-  const art = artLines(state, lines);
   const {compact, fonts} = attributeRows(state);
   const decorations: Range<Decoration>[] = [];
   const atomic: Range<Decoration>[] = [];
@@ -243,7 +228,6 @@ function createDecorations(view: EditorView) {
       const {from, type} = lines[i];
       const line = doc.lineAt(from);
       let className = LINE_CLASS[type];
-      if (art.has(from)) className += " cm-art-line";
       if (compact.has(from)) className += " cm-compact-line";
       decorations.push(lineDecoration(className, fonts.get(from) ?? "").range(from));
 

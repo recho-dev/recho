@@ -1591,10 +1591,6 @@
     border-bottom-left-radius: var(--out-marker-width);
     border-bottom-right-radius: var(--out-marker-width);
   }
-  .thumb-code .line.art {
-    min-height: 1em;
-    line-height: var(--lh-art);
-  }
 }
 
 /* Theme swaps are instant: transitions pause for one frame so nothing lags behind. */
