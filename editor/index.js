@@ -1,13 +1,14 @@
 import {EditorView, basicSetup} from "codemirror";
 import {EditorState, Transaction} from "@codemirror/state";
 import {keymap} from "@codemirror/view";
-import {HighlightStyle, syntaxHighlighting} from "@codemirror/language";
+import {HighlightStyle, forceParsing, syntaxHighlighting} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
 import {indentWithTab} from "@codemirror/commands";
 import {createRuntime} from "../runtime/index.js";
 import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import {blockIndicator, runButtonGutter} from "./blocks";
+import {clearOutputChanges} from "./blocks/output.ts";
 import {javascriptSupport} from "./languages/javascript.js";
 
 /**
@@ -238,9 +239,25 @@ export function createEditor(container, options) {
   function stop() {
     runtimeRef.current?.destroy();
     runtimeRef.current = null;
+    // The Cmd key's release isn't heard from here on, so it can't resume a
+    // later run.
+    isStopByMetaKey = false;
     window.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("keyup", onKeyUp);
     window.removeEventListener("openlink", onOpenLink);
+  }
+
+  /**
+   * Stop running and remove every output line, e.g. to make the editor
+   * usable again after printing too much. It's an edit, so it can be undone.
+   */
+  function clear() {
+    stop();
+    // The parser stops after a time budget, and long output is when this is
+    // needed, so finish parsing first: output past the parsed part is missed.
+    forceParsing(view, view.state.doc.length, 2000);
+    const changes = clearOutputChanges(view.state);
+    if (changes.length) view.dispatch({changes, userEvent: "delete.clear"});
   }
 
   /** Run the runtime. Initialize a new runtime if it doesn't exist. */
@@ -284,6 +301,7 @@ export function createEditor(container, options) {
       run();
     },
     stop,
+    clear,
     on: (event, callback) => dispatcher.on(event, callback),
     destroy: () => {
       stop();

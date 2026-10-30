@@ -1,6 +1,6 @@
 "use client";
 import {useEffect, useRef, useState} from "react";
-import {Play, Square} from "lucide-react";
+import {Eraser, Play, Square} from "lucide-react";
 import {createEditor} from "../editor/index.js";
 import {loadLanguageSupport} from "../editor/languages/index.js";
 import {loadLanguage} from "../runtime/languages/index.js";
@@ -135,6 +135,12 @@ export function Editor({
     editorRef.current?.stop();
   }
 
+  function onClear() {
+    editorRef.current?.clear();
+    // Clearing is an edit, but there's nothing new to run.
+    setNeedRerun(false);
+  }
+
   const shortcut = useShortcut("S");
   // Edits stop the outputs updating until the next run.
   const shownStatus = compiling ? "Compiling…" : needRerun ? "Edited" : null;
@@ -151,6 +157,10 @@ export function Editor({
         <Button className="tb-action" tip="Stop updating" onClick={onStop}>
           <Square className="ic" size={9} strokeWidth={1.75} fill="currentColor" aria-hidden="true" />
           <span className="lbl">Stop</span>
+        </Button>
+        <Button className="tb-action" tip="Stop and clear output" onClick={onClear}>
+          <Eraser className="ic" size={12} strokeWidth={1.75} aria-hidden="true" />
+          <span className="lbl">Clear</span>
         </Button>
         {shownStatus && (
           <span key={shownStatus} role="status" className="status swap-in" data-state={statusState ?? undefined}>
