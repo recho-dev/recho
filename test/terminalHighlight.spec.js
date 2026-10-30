@@ -49,6 +49,9 @@ describe("terminal highlighting", () => {
     expect(highlightLine("echo(1)")).toContain(fg(COLORS.fn) + bold + "echo");
     expect(highlightLine("recho.now()")).toContain(fg(COLORS.fg) + bold + "recho");
     expect(highlightLine("obj.echo")).not.toContain(bold);
+    expect(highlightLine("obj. echo")).not.toContain(bold);
+    expect(highlightLine("  .echo()")).not.toContain(bold);
+    expect(highlightLine("#echo = 1")).not.toContain(bold);
   });
 
   it("keeps the line-number gutter intact while horizontally scrolled", () => {

@@ -1,53 +1,26 @@
 import {syntaxTree} from "@codemirror/language";
-import {Decoration, ViewPlugin} from "@codemirror/view";
+import {Decoration} from "@codemirror/view";
+import {syntaxMarks} from "./syntaxMarks.js";
 
 const docTagDeco = Decoration.mark({class: "cm-doc-tag"});
 
-export const docStringTag = ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = this.buildDeco(view);
-    }
+// A tag needs space before and after it, but doesn't have to start the line.
+const TAG_RE = /\s+(@[a-zA-Z_]+)\s+/g;
 
-    update(update) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = this.buildDeco(update.view);
+/** Marks doc tags (`@param`, ...) in block comments. */
+export const docStringTag = syntaxMarks((state, from, to) => {
+  const marks = [];
+  syntaxTree(state).iterate({
+    from,
+    to,
+    enter: (node) => {
+      if (node.name !== "BlockComment") return;
+      const text = state.doc.sliceString(node.from, node.to);
+      for (const m of text.matchAll(TAG_RE)) {
+        const start = node.from + m.index;
+        marks.push(docTagDeco.range(start, start + m[0].length));
       }
-    }
-
-    buildDeco(view) {
-      let widgets = [];
-      let tree = syntaxTree(view.state);
-
-      for (const {from, to} of view.visibleRanges) {
-        tree.iterate({
-          // Only iterate tree nodes that intersect with the viewport.
-          from,
-          to,
-          enter: ({type, from, to}) => {
-            if (type.name === "BlockComment") {
-              const text = view.state.doc.sliceString(from, to);
-              // Need space before and after the tag,
-              // it does not have to be at the beginning of the line.
-              let regex = /\s+(@[a-zA-Z_]+)\s+/g;
-              let m;
-              while ((m = regex.exec(text))) {
-                const tagStart = from + m.index;
-                const tagEnd = tagStart + m[0].length;
-                // Only add decoration if the tag is within or intersects the viewport
-                if (tagEnd >= from && tagStart <= to) {
-                  widgets.push(docTagDeco.range(tagStart, tagEnd));
-                }
-              }
-            }
-          },
-        });
-      }
-
-      return Decoration.set(widgets, true);
-    }
-  },
-  {
-    decorations: (v) => v.decorations,
-  },
-);
+    },
+  });
+  return marks;
+});

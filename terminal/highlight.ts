@@ -146,8 +146,10 @@ function styleToken(tok: string, line: string, index: number): string {
     const next = line[index + tok.length];
     if (next === "(") style = fg(C.fn);
     else style = fg(C.fg);
-    // Recho's own names are bold, unless read as a property (`obj.echo`).
-    if (BUILTINS.has(tok) && line[index - 1] !== ".") style += bold;
+    // Recho's own names are bold, unless read as a property (`obj.echo`,
+    // `obj. echo`) or a private field (`#echo`).
+    const before = line.slice(0, index).trimEnd().slice(-1);
+    if (BUILTINS.has(tok) && before !== "." && line[index - 1] !== "#") style += bold;
   } else style = fg(C.punct);
 
   return style + tok + reset + fg(C.fg);
