@@ -1,17 +1,9 @@
-import {
-  Decoration,
-  EditorView,
-  GutterMarker,
-  ViewPlugin,
-  WidgetType,
-  lineNumberWidgetMarker,
-  type ViewUpdate,
-} from "@codemirror/view";
+import {Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate} from "@codemirror/view";
 import {syntaxTree} from "@codemirror/language";
-import {Facet, StateField, type EditorState, type Extension, type Range} from "@codemirror/state";
+import {EditorState, Facet, Prec, StateField, type Extension, type Range} from "@codemirror/state";
 import {ART, PREFIX_END, markLineType} from "../../lib/blocks/detect.ts";
 import {findLinks, linkTitle} from "../commentLink.js";
-import {parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
+import {hasEscape, parse, stripAnsi, styleToCss} from "../../lib/ansi.js";
 import {blockMetadataField} from "./state.ts";
 import {createTypefaceStyle} from "./fonts.ts";
 
@@ -67,174 +59,11 @@ export const outputLinesField = StateField.define<OutputLine[]>({
   },
 });
 
-/** One row of an output widget: a line of output and how it is set. */
-type Row = {
-  text: string;
-  // The classes of the row, e.g. `cm-output-line cm-art-line`.
-  className: string;
-  // The inline style for the block's `@typeface` attribute, or "".
-  font: string;
-};
-
-const ROW_CLASS = {
+const LINE_CLASS = {
   output: "cm-output-line",
   error: "cm-output-line cm-error-line",
   warning: "cm-output-line cm-warning-line",
 };
-
-function sameRow(a: Row, b: Row) {
-  return a.text === b.text && a.className === b.className && a.font === b.font;
-}
-
-// Art and `@compact` rows are one em high, other rows 1.25 em (see
-// .cm-output-line in ../index.css).
-function isTight(row: Row) {
-  return row.className.includes("cm-art-line") || row.className.includes("cm-compact-line");
-}
-
-// The class, inline style and link each span was last given, so a redraw
-// only touches what changed.
-type Span = HTMLSpanElement & {rechoClass?: string; rechoStyle?: string; rechoUrl?: string};
-
-type Part = {className: string; style: string; text: string; url: string};
-
-/**
- * The parts of a row's text after its prefix: one per SGR style, split
- * further where http(s) links start and end, so links open with Cmd/Ctrl +
- * Click like links in comments (see ../commentLink.js).
- */
-function textParts(text: string): Part[] {
-  const runs = parse(text);
-  const links = findLinks(runs.map((run) => run.text).join(""));
-  const parts: Part[] = [];
-  let offset = 0;
-  for (const run of runs) {
-    const style = styleToCss(run.style);
-    const end = offset + run.text.length;
-    let at = offset;
-    while (at < end) {
-      const link = links.find((l) => l.to > at && l.from < end);
-      if (!link || link.from >= end) {
-        parts.push({className: "", style, text: run.text.slice(at - offset), url: ""});
-        break;
-      }
-      if (link.from > at)
-        parts.push({className: "", style, text: run.text.slice(at - offset, link.from - offset), url: ""});
-      const to = Math.min(link.to, end);
-      const from = Math.max(link.from, at);
-      parts.push({
-        className: "cm-comment-link",
-        style,
-        text: run.text.slice(from - offset, to - offset),
-        url: link.url,
-      });
-      at = to;
-    }
-    offset = end;
-  }
-  return parts;
-}
-
-/**
- * Draws a row as spans: the prefix, then one span per SGR style (and link).
- * The row's existing spans are reused, so an animation frame that changes a
- * few characters changes a few text nodes, not the whole row.
- */
-function renderRow(row: Row, element: HTMLElement) {
-  if (element.className !== row.className) element.className = row.className;
-  if (element.style.cssText !== row.font) element.style.cssText = row.font;
-  const prefix = row.text.match(PREFIX_END);
-  const parts = textParts(prefix ? row.text.slice(prefix[0].length) : row.text);
-  if (prefix) parts.unshift({className: "cm-output-line-prefix", style: "", text: prefix[0], url: ""});
-  let child = element.firstChild as Span | null;
-  for (const {className, style, text, url} of parts) {
-    let span = child;
-    if (span === null) {
-      span = document.createElement("span");
-      element.appendChild(span);
-    }
-    if (span.rechoClass !== className) span.className = span.rechoClass = className;
-    if (span.rechoStyle !== style) span.style.cssText = span.rechoStyle = style;
-    if ((span.rechoUrl ?? "") !== url) {
-      span.rechoUrl = url;
-      if (url) {
-        span.setAttribute("data-url", url);
-        span.title = linkTitle;
-      } else {
-        span.removeAttribute("data-url");
-        span.removeAttribute("title");
-      }
-    }
-    if (span.textContent !== text) span.textContent = text;
-    child = span.nextSibling as Span | null;
-  }
-  while (child) {
-    const next = child.nextSibling as Span | null;
-    child.remove();
-    child = next;
-  }
-}
-
-// The rows a widget's DOM shows, to patch only those that change.
-const renderedRows = new WeakMap<HTMLElement, Row[]>();
-
-/**
- * A run of output lines drawn by the editor: one row per line, with the
- * `//➜` prefix in the quiet prefix colour and the rest split into spans per
- * SGR style (see lib/ansi.js). It replaces the lines it shows, so the
- * escapes in the document never show.
- */
-export class OutputWidget extends WidgetType {
-  constructor(readonly rows: Row[]) {
-    super();
-  }
-
-  eq(other: OutputWidget) {
-    if (other.rows.length !== this.rows.length) return false;
-    for (let i = 0; i < this.rows.length; i++) if (!sameRow(this.rows[i], other.rows[i])) return false;
-    return true;
-  }
-
-  toDOM() {
-    const dom = document.createElement("div");
-    dom.className = "cm-output-widget";
-    this.patch(dom, []);
-    return dom;
-  }
-
-  updateDOM(dom: HTMLElement) {
-    this.patch(dom, renderedRows.get(dom) ?? []);
-    return true;
-  }
-
-  // Redraws only the rows whose text or style changed (rows are keyed by
-  // index), and adds or removes rows at the end.
-  patch(dom: HTMLElement, old: Row[]) {
-    const {rows} = this;
-    while (dom.childElementCount > rows.length) dom.lastElementChild!.remove();
-    for (let i = 0; i < rows.length; i++) {
-      if (i < dom.childElementCount) {
-        if (i >= old.length || !sameRow(old[i], rows[i])) renderRow(rows[i], dom.children[i] as HTMLElement);
-      } else {
-        const element = document.createElement("div");
-        renderRow(rows[i], element);
-        dom.appendChild(element);
-      }
-    }
-    renderedRows.set(dom, rows);
-  }
-
-  // Mouse events on links reach the editor's link handler (../commentLink.js);
-  // the rest stay with the widget, e.g. to select its text.
-  ignoreEvent(event: Event) {
-    return !(event.target instanceof Element && event.target.closest(".cm-comment-link"));
-  }
-
-  get estimatedHeight() {
-    // Rows are 1.25 em (or 1 em) of a 13.5px font; CodeMirror measures them.
-    return this.rows.reduce((height, row) => height + (isTight(row) ? 13.5 : 16.875), 0);
-  }
-}
 
 /** Per line start, the classes and typeface that block attributes give it. */
 function attributeRows(state: EditorState) {
@@ -255,138 +84,204 @@ function attributeRows(state: EditorState) {
   return {compact, fonts};
 }
 
-function createWidgets(state: EditorState) {
-  const lines = state.field(outputLinesField);
+/** The starts of output lines in runs (consecutive lines) with box drawing: they are set as art. */
+function artLines(state: EditorState, lines: OutputLine[]) {
   const {doc} = state;
-  const {compact, fonts} = attributeRows(state);
-  const widgets: Range<Decoration>[] = [];
+  const art = new Set<number>();
   for (let i = 0; i < lines.length; ) {
-    // A run: output lines on consecutive lines of the document.
-    const first = doc.lineAt(lines[i].from);
-    const run = [{line: first, type: lines[i].type}];
     let j = i + 1;
-    for (; j < lines.length; j++) {
-      const line = doc.lineAt(lines[j].from);
-      if (line.number !== run[run.length - 1].line.number + 1) break;
-      run.push({line, type: lines[j].type});
-    }
+    while (j < lines.length && doc.lineAt(lines[j].from).number === doc.lineAt(lines[j - 1].from).number + 1) j++;
+    const run = lines.slice(i, j).filter(({type}) => type === "output");
+    if (run.some(({from}) => ART.test(doc.lineAt(from).text))) run.forEach(({from}) => art.add(from));
     i = j;
-    // A run with box drawing is set as art.
-    const art = run.some(({line, type}) => type === "output" && ART.test(line.text));
-    const rows = run.map(({line, type}) => {
-      let className = ROW_CLASS[type];
-      if (type === "output" && art) className += " cm-art-line";
-      if (compact.has(line.from)) className += " cm-compact-line";
-      return {text: line.text, className, font: fonts.get(line.from) ?? ""};
-    });
-    const last = run[run.length - 1].line;
-    const widget = new OutputWidget(rows);
-    widgets.push(Decoration.replace({widget, block: true}).range(first.from, last.to));
   }
-  return Decoration.set(widgets);
+  return art;
 }
 
-/** The output widgets. They are block decorations, which only a state field can provide. */
-export const outputWidgetField = StateField.define({
-  create: createWidgets,
-  update(widgets, tr) {
-    const blocksChanged = tr.startState.field(blockMetadataField, false) !== tr.state.field(blockMetadataField, false);
-    const linesChanged = tr.startState.field(outputLinesField) !== tr.state.field(outputLinesField);
-    return tr.docChanged || blocksChanged || linesChanged ? createWidgets(tr.state) : widgets;
-  },
-  provide: (field) => EditorView.decorations.from(field),
-});
+// Line decorations are shared by every line that looks the same, so
+// CodeMirror can tell unchanged lines apart cheaply.
+const lineDecorations = new Map<string, Decoration>();
+function lineDecoration(className: string, font: string) {
+  const key = `${className}|${font}`;
+  let decoration = lineDecorations.get(key);
+  if (!decoration) {
+    decoration = Decoration.line({attributes: font ? {class: className, style: font} : {class: className}});
+    lineDecorations.set(key, decoration);
+  }
+  return decoration;
+}
+
+// The `//➜` (or `//✗`) at the start of a line, quieter than the output after it.
+const prefixMark = Decoration.mark({class: "cm-output-line-prefix"});
+
+// A span with the inline style and link it was last given, so a redraw only
+// touches what changed.
+type Span = HTMLSpanElement & {rechoStyle?: string; rechoUrl?: string};
 
 /**
- * The line numbers next to an output widget, one per row, each as high as
- * its row. Its line is worked out from where the widget is, not stored on the
- * widget, so the numbers follow lines inserted above unchanged output.
+ * The parts of a line's text: one per SGR style, split further where
+ * http(s) links start and end, so links open with Cmd/Ctrl + Click like
+ * links in comments (see ../commentLink.js).
  */
-class OutputLineNumbers extends GutterMarker {
-  constructor(
-    readonly first: number,
-    readonly tight: boolean[],
-  ) {
+function textParts(text: string) {
+  const runs = parse(text);
+  const links = findLinks(runs.map((run) => run.text).join(""));
+  const parts: {style: string; text: string; url: string}[] = [];
+  let offset = 0;
+  for (const run of runs) {
+    const style = styleToCss(run.style);
+    const end = offset + run.text.length;
+    let at = offset;
+    while (at < end) {
+      const link = links.find((l) => l.to > at && l.from < end);
+      if (!link) {
+        parts.push({style, text: run.text.slice(at - offset), url: ""});
+        break;
+      }
+      if (link.from > at) parts.push({style, text: run.text.slice(at - offset, link.from - offset), url: ""});
+      const to = Math.min(link.to, end);
+      parts.push({style, text: run.text.slice(Math.max(link.from, at) - offset, to - offset), url: link.url});
+      at = to;
+    }
+    offset = end;
+  }
+  return parts;
+}
+
+/**
+ * The text of a coloured output line, after its prefix, drawn as styled spans
+ * with its escapes left out. The escapes stay in the document, but never in
+ * editable text, so the cursor and selections can't stop among them. The line
+ * keeps its place in the document, so it is selected and deleted like other
+ * lines; the cursor goes before or after the coloured text, which is deleted
+ * as a whole. A redraw reuses the spans, so an animation frame only changes
+ * the text and styles that changed, and thousands of coloured characters
+ * stay fast (Chrome slows down a lot with that many spans in editable text).
+ */
+class ColoredOutputWidget extends WidgetType {
+  constructor(readonly text: string) {
     super();
   }
 
-  eq(other: OutputLineNumbers) {
-    return (
-      other.first === this.first &&
-      other.tight.length === this.tight.length &&
-      other.tight.every((tight, i) => tight === this.tight[i])
-    );
+  eq(other: ColoredOutputWidget) {
+    return other.text === this.text;
   }
 
-  // One element: the gutter removes a marker by removing its first node.
   toDOM() {
-    const numbers = document.createElement("div");
-    numbers.className = "cm-output-numbers";
-    numbers.dataset.line = String(this.first);
-    this.tight.forEach((tight, i) => {
-      const div = document.createElement("div");
-      div.className = tight ? "cm-output-number cm-tight" : "cm-output-number";
-      div.textContent = String(this.first + i);
-      numbers.appendChild(div);
-    });
-    return numbers;
+    const dom = document.createElement("span");
+    dom.className = "cm-output-colored";
+    this.render(dom);
+    return dom;
+  }
+
+  updateDOM(dom: HTMLElement) {
+    this.render(dom);
+    return true;
+  }
+
+  render(dom: HTMLElement) {
+    let child = dom.firstChild as Span | null;
+    for (const {style, text, url} of textParts(this.text)) {
+      let span = child;
+      if (span === null) span = dom.appendChild(document.createElement("span"));
+      if (span.rechoStyle !== style) span.style.cssText = span.rechoStyle = style;
+      if ((span.rechoUrl ?? "") !== url) {
+        span.rechoUrl = url;
+        if (url) {
+          span.className = "cm-comment-link";
+          span.setAttribute("data-url", url);
+          span.title = linkTitle;
+        } else {
+          span.removeAttribute("class");
+          span.removeAttribute("data-url");
+          span.removeAttribute("title");
+        }
+      }
+      if (span.textContent !== text) span.textContent = text;
+      child = span.nextSibling as Span | null;
+    }
+    while (child) {
+      const next = child.nextSibling as Span | null;
+      child.remove();
+      child = next;
+    }
+  }
+
+  // The cursor goes at the widget's start or end. CodeMirror would measure
+  // the end from the first span, which put the cursor inside the text.
+  coordsAt(dom: HTMLElement, pos: number) {
+    const {left, right, top, bottom} = dom.getBoundingClientRect();
+    const x = pos === 0 ? left : right;
+    return {left: x, right: x, top, bottom};
+  }
+
+  // The editor handles clicks and drags, so they select lines as in code.
+  ignoreEvent() {
+    return false;
   }
 }
 
-const outputLineNumbers = lineNumberWidgetMarker.of((view, widget, block) =>
-  widget instanceof OutputWidget
-    ? new OutputLineNumbers(view.state.doc.lineAt(block.from).number, widget.rows.map(isTight))
-    : null,
-);
-
 /**
- * Rows have fixed heights, except error rows, which wrap. When a widget has
- * error rows, its line numbers take the rows' measured heights, so the
- * numbers below a wrapped error stay next to their rows.
+ * The decorations of the output lines in view: a class per line and the
+ * prefix in the quiet prefix colour. Plain output stays editable text, like
+ * code. A line with escapes has the text after its prefix drawn by a
+ * ColoredOutputWidget, which is also `atomic`: the cursor steps over it and
+ * deleting takes it in one go.
  */
-const wrappedLineNumbers = ViewPlugin.fromClass(
+function createDecorations(view: EditorView) {
+  const {state} = view;
+  const {doc} = state;
+  const lines = state.field(outputLinesField);
+  const art = artLines(state, lines);
+  const {compact, fonts} = attributeRows(state);
+  const decorations: Range<Decoration>[] = [];
+  const atomic: Range<Decoration>[] = [];
+  let i = 0;
+  for (const range of view.visibleRanges) {
+    while (i < lines.length && lines[i].from < range.from) i++;
+    for (; i < lines.length && lines[i].from <= range.to; i++) {
+      const {from, type} = lines[i];
+      const line = doc.lineAt(from);
+      let className = LINE_CLASS[type];
+      if (art.has(from)) className += " cm-art-line";
+      if (compact.has(from)) className += " cm-compact-line";
+      decorations.push(lineDecoration(className, fonts.get(from) ?? "").range(from));
+
+      const prefix = line.text.match(PREFIX_END);
+      const textFrom = prefix ? prefix[0].length : 0;
+      if (prefix) decorations.push(prefixMark.range(from, from + textFrom));
+
+      const text = line.text.slice(textFrom);
+      if (!hasEscape(text)) continue;
+      const colored = Decoration.replace({widget: new ColoredOutputWidget(text)}).range(from + textFrom, line.to);
+      decorations.push(colored);
+      atomic.push(colored);
+    }
+  }
+  return {decorations: Decoration.set(decorations, true), atomic: Decoration.set(atomic, true)};
+}
+
+export const outputDecorationPlugin = ViewPlugin.fromClass(
   class {
-    constructor(readonly view: EditorView) {
-      this.schedule();
+    decorations: DecorationSet;
+    atomic: DecorationSet;
+
+    constructor(view: EditorView) {
+      ({decorations: this.decorations, atomic: this.atomic} = createDecorations(view));
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.geometryChanged || update.viewportChanged || update.heightChanged) {
-        this.schedule();
+      const blocksChanged =
+        update.startState.field(blockMetadataField, false) !== update.state.field(blockMetadataField, false);
+      const linesChanged = update.startState.field(outputLinesField) !== update.state.field(outputLinesField);
+      if (update.docChanged || update.viewportChanged || blocksChanged || linesChanged) {
+        ({decorations: this.decorations, atomic: this.atomic} = createDecorations(update.view));
       }
     }
-
-    schedule() {
-      if (!this.view.contentDOM.querySelector(".cm-output-widget .cm-error-line")) return;
-      this.view.requestMeasure({
-        key: this,
-        read: (view) => this.read(view),
-        write: (rows, view) => this.write(rows, view),
-      });
-    }
-
-    read(view: EditorView) {
-      const widgets: {line: number; heights: number[]}[] = [];
-      for (const dom of Array.from(view.contentDOM.querySelectorAll<HTMLElement>(".cm-output-widget"))) {
-        if (!dom.querySelector(".cm-error-line")) continue;
-        const line = view.state.doc.lineAt(view.posAtDOM(dom)).number;
-        const heights = Array.from(dom.children, (row: Element) => row.getBoundingClientRect().height / view.scaleY);
-        widgets.push({line, heights});
-      }
-      return widgets;
-    }
-
-    write(widgets: {line: number; heights: number[]}[], view: EditorView) {
-      for (const {line, heights} of widgets) {
-        const numbers = view.dom.querySelector(`.cm-output-numbers[data-line="${line}"]`);
-        if (!numbers || numbers.children.length !== heights.length) continue;
-        heights.forEach((height, i) => {
-          const number = numbers.children[i] as HTMLElement;
-          const value = `${height}px`;
-          if (number.style.height !== value) number.style.height = value;
-        });
-      }
-    }
+  },
+  {
+    decorations: (plugin) => plugin.decorations,
+    provide: (plugin) => EditorView.atomicRanges.of((view) => view.plugin(plugin)?.atomic ?? Decoration.none),
   },
 );
 
@@ -395,5 +290,7 @@ const plainCopy = EditorView.clipboardOutputFilter.of((text) => stripAnsi(text))
 
 export const outputLines = outputLinesField.extension;
 
-/** Output drawn as widgets, with their line numbers, copied without colours. */
-export const outputDecoration: Extension = [outputWidgetField, outputLineNumbers, wrappedLineNumbers, plainCopy];
+/** Output lines styled in place, with their colours, copied without them. */
+// Above the basic setup's special characters, which would draw a placeholder
+// for the ESC of escapes the widget covers.
+export const outputDecoration: Extension = [Prec.high(outputDecorationPlugin), plainCopy];
