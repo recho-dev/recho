@@ -239,6 +239,9 @@ export function createEditor(container, options) {
   function stop() {
     runtimeRef.current?.destroy();
     runtimeRef.current = null;
+    // The Cmd key's release isn't heard from here on, so it can't resume a
+    // later run.
+    isStopByMetaKey = false;
     window.removeEventListener("keydown", onKeyDown);
     window.removeEventListener("keyup", onKeyUp);
     window.removeEventListener("openlink", onOpenLink);
