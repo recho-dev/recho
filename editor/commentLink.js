@@ -3,14 +3,29 @@ import {Decoration, ViewPlugin, EditorView} from "@codemirror/view";
 
 const isWindows = navigator.userAgent.includes("Windows");
 
+export const linkTitle = `Open in a new tab (${isWindows ? "Ctrl" : "Cmd"} + Click)`;
+
+/** The http(s) links in `text`, without trailing punctuation: `{from, to, url}`. */
+export function findLinks(text) {
+  const links = [];
+  // Match URLs, allowing common URL characters, then trim trailing punctuation.
+  const httpRegex = /https?:\/\/[^\s\)\]\}]+/g;
+  let m;
+  while ((m = httpRegex.exec(text))) {
+    // Trim trailing punctuation that shouldn't be part of URL.
+    // These are common sentence/clause-ending punctuation.
+    const url = m[0].replace(/[.,;:!?)\]}>]+$/, "");
+    if (!url || url.length < 11) continue; // Minimum valid URL length.
+    links.push({from: m.index, to: m.index + url.length, url});
+  }
+  return links;
+}
+
 // Create a decoration that marks links but keeps text selectable.
 function createLinkDecoration(url) {
   return Decoration.mark({
     class: "cm-comment-link",
-    attributes: {
-      "data-url": url,
-      title: `Open in a new tab (${isWindows ? "Ctrl" : "Cmd"} + Click)`,
-    },
+    attributes: {"data-url": url, title: linkTitle},
   });
 }
 
@@ -38,20 +53,8 @@ export const commentLink = ViewPlugin.fromClass(
           enter: ({type, from, to}) => {
             if (type.name === "BlockComment" || type.name === "LineComment") {
               const text = view.state.doc.sliceString(from, to);
-              // Match URLs, allowing common URL characters, then trim trailing punctuation.
-              let httpRegex = /https?:\/\/[^\s\)\]\}]+/g;
-              let m;
-              while ((m = httpRegex.exec(text))) {
-                let url = m[0];
-                // Trim trailing punctuation that shouldn't be part of URL.
-                // These are common sentence/clause-ending punctuation.
-                url = url.replace(/[.,;:!?)\]}>]+$/, "");
-                if (!url || url.length < 11) continue; // Minimum valid URL length.
-                const tagStart = from + m.index;
-                const tagEnd = tagStart + url.length;
-                if (tagEnd >= from && tagStart <= to) {
-                  decorations.push(createLinkDecoration(url).range(tagStart, tagEnd));
-                }
+              for (const link of findLinks(text)) {
+                decorations.push(createLinkDecoration(link.url).range(from + link.from, from + link.to));
               }
             }
           },

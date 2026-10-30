@@ -2,6 +2,7 @@ import {groups, max} from "d3-array";
 import {getBorderCharacters, table} from "table";
 import {ERROR_MARK, OUTPUT_MARK} from "./constant.js";
 import {Inspector} from "./stdlib/inspect.js";
+import {padEnd, stripAnsi, visibleLength} from "../lib/ansi.js";
 
 export const OUTPUT_PREFIX = `//${OUTPUT_MARK}`;
 
@@ -44,8 +45,9 @@ function columns(data, options) {
 
 function padStringWidth(string) {
   const lines = string.split("\n");
-  const maxLength = max(lines, (line) => line.length);
-  return lines.map((line) => line.padEnd(maxLength)).join("\n");
+  // By the characters shown: SGR sequences in coloured output take no space.
+  const maxLength = max(lines, visibleLength);
+  return lines.map((line) => padEnd(line, maxLength)).join("\n");
 }
 
 function padStringHeight(string, height) {
@@ -142,6 +144,8 @@ export function makeOutput(values, outputFormat = JAVASCRIPT_OUTPUT) {
   // Merging values pads lines to the same width, which an error's lines
   // don't need.
   if (error && format === columns) formatted = formatted.replace(/[ \t]+$/gm, "");
+  // Errors are shown without colours (see lib/ansi.js), whatever printed them.
+  if (error) formatted = stripAnsi(formatted);
   const prefixed = addPrefix(
     formatted,
     error ? outputFormat.errorPrefix : outputFormat.outputPrefix,

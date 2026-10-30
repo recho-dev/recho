@@ -39,3 +39,4 @@ export {letDerived} from "./let-derived.js";
 export {letWriterBeforeDefiner} from "./let-writer-before-definer.js";
 export {letInvalidAssignments} from "./let-invalid-assignments.js";
 export {letDuplicateDeclaration} from "./let-duplicate-declaration.js";
+export {echoAnsi} from "./echo-ansi.js";

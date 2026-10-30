@@ -17,6 +17,15 @@ describe("terminal highlighting", () => {
     expect(styled).not.toContain(keywordStyle);
   });
 
+  it("keeps the output colour after resets inside coloured output", () => {
+    const line = `${OUTPUT_PREFIX} \x1b[31mRED\x1b[39m after \x1b[1;32mok\x1b[0m end`;
+    const styled = highlightLine(line);
+    expect(stripAnsi(styled)).toBe(stripAnsi(line));
+    expect(styled).toContain(`\x1b[39m${fg(COLORS.output)} after`);
+    expect(styled).toContain(`\x1b[0m${fg(COLORS.output)} end`);
+    expect(styled).not.toContain(`\x1b[31m${fg(COLORS.output)}`);
+  });
+
   it("does not highlight keywords inside line comments", () => {
     const line = "// for in";
     const styled = highlightLine(line);

@@ -1,5 +1,3 @@
-import {Decoration} from "@codemirror/view";
-
 export const supportedTypefaces = new Set(["Cascadia Code", "Google Sans Code", "Fira Code"]);
 
 // Map typeface names to Google Fonts API URLs and actual font family names
@@ -93,17 +91,11 @@ export async function loadFont(typeface: string): Promise<void> {
 }
 
 /**
- * Create a line decoration with a specific font family
+ * The inline style that sets output rows in a typeface.
  * @param typeface The name of the typeface to use
- * @returns A CodeMirror line decoration with the font family applied
  */
-export function createTypefaceDecoration(typeface: string) {
+export function createTypefaceStyle(typeface: string) {
   const config = typefaceConfig[typeface];
   const fontFamily = config?.family || typeface;
-  return Decoration.line({
-    attributes: {
-      class: "cm-output-line",
-      style: `font-family: "${fontFamily}", monospace;`,
-    },
-  });
+  return `font-family: "${fontFamily}", monospace;`;
 }

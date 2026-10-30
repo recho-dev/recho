@@ -1559,7 +1559,11 @@
     padding-left: calc(var(--out-marker-width) + var(--space-2));
     white-space: pre;
   }
-  .thumb-code .line.out > span {
+  /* Output is quiet, except for the colours it prints (SGR, see lib/ansi.js). */
+  .thumb-code .line.out {
+    color: var(--out-value);
+  }
+  .thumb-code .line.out > span:not(.ansi) {
     color: var(--out-value) !important;
   }
   .thumb-code .line.err > span {
