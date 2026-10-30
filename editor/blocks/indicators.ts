@@ -1,7 +1,6 @@
 import {GutterMarker, gutter} from "@codemirror/view";
 import {BlockMetadata} from "./BlockMetadata.ts";
 import {blockMetadataField} from "./state.ts";
-import {OutputWidget} from "./output.ts";
 
 export class BlockIndicator extends GutterMarker {
   constructor(private className: string) {
@@ -73,19 +72,6 @@ export const blockIndicator = gutter({
     } else {
       return group.body;
     }
-  },
-  // An output widget (see ./output.ts) is one gutter element as high as its
-  // rows, so it gets one marker, rounded at both ends, when it is a block's
-  // output.
-  widgetMarker(view, widget, block) {
-    if (!(widget instanceof OutputWidget)) return null;
-    const blocks = view.state.field(blockMetadataField, false);
-    if (blocks === undefined) return null;
-    const index = findEnclosingBlock(blocks, block.from);
-    if (index === null || block.from >= blocks[index].source.from) return null;
-    // The output is one widget at the top of its block; the block's run goes
-    // on through its source, so the widget only starts it.
-    return blocks[index].error ? indicatorMarkers.error.head : indicatorMarkers.output.head;
   },
   initialSpacer() {
     return spacer;
