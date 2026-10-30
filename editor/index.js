@@ -4,7 +4,7 @@ import {keymap} from "@codemirror/view";
 import {HighlightStyle, syntaxHighlighting} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
 import {indentWithTab} from "@codemirror/commands";
-import {createRuntime} from "../runtime/index.js";
+import {createRuntime, removeOutputChanges} from "../runtime/index.js";
 import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import {blockIndicator, runButtonGutter} from "./blocks";
@@ -243,6 +243,16 @@ export function createEditor(container, options) {
     window.removeEventListener("openlink", onOpenLink);
   }
 
+  /**
+   * Stop running and remove every output line, e.g. to make the editor
+   * usable again after printing too much. It's an edit, so it can be undone.
+   */
+  function clear() {
+    stop();
+    const changes = removeOutputChanges(view.state.doc.toString(), language);
+    if (changes.length) view.dispatch({changes, userEvent: "delete.clear"});
+  }
+
   /** Run the runtime. Initialize a new runtime if it doesn't exist. */
   function run() {
     try {
@@ -284,6 +294,7 @@ export function createEditor(container, options) {
       run();
     },
     stop,
+    clear,
     on: (event, callback) => dispatcher.on(event, callback),
     destroy: () => {
       stop();

@@ -100,6 +100,54 @@ function debounce(fn, delay = 0) {
   };
 }
 
+/**
+ * Get the changes that remove the output lines from the code.
+ * @param {string} code The code to remove changes from.
+ * @param {object} [language] The notebook's language, JavaScript by default.
+ * @returns {{from: number, to: number, insert: ""}[]} An array of changes.
+ */
+export function removeOutputChanges(code, language = javascript) {
+  const {output: outputFormat} = language;
+  // A language can tell output lines apart from code that merely looks
+  // like them (e.g. inside a multi-line string), by line number.
+  const outputLines = language.outputLines?.(code);
+  function matchAt(index, lineNumber) {
+    if (outputLines) return outputLines.has(lineNumber);
+    return code.startsWith(outputFormat.outputPrefix, index) || code.startsWith(outputFormat.errorPrefix, index);
+  }
+
+  /** Line number ranges (left-closed and right-open) of lines that contain output or error. */
+  const lineNumbers = matchAt(0, 0) ? [{begin: 0, end: 1}] : [];
+  /**
+   * The index of the first character of each line.
+   * If the code ends with a newline, the last index is the length of the code.
+   */
+  const lineStartIndices = [0];
+  let nextNewlineIndex = code.indexOf("\n", 0);
+  while (0 <= nextNewlineIndex && nextNewlineIndex < code.length) {
+    lineStartIndices.push(nextNewlineIndex + 1);
+    if (matchAt(nextNewlineIndex + 1, lineStartIndices.length - 1)) {
+      const lineNumber = lineStartIndices.length - 1;
+      if (lineNumbers.length > 0 && lineNumber === lineNumbers[lineNumbers.length - 1].end) {
+        // Extend the last line number range.
+        lineNumbers[lineNumbers.length - 1].end += 1;
+      } else {
+        // Append a new line number range.
+        lineNumbers.push({begin: lineNumber, end: lineNumber + 1});
+      }
+    }
+    nextNewlineIndex = code.indexOf("\n", nextNewlineIndex + 1);
+  }
+
+  const changes = lineNumbers.map(({begin, end}) => ({
+    from: lineStartIndices[begin],
+    to: lineStartIndices[end],
+    insert: "",
+  }));
+
+  return changes;
+}
+
 export function createRuntime(initialCode, options = {}) {
   let code = initialCode;
   let prevCode = null;
@@ -177,7 +225,7 @@ export function createRuntime(initialCode, options = {}) {
 
   const refresh = debounce((code) => {
     if (disposed) return;
-    const changes = removeChanges(code);
+    const changes = removeOutputChanges(code, language);
 
     // Construct an interval tree containing the ranges to be deleted.
     const removedIntervals = IntervalTree.from(changes, ({from, to}, index) =>
@@ -358,7 +406,9 @@ export function createRuntime(initialCode, options = {}) {
         outputFormat.formatLine,
       ) + "\n";
     dispatch(
-      language.nodes ? nodesErrorChanges(code, from, errorMsg) : [...removeChanges(code), {from, insert: errorMsg}],
+      language.nodes
+        ? nodesErrorChanges(code, from, errorMsg)
+        : [...removeOutputChanges(code, language), {from, insert: errorMsg}],
     );
     dispatcher.call("error", null, {source: "split", error});
   }
@@ -368,7 +418,7 @@ export function createRuntime(initialCode, options = {}) {
   // their output stays, and only error output (which may be from an earlier
   // such error) is replaced by this one.
   function nodesErrorChanges(code, from, errorMsg) {
-    const changes = removeChanges(code).map((c) => {
+    const changes = removeOutputChanges(code, language).map((c) => {
       // Lines of output, each with its newline.
       const lines = code.slice(c.from, c.to).match(/[^\n]*\n?/g);
       const kept = lines.filter((line) => !line.startsWith(outputFormat.errorPrefix)).join("");
@@ -451,52 +501,6 @@ export function createRuntime(initialCode, options = {}) {
         },
       };
     });
-  }
-
-  /**
-   * Get the changes that remove the output lines from the code.
-   * @param {string} code The code to remove changes from.
-   * @returns {{from: number, to: number, insert: ""}[]} An array of changes.
-   */
-  function removeChanges(code) {
-    // A language can tell output lines apart from code that merely looks
-    // like them (e.g. inside a multi-line string), by line number.
-    const outputLines = language.outputLines?.(code);
-    function matchAt(index, lineNumber) {
-      if (outputLines) return outputLines.has(lineNumber);
-      return code.startsWith(outputFormat.outputPrefix, index) || code.startsWith(outputFormat.errorPrefix, index);
-    }
-
-    /** Line number ranges (left-closed and right-open) of lines that contain output or error. */
-    const lineNumbers = matchAt(0, 0) ? [{begin: 0, end: 1}] : [];
-    /**
-     * The index of the first character of each line.
-     * If the code ends with a newline, the last index is the length of the code.
-     */
-    const lineStartIndices = [0];
-    let nextNewlineIndex = code.indexOf("\n", 0);
-    while (0 <= nextNewlineIndex && nextNewlineIndex < code.length) {
-      lineStartIndices.push(nextNewlineIndex + 1);
-      if (matchAt(nextNewlineIndex + 1, lineStartIndices.length - 1)) {
-        const lineNumber = lineStartIndices.length - 1;
-        if (lineNumbers.length > 0 && lineNumber === lineNumbers[lineNumbers.length - 1].end) {
-          // Extend the last line number range.
-          lineNumbers[lineNumbers.length - 1].end += 1;
-        } else {
-          // Append a new line number range.
-          lineNumbers.push({begin: lineNumber, end: lineNumber + 1});
-        }
-      }
-      nextNewlineIndex = code.indexOf("\n", nextNewlineIndex + 1);
-    }
-
-    const changes = lineNumbers.map(({begin, end}) => ({
-      from: lineStartIndices[begin],
-      to: lineStartIndices[end],
-      insert: "",
-    }));
-
-    return changes;
   }
 
   function echo(state, options, ...values) {
