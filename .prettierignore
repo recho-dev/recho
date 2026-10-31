@@ -1,3 +1,4 @@
 *.recho.js
 test/output/*
 pnpm-lock.yaml
+runtime/frame/dist
