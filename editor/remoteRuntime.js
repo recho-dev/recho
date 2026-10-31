@@ -65,10 +65,6 @@ export function changesOnlyOutput(code, changes, prefixes) {
   return codeLines(next, prefixes) === codeLines(code, prefixes);
 }
 
-function isRange(range) {
-  return !!range && Number.isInteger(range.from) && Number.isInteger(range.to) && range.from <= range.to;
-}
-
 // The block attributes the editor uses (see ./blocks/output.ts). A typeface
 // goes into a style attribute, so it's kept only as a plain name.
 function safeAttributes(attributes) {
@@ -80,9 +76,19 @@ function safeAttributes(attributes) {
   return safe;
 }
 
-/** BlockMetadata from the frame's data, or null if any of it isn't valid. Exported for tests. */
-export function blocksOf(data) {
+/**
+ * BlockMetadata from the frame's data, for code of `length`, or null if any
+ * of it isn't valid. Exported for tests.
+ */
+export function blocksOf(data, length) {
   if (!Array.isArray(data)) return null;
+  const isRange = (range) =>
+    !!range &&
+    Number.isInteger(range.from) &&
+    Number.isInteger(range.to) &&
+    0 <= range.from &&
+    range.from <= range.to &&
+    range.to <= length;
   const blocks = [];
   for (const b of data) {
     if (!b || !isRange(b.source) || (b.output !== null && !isRange(b.output))) return null;
@@ -288,7 +294,8 @@ export function createRuntimeFrame(origin, {container = document.body} = {}) {
           case "changes": {
             // For code the user has edited since.
             if (message.version !== version) return;
-            const blocks = message.blocks === null ? null : blocksOf(message.blocks);
+            // Block positions are in the code before the changes.
+            const blocks = message.blocks === null ? null : blocksOf(message.blocks, doc.length);
             if (!changesOnlyOutput(doc, message.changes, prefixes) || (message.blocks !== null && !blocks)) {
               fail(new Error("The notebook's runtime sent changes that aren't output."), "frame");
               return;

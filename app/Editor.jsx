@@ -72,7 +72,8 @@ export function Editor({
   runtime = "javascript",
   onUserInput = () => {},
   onBeforeEachRun = () => {},
-  onHang = () => {},
+  // Called with whether the code stopped responding, or responds again.
+  onHangChange = () => {},
   autoRun = true,
   fileName = null,
   pinToolbar = true,
@@ -100,19 +101,24 @@ export function Editor({
 
   // Where the code is kept while it doesn't respond (it runs in a frame).
   // Nothing is shown: the user decides what to do, and the kept code opens
-  // without running. Code kept from before
-  // is dropped once it runs or is edited (not when it's read, so that it
-  // survives the editor being created twice).
+  // without running. Code kept from before is dropped once it runs or is
+  // edited (not when it's read, so that it survives the editor being created
+  // twice).
   const stash = useRef(null);
   const hungRef = useRef(false);
   const clearStash = () => !hungRef.current && stash.current && writeStash(stash.current, null);
 
-  const onRunCellRef = useRef(null);
-  onRunCellRef.current = () => {
+  // Before each run. A run doesn't happen while the code doesn't respond, so
+  // it keeps what that set up.
+  function beforeRun() {
+    setNeedRerun(false);
+    if (hungRef.current) return;
     clearStash();
     onBeforeEachRun();
-    setNeedRerun(false);
-  };
+  }
+
+  const onRunCellRef = useRef(null);
+  onRunCellRef.current = beforeRun;
 
   const onStatusRef = useRef(null);
   onStatusRef.current = (status) => {
@@ -121,10 +127,10 @@ export function Editor({
       hungRef.current = status.hung;
       if (status.hung) {
         if (editorRef.current) writeStash(stash.current, editorRef.current.getCode());
-        onHang();
       } else {
         clearStash();
       }
+      onHangChange(status.hung);
     }
   };
 
@@ -210,10 +216,8 @@ export function Editor({
   function onRun() {
     // Nothing to run until the editor exists (its language may be loading).
     if (!editorRef.current) return;
-    clearStash();
-    onBeforeEachRun();
-    setNeedRerun(false);
-    editorRef.current?.run();
+    beforeRun();
+    editorRef.current.run();
   }
 
   function onStop() {

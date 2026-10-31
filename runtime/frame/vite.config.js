@@ -16,6 +16,7 @@ export default defineConfig({
     target: "es2022",
   },
   worker: {format: "es"},
-  server: {port: 5174, strictPort: true},
-  preview: {port: 5174, strictPort: true},
+  // 127.0.0.1, not localhost: another site than the app in development.
+  server: {host: "127.0.0.1", port: 5174, strictPort: true},
+  preview: {host: "127.0.0.1", port: 5174, strictPort: true},
 });

@@ -39,16 +39,18 @@ describe("blocksOf", () => {
   const block = {id: "a", name: "cell", output: null, source: {from: 0, to: 5}, attributes: {}, error: false};
 
   it("keeps only the attributes the editor uses, in safe forms", () => {
-    const [b] = blocksOf([{...block, attributes: {compact: true, typeface: "Fira Code", other: 1}}]);
+    const [b] = blocksOf([{...block, attributes: {compact: true, typeface: "Fira Code", other: 1}}], 10);
     expect(b.attributes).toEqual({compact: true, typeface: "Fira Code"});
-    const [c] = blocksOf([{...block, attributes: {typeface: 'x"; position: fixed; inset: 0'}}]);
+    const [c] = blocksOf([{...block, attributes: {typeface: 'x"; position: fixed; inset: 0'}}], 10);
     expect(c.attributes).toEqual({});
   });
 
   it("rejects blocks without valid ranges", () => {
-    expect(blocksOf([{...block, source: {from: 5, to: 1}}])).toBe(null);
-    expect(blocksOf([{...block, output: {from: "0", to: 1}}])).toBe(null);
-    expect(blocksOf("nope")).toBe(null);
+    expect(blocksOf([{...block, source: {from: 5, to: 1}}], 10)).toBe(null);
+    expect(blocksOf([{...block, output: {from: "0", to: 1}}], 10)).toBe(null);
+    expect(blocksOf([{...block, source: {from: 0, to: 11}}], 10)).toBe(null);
+    expect(blocksOf([{...block, source: {from: -1, to: 5}}], 10)).toBe(null);
+    expect(blocksOf("nope", 10)).toBe(null);
   });
 });
 

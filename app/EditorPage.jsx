@@ -228,9 +228,11 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
   }
 
   // Code that stopped responding (in its frame) shouldn't run by itself next
-  // time either, as if it had frozen the page.
-  function onHang() {
-    if (isAdded) markRunning(notebook.id);
+  // time either, as if it had frozen the page, unless it responds again.
+  function onHangChange(hung) {
+    if (!isAdded) return;
+    if (hung) markRunning(notebook.id);
+    else clearRunning(notebook.id);
   }
 
   async function onChangeVisibility(visibility) {
@@ -350,7 +352,7 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
           key={notebook.id}
           onUserInput={onUserInput}
           onBeforeEachRun={onBeforeEachRun}
-          onHang={onHang}
+          onHangChange={onHangChange}
           autoRun={autoRun}
           fileName={fileNameOf(notebook.title, notebook.runtime)}
         />
