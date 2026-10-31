@@ -87,7 +87,7 @@ describe("createRuntimeFrame", () => {
   it("loads the runtime page in a sandboxed iframe", () => {
     start();
     expect(iframe().src).toBe(`${ORIGIN}/`);
-    expect(iframe().getAttribute("sandbox")).toBe("allow-scripts allow-same-origin");
+    expect(iframe().getAttribute("sandbox")).toBe("allow-scripts allow-same-origin allow-modals");
   });
 
   it("sends the code and language to start a runtime", () => {

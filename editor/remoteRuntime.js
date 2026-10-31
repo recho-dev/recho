@@ -134,7 +134,8 @@ export function createRuntimeFrame(origin, {container = document.body} = {}) {
     iframe = document.createElement("iframe");
     // Its own site, so `allow-same-origin` only lets it use its own storage
     // and workers (MLscript compiles in one). No navigating this page.
-    iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+    // `allow-modals`: notebooks can use alert(), confirm() and prompt().
+    iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-modals");
     // E.g. a notebook using the webcam (ml5-handpose).
     iframe.setAttribute("allow", "camera; microphone");
     iframe.setAttribute("aria-hidden", "true");
