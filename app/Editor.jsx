@@ -11,6 +11,40 @@ import {toast} from "../components/Toast.jsx";
 import {LoadingBar} from "./LoadingBar.jsx";
 import {languageOf, languageName} from "./shared.js";
 
+// The site of the runtime page (runtime/frame/), whose iframe runs notebooks
+// apart from this page: their code can't reach the user's sign-in, and an
+// infinite loop freezes only the frame. Without one (e.g. in development
+// unless it's set), notebooks run in this page.
+const RUNTIME_ORIGIN =
+  process.env.NEXT_PUBLIC_RUNTIME_ORIGIN ||
+  (process.env.NODE_ENV === "production" ? "https://recho-runtime.vercel.app" : null);
+
+// Code kept while it doesn't respond. The browser can't give the page a new
+// frame until the tab is closed (see ../editor/remoteRuntime.js), so the code
+// is kept for when the notebook is opened again. By page and editor.
+function stashKey(id, initialCode) {
+  let hash = 0;
+  for (let i = 0; i < (initialCode ?? "").length; i++) hash = (Math.imul(31, hash) + initialCode.charCodeAt(i)) | 0;
+  return `recho:stuck:${window.location.pathname}:${id ?? hash}`;
+}
+
+function readStash(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStash(key, code) {
+  try {
+    if (code === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, code);
+  } catch {
+    // Without storage, the notebook opens with the code as it was loaded.
+  }
+}
+
 // How the loading indicator names the languages that load on demand.
 
 function debounce(fn, delay = 0) {
@@ -21,15 +55,24 @@ function debounce(fn, delay = 0) {
   };
 }
 
-const onDefaultError = debounce(() => {
-  toast("Something unexpected happened. Please check the console for details.", {error: true});
+const onDefaultError = debounce((error) => {
+  // The runtime failing to start says what to do.
+  const message =
+    error?.code === "RECHO_RUNTIME_LOAD"
+      ? error.message
+      : "Something unexpected happened. Please check the console for details.";
+  toast(message, {error: true});
 }, 0);
 
 export function Editor({
+  // Which notebook this is, to keep its code while it doesn't respond; by
+  // default, its code identifies it.
+  id = null,
   initialCode,
   runtime = "javascript",
   onUserInput = () => {},
   onBeforeEachRun = () => {},
+  onHang = () => {},
   autoRun = true,
   fileName = null,
   pinToolbar = true,
@@ -43,6 +86,8 @@ export function Editor({
   const [loadAttempt, setLoadAttempt] = useState(0);
   // Whether the language is taking long to compile the code.
   const [compiling, setCompiling] = useState(false);
+  // Whether the code has stopped responding (it runs in a frame).
+  const [hung, setHung] = useState(false);
   // For a language that loads on demand: the parts it loads (e.g. compiler,
   // syntax highlighting) and those still loading.
   const [loading, setLoading] = useState({parts: [], remaining: []});
@@ -55,10 +100,37 @@ export function Editor({
     setNeedRerun(true);
   };
 
+  // Where the code is kept while it doesn't respond. Code kept from before
+  // is dropped once it runs or is edited (not when it's read, so that it
+  // survives the editor being created twice).
+  const stash = useRef(null);
+  const hungRef = useRef(false);
+  const clearStash = () => !hungRef.current && stash.current && writeStash(stash.current, null);
+
   const onRunCellRef = useRef(null);
   onRunCellRef.current = () => {
+    clearStash();
     onBeforeEachRun();
     setNeedRerun(false);
+  };
+
+  const onStatusRef = useRef(null);
+  onStatusRef.current = (status) => {
+    if (typeof status.compiling === "boolean") setCompiling(status.compiling);
+    if (typeof status.hung === "boolean" && status.hung !== hungRef.current) {
+      hungRef.current = status.hung;
+      setHung(status.hung);
+      if (status.hung) {
+        if (editorRef.current) writeStash(stash.current, editorRef.current.getCode());
+        toast("This notebook stopped responding. Close this tab, then open the notebook again; your code is kept.", {
+          error: true,
+          duration: 15000,
+        });
+        onHang();
+      } else {
+        clearStash();
+      }
+    }
   };
 
   useEffect(() => {
@@ -83,12 +155,29 @@ export function Editor({
       ([language, languageSupport]) => {
         if (cancelled || !containerRef.current) return;
         containerRef.current.innerHTML = "";
-        editorRef.current = createEditor(containerRef.current, {code: initialCode, onError, language, languageSupport});
-        editorRef.current.on("userInput", (code) => onInputRef.current(code));
-        editorRef.current.on("status", ({compiling}) => !cancelled && setCompiling(compiling));
+        stash.current = stashKey(id, initialCode);
+        const restored = readStash(stash.current);
+        editorRef.current = createEditor(containerRef.current, {
+          code: restored ?? initialCode,
+          onError,
+          language,
+          languageSupport,
+          runtimeOrigin: RUNTIME_ORIGIN,
+        });
+        editorRef.current.on("userInput", (code) => {
+          // Edits made while it doesn't respond are kept too.
+          if (hungRef.current) writeStash(stash.current, code);
+          else clearStash();
+          onInputRef.current(code);
+        });
+        editorRef.current.on("status", (status) => !cancelled && onStatusRef.current(status));
         // A block's play button runs the code too.
         editorRef.current.on("run", () => onRunCellRef.current());
-        if (autoRun) onRun();
+        // Code kept from a notebook that stopped responding is shown as
+        // edited, and not run: it may be what stopped responding.
+        if (restored !== null) {
+          if (restored !== initialCode) onInputRef.current(restored);
+        } else if (autoRun) onRun();
       },
       (error) => {
         // E.g. the language's code failed to download, or it's unknown.
@@ -99,6 +188,8 @@ export function Editor({
     return () => {
       cancelled = true;
       setCompiling(false);
+      setHung(false);
+      hungRef.current = false;
       if (editorRef.current) {
         editorRef.current.destroy();
         editorRef.current = null;
@@ -125,6 +216,7 @@ export function Editor({
   function onRun() {
     // Nothing to run until the editor exists (its language may be loading).
     if (!editorRef.current) return;
+    clearStash();
     onBeforeEachRun();
     setNeedRerun(false);
     editorRef.current?.run();
@@ -143,9 +235,10 @@ export function Editor({
 
   const shortcut = useShortcut("S");
   // Edits stop the outputs updating until the next run.
-  const shownStatus = compiling ? "Compiling…" : needRerun ? "Edited" : null;
-  // The dot's colour: busy while compiling, waiting while edits haven't run.
-  const statusState = compiling ? "busy" : needRerun ? "waiting" : null;
+  const shownStatus = hung ? "Not responding" : compiling ? "Compiling…" : needRerun ? "Edited" : null;
+  // The dot's colour: busy while compiling, waiting while edits haven't run
+  // or while the code doesn't respond.
+  const statusState = hung ? "waiting" : compiling ? "busy" : needRerun ? "waiting" : null;
 
   return (
     <div className="editor-frame">
@@ -163,7 +256,13 @@ export function Editor({
           <span className="lbl">Clear</span>
         </Button>
         {shownStatus && (
-          <span key={shownStatus} role="status" className="status swap-in" data-state={statusState ?? undefined}>
+          <span
+            key={shownStatus}
+            role="status"
+            className="status swap-in"
+            data-state={statusState ?? undefined}
+            title={hung ? "Close this tab and open the notebook again; your code is kept" : undefined}
+          >
             {shownStatus}
           </span>
         )}

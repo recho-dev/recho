@@ -5,6 +5,7 @@ import {HighlightStyle, forceParsing, syntaxHighlighting} from "@codemirror/lang
 import {tags as t} from "@lezer/highlight";
 import {indentWithTab} from "@codemirror/commands";
 import {createRuntime} from "../runtime/index.js";
+import {createRuntimeFrame} from "./remoteRuntime.js";
 import {javascript} from "../runtime/languages/javascript.js";
 import {dispatch as d3Dispatch} from "d3-dispatch";
 import {blockIndicator, runButtonGutter} from "./blocks";
@@ -111,9 +112,12 @@ const rechoHighlightStyle = HighlightStyle.define([
  * @param {import("@codemirror/state").Extension[] | ((runtimeRef: {current: any}) => import("@codemirror/state").Extension[])} [options.languageSupport] -
  *   Editor extensions for a language other than JavaScript (see
  *   ./languages/index.js), or a function of the runtime giving them.
+ * @param {string | null} [options.runtimeOrigin] - The site of the runtime
+ *   page (../runtime/frame/), to run the code in an iframe from there (see
+ *   ./remoteRuntime.js). Without it, the code runs in this page.
  */
 export function createEditor(container, options) {
-  const {code, onError, extensions = [], language = javascript, languageSupport = []} = options;
+  const {code, onError, extensions = [], language = javascript, languageSupport = [], runtimeOrigin = null} = options;
   const dispatcher = d3Dispatch("userInput", "status", "run");
   const runtimeRef = {current: null};
   const isJavaScript = language.id === "javascript";
@@ -159,18 +163,29 @@ export function createEditor(container, options) {
   });
 
   const view = new EditorView({state, parent: container});
+  const runtimeFrame = runtimeOrigin ? createRuntimeFrame(runtimeOrigin) : null;
 
   let isStopByMetaKey = false;
 
   function initRuntime() {
-    const runtime = createRuntime(view.state.doc.toString(), {language});
+    const code = view.state.doc.toString();
+    const runtime = runtimeFrame ? runtimeFrame.createRuntime(code, {language}) : createRuntime(code, {language});
     runtimeRef.current = runtime;
     runtime.onChanges(dispatch);
 
-    // Stop the runtime when there is an error.
-    runtime.onError(stop);
+    // Stop the runtime when there is an error. A syntax error shows in the
+    // code; others (e.g. the runtime frame failing to load) are reported.
+    runtime.onError(({error, source} = {}) => {
+      if (runtimeRef.current !== runtime) return;
+      stop();
+      if (error && source !== "split") {
+        console.error(error);
+        onError?.(error);
+      }
+    });
 
-    // E.g. whether the language is taking long to compile.
+    // E.g. whether the language is taking long to compile, or (in a frame)
+    // whether the code has stopped responding.
     runtime.onStatus((status) => dispatcher.call("status", null, status));
 
     window.addEventListener("keydown", onKeyDown);
@@ -180,11 +195,19 @@ export function createEditor(container, options) {
 
   function dispatch({changes, effects}) {
     // Mark this transaction as from runtime so that it will not be filtered out.
-    view.dispatch({
-      changes,
-      effects,
-      annotations: [Transaction.remote.of(true)],
-    });
+    try {
+      view.dispatch({
+        changes,
+        effects,
+        annotations: [Transaction.remote.of(true)],
+      });
+    } catch (error) {
+      // E.g. changes for code that doesn't match the document.
+      stop();
+      console.error(error);
+      onError?.(error);
+      return;
+    }
     // Measure the new lines now rather than at the next frame. Until then the
     // editor lays them out at an estimated height, and output lines are
     // shorter than code lines, so with output changing every frame (e.g. an
@@ -197,7 +220,9 @@ export function createEditor(container, options) {
   function onChange(update) {
     if (update.docChanged) {
       const code = update.state.doc.toString();
-      runtimeRef.current?.setCode(code);
+      // A runtime in a frame already has its own changes.
+      const remote = !update.transactions.some((tr) => tr.docChanged && !tr.annotation(Transaction.remote));
+      runtimeRef.current?.setCode(code, {remote});
       const userEdit = update.transactions.some((tr) => tr.annotation(Transaction.userEvent));
       // Stop updating the outputs when user edit the code.
       // Prevent triggering `run` by generators, which will parse the code immediately.
@@ -303,8 +328,10 @@ export function createEditor(container, options) {
     stop,
     clear,
     on: (event, callback) => dispatcher.on(event, callback),
+    getCode: () => view.state.doc.toString(),
     destroy: () => {
       stop();
+      runtimeFrame?.destroy();
       view.destroy();
     },
   };

@@ -44,6 +44,8 @@
     "app:dev": "next dev",
     "app:build": "next build",
     "app:start": "next start",
+    "runtime:dev": "vite --config runtime/frame/vite.config.js",
+    "runtime:build": "vite build --config runtime/frame/vite.config.js",
     "test": "pnpm test:lint && pnpm test:format && pnpm test:typecheck && pnpm test:js",
     "test:js": "TZ=America/New_York vitest",
     "test:fuzz": "TZ=America/New_York FUZZ_SEEDS=${FUZZ_SEEDS:-60} FUZZ_STEPS=${FUZZ_STEPS:-250} vitest run blocks/update.spec.ts",

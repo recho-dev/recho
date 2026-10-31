@@ -76,3 +76,5 @@ After that, run `npm run test` to generate the snapshot file for this test case,
 ## Website Development
 
 If you want to contribute to the [website](https://recho.dev/notebook), run `npm run app:dev` to open the development server. After finishing development, run `npm run test` to make sure everything works as expected.
+
+On the website, notebooks run in an iframe from another site, the runtime page in [runtime/frame/](/runtime/frame/), so that their code can't reach the user's sign-in and an infinite loop freezes only the frame. In development they run in the page itself, unless you run `npm run runtime:dev` and set `NEXT_PUBLIC_RUNTIME_ORIGIN=http://127.0.0.1:5174` in `.env.local` (a different host than `localhost`, so the browser treats it as another site). In production the runtime page is its own Vercel project: build command `npm run runtime:build`, output directory `runtime/frame/dist`.

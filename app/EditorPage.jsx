@@ -227,6 +227,12 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
     }, 100);
   }
 
+  // Code that stopped responding (in its frame) shouldn't run by itself next
+  // time either, as if it had frozen the page.
+  function onHang() {
+    if (isAdded) markRunning(notebook.id);
+  }
+
   async function onChangeVisibility(visibility) {
     const newNotebook = {...notebook, visibility};
     // Explore lists notebooks by when they were made public.
@@ -338,11 +344,13 @@ export function EditorPage({id: initialId, runtime: initialRuntime}) {
           }
         />
         <Editor
+          id={notebook.id}
           initialCode={initialCode}
           runtime={notebook.runtime}
           key={notebook.id}
           onUserInput={onUserInput}
           onBeforeEachRun={onBeforeEachRun}
+          onHang={onHang}
           autoRun={autoRun}
           fileName={fileNameOf(notebook.title, notebook.runtime)}
         />
