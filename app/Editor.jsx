@@ -86,8 +86,6 @@ export function Editor({
   const [loadAttempt, setLoadAttempt] = useState(0);
   // Whether the language is taking long to compile the code.
   const [compiling, setCompiling] = useState(false);
-  // Whether the code has stopped responding (it runs in a frame).
-  const [hung, setHung] = useState(false);
   // For a language that loads on demand: the parts it loads (e.g. compiler,
   // syntax highlighting) and those still loading.
   const [loading, setLoading] = useState({parts: [], remaining: []});
@@ -100,7 +98,9 @@ export function Editor({
     setNeedRerun(true);
   };
 
-  // Where the code is kept while it doesn't respond. Code kept from before
+  // Where the code is kept while it doesn't respond (it runs in a frame).
+  // Nothing is shown: the user decides what to do, and the kept code opens
+  // without running. Code kept from before
   // is dropped once it runs or is edited (not when it's read, so that it
   // survives the editor being created twice).
   const stash = useRef(null);
@@ -119,16 +119,8 @@ export function Editor({
     if (typeof status.compiling === "boolean") setCompiling(status.compiling);
     if (typeof status.hung === "boolean" && status.hung !== hungRef.current) {
       hungRef.current = status.hung;
-      setHung(status.hung);
       if (status.hung) {
         if (editorRef.current) writeStash(stash.current, editorRef.current.getCode());
-        toast(
-          "This notebook stopped responding. Close this tab, wait a few seconds, then open the notebook again; your code is kept.",
-          {
-            error: true,
-            duration: 15000,
-          },
-        );
         onHang();
       } else {
         clearStash();
@@ -191,7 +183,6 @@ export function Editor({
     return () => {
       cancelled = true;
       setCompiling(false);
-      setHung(false);
       hungRef.current = false;
       if (editorRef.current) {
         editorRef.current.destroy();
@@ -238,10 +229,9 @@ export function Editor({
 
   const shortcut = useShortcut("S");
   // Edits stop the outputs updating until the next run.
-  const shownStatus = hung ? "Not responding" : compiling ? "Compiling…" : needRerun ? "Edited" : null;
-  // The dot's colour: busy while compiling, waiting while edits haven't run
-  // or while the code doesn't respond.
-  const statusState = hung ? "waiting" : compiling ? "busy" : needRerun ? "waiting" : null;
+  const shownStatus = compiling ? "Compiling…" : needRerun ? "Edited" : null;
+  // The dot's colour: busy while compiling, waiting while edits haven't run.
+  const statusState = compiling ? "busy" : needRerun ? "waiting" : null;
 
   return (
     <div className="editor-frame">
@@ -259,15 +249,7 @@ export function Editor({
           <span className="lbl">Clear</span>
         </Button>
         {shownStatus && (
-          <span
-            key={shownStatus}
-            role="status"
-            className="status swap-in"
-            data-state={statusState ?? undefined}
-            title={
-              hung ? "Close this tab, wait a few seconds, then open the notebook again; your code is kept" : undefined
-            }
-          >
+          <span key={shownStatus} role="status" className="status swap-in" data-state={statusState ?? undefined}>
             {shownStatus}
           </span>
         )}

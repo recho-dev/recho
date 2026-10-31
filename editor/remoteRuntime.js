@@ -11,7 +11,8 @@
 //   `{hung: false}` if it starts again. A stuck frame can't be replaced: the
 //   browser often puts a new frame of the same site in the same, stuck
 //   process, even after a reload, until the tab is closed. So the frame
-//   stays, and the editor asks to close the tab (../app/Editor.jsx).
+//   stays; the editor keeps the code and doesn't run it when the notebook is
+//   opened again (../app/Editor.jsx).
 //
 // Messages. The editor sends `{recho: true, seq, type, ...}`, `seq` counting
 // up:
@@ -32,7 +33,7 @@ import {BlockMetadata} from "./blocks/BlockMetadata.ts";
 import {blockMetadataEffect} from "./blocks/effect.ts";
 
 // How long without a heartbeat before the frame counts as not responding.
-const HUNG_AFTER = 2000;
+const HUNG_AFTER = 5000;
 const WATCH_INTERVAL = 500;
 // How long the runtime page may take to load before a run fails.
 const LOAD_TIMEOUT = 15000;
@@ -118,6 +119,7 @@ export function createRuntimeFrame(origin, {container = document.body} = {}) {
   let queued = [];
   let seq = 0;
   let lastBeat = 0;
+  let lastWatch = performance.now();
   let hung = false;
   // The runtime using the frame, if any.
   let current = null;
@@ -187,12 +189,17 @@ export function createRuntimeFrame(origin, {container = document.body} = {}) {
   }
 
   function watch() {
-    // Hidden pages' timers are slowed down, the frame's heartbeat too.
-    if (!online || document.visibilityState !== "visible") {
-      lastBeat = performance.now();
+    const now = performance.now();
+    // This check itself ran late: this page was in the background (its timers
+    // slowed down, the frame's heartbeat too) or busy, so heartbeats may be
+    // waiting to be read. Count from now.
+    const late = now - lastWatch > WATCH_INTERVAL * 2;
+    lastWatch = now;
+    if (!online || late || document.visibilityState !== "visible") {
+      lastBeat = now;
       return;
     }
-    if (performance.now() - lastBeat > HUNG_AFTER) setHung(true);
+    if (now - lastBeat > HUNG_AFTER) setHung(true);
   }
 
   window.addEventListener("message", onMessage);

@@ -165,7 +165,7 @@ describe("createRuntimeFrame", () => {
     runtime.onStatus(onStatus);
     vi.advanceTimersByTime(1000);
     fromFrame({type: "heartbeat"});
-    vi.advanceTimersByTime(1500);
+    vi.advanceTimersByTime(4500);
     expect(runtime.isHung()).toBe(false);
     vi.advanceTimersByTime(1500);
     expect(runtime.isHung()).toBe(true);
@@ -175,10 +175,20 @@ describe("createRuntimeFrame", () => {
     expect(onStatus).toHaveBeenLastCalledWith({hung: false});
   });
 
+  it("doesn't count time this page's own timers were late", () => {
+    const {runtime} = start();
+    // E.g. the tab was in the background: the next check runs 10 seconds late.
+    const now = performance.now.bind(performance);
+    const late = vi.spyOn(performance, "now").mockImplementation(() => now() + 10000);
+    vi.advanceTimersByTime(500);
+    late.mockRestore();
+    expect(runtime.isHung()).toBe(false);
+  });
+
   it("keeps a stuck frame, which a new frame couldn't replace before a reload", () => {
     const {runtime} = start();
     const stuck = iframe();
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(6000);
     expect(runtime.isHung()).toBe(true);
     runtime.destroy();
     expect(stuck.isConnected).toBe(true);
