@@ -1,5 +1,5 @@
 import {EditorView, basicSetup} from "codemirror";
-import {EditorState, Transaction} from "@codemirror/state";
+import {Annotation, EditorState, Transaction} from "@codemirror/state";
 import {keymap} from "@codemirror/view";
 import {HighlightStyle, forceParsing, syntaxHighlighting} from "@codemirror/language";
 import {tags as t} from "@lezer/highlight";
@@ -116,6 +116,10 @@ const rechoHighlightStyle = HighlightStyle.define([
  *   page (../runtime/frame/), to run the code in an iframe from there (see
  *   ./remoteRuntime.js). Without it, the code runs in this page.
  */
+// Marks the runtime's own changes (its output). Inputs' edits are marked
+// `Transaction.remote` too, but they're edits the runtime must hear of.
+const fromRuntime = Annotation.define();
+
 export function createEditor(container, options) {
   const {code, onError, extensions = [], language = javascript, languageSupport = [], runtimeOrigin = null} = options;
   const dispatcher = d3Dispatch("userInput", "status", "run");
@@ -199,7 +203,7 @@ export function createEditor(container, options) {
       view.dispatch({
         changes,
         effects,
-        annotations: [Transaction.remote.of(true)],
+        annotations: [Transaction.remote.of(true), fromRuntime.of(true)],
       });
     } catch (error) {
       // E.g. changes for code that doesn't match the document.
@@ -221,7 +225,7 @@ export function createEditor(container, options) {
     if (update.docChanged) {
       const code = update.state.doc.toString();
       // A runtime in a frame already has its own changes.
-      const remote = !update.transactions.some((tr) => tr.docChanged && !tr.annotation(Transaction.remote));
+      const remote = !update.transactions.some((tr) => tr.docChanged && !tr.annotation(fromRuntime));
       runtimeRef.current?.setCode(code, {remote});
       const userEdit = update.transactions.some((tr) => tr.annotation(Transaction.userEvent));
       // Stop updating the outputs when user edit the code.
