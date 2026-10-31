@@ -122,10 +122,13 @@ export function Editor({
       setHung(status.hung);
       if (status.hung) {
         if (editorRef.current) writeStash(stash.current, editorRef.current.getCode());
-        toast("This notebook stopped responding. Close this tab, then open the notebook again; your code is kept.", {
-          error: true,
-          duration: 15000,
-        });
+        toast(
+          "This notebook stopped responding. Close this tab, wait a few seconds, then open the notebook again; your code is kept.",
+          {
+            error: true,
+            duration: 15000,
+          },
+        );
         onHang();
       } else {
         clearStash();
@@ -261,7 +264,9 @@ export function Editor({
             role="status"
             className="status swap-in"
             data-state={statusState ?? undefined}
-            title={hung ? "Close this tab and open the notebook again; your code is kept" : undefined}
+            title={
+              hung ? "Close this tab, wait a few seconds, then open the notebook again; your code is kept" : undefined
+            }
           >
             {shownStatus}
           </span>
