@@ -63,12 +63,37 @@ function markOutput($, lines) {
   }
 }
 
+/** Drops the first `skip` characters of a line, across its text nodes. */
+function cropColumn(line, skip) {
+  const texts = [];
+  const walk = (node) => {
+    for (const child of node.children ?? []) {
+      if (child.type === "text") texts.push(child);
+      else walk(child);
+    }
+  };
+  walk(line);
+  let left = skip;
+  for (const node of texts) {
+    if (left <= 0) break;
+    const text = node.data ?? "";
+    if (text.length <= left) {
+      left -= text.length;
+      node.data = "";
+    } else {
+      node.data = text.slice(left);
+      left = 0;
+    }
+  }
+}
+
 /**
  * The part of Shiki's HTML that a thumbnail shows: the lines from
  * `outputStartLine` on, at most `maxLines` of them when given, with their
- * output lines marked.
+ * output lines marked. `outputStartColumn` (1-based) drops the columns before
+ * it, counted on the source line, so a drawing can start in frame.
  */
-export function thumbnailHtml(html, outputStartLine = null, maxLines = Infinity) {
+export function thumbnailHtml(html, outputStartLine = null, maxLines = Infinity, outputStartColumn = null) {
   const $ = load(html, null, false);
   const lines = $("span.line").toArray();
   const start = outputStartLine === null ? 0 : outputStartLine - 1;
@@ -78,5 +103,9 @@ export function thumbnailHtml(html, outputStartLine = null, maxLines = Infinity)
     else shown.push(lines[i]);
   }
   markOutput($, shown);
+  const column = Number(outputStartColumn);
+  if (Number.isInteger(column) && column > 1) {
+    for (const line of shown) cropColumn(line, column - 1);
+  }
   return removeEmptyLines($.html());
 }

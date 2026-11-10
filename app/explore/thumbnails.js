@@ -35,10 +35,9 @@ function mlscriptHighlighter() {
  * Highlights the part of an example a card shows, at build time, so the
  * examples page needs neither Shiki nor any grammar in the browser.
  */
-export async function exampleThumbnail({content, runtime, outputStartLine, snap}) {
-  if (snap) return null;
+export async function exampleThumbnail({content, runtime, outputStartLine, outputStartColumn}) {
   const lang = highlightLanguage(runtime);
   const html =
     lang === "mlscript" ? (await mlscriptHighlighter())(content) : await codeToHtml(content, {lang, theme: codeTheme});
-  return thumbnailHtml(html, outputStartLine, MAX_THUMBNAIL_LINES);
+  return thumbnailHtml(html, outputStartLine, MAX_THUMBNAIL_LINES, outputStartColumn);
 }

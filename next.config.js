@@ -48,15 +48,13 @@ const nextConfig = {
         destination: "/:path*",
         permanent: true,
       },
-      // Only the pages moved. Snapshot images in public/examples (which have a
-      // file extension) are still served from /examples.
       {
         source: "/examples",
         destination: "/explore",
         permanent: true,
       },
       {
-        source: "/examples/:slug([^.]*)",
+        source: "/examples/:slug",
         destination: "/explore/:slug",
         permanent: true,
       },

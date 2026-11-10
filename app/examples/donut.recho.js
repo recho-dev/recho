@@ -5,7 +5,8 @@
  * @pull_request 133
  * @github pearmini
  * @label ASCII Art
- * @snap donut.snap.png
+ * @thumbnail_start 35
+ * @thumbnail_start_x 30
  * @tui true
  */
 

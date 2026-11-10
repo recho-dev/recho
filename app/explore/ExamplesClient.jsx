@@ -78,7 +78,7 @@ export function ExamplesClient({examples, allLabels}) {
                 subtitle={`${example.author} · ${example.created}`}
                 // With every language shown, each card says which one it is.
                 aside={language === "all" ? languageName(example.runtime) : null}
-                thumbnail={<Thumbnail snap={example.snap} excerpt={example.thumbnail} />}
+                thumbnail={<Thumbnail excerpt={example.thumbnail} />}
               />
             )}
           </li>

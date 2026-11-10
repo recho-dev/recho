@@ -102,8 +102,8 @@ export function getAllJSExamples() {
         slug,
         runtime: format.runtime,
         outputStartLine: meta.thumbnail_start ?? startLine,
+        outputStartColumn: meta.thumbnail_start_x ?? null,
         outputEndLine: endLine,
-        snap: meta.snap ?? null,
       },
     ];
   });
