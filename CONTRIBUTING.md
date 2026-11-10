@@ -23,6 +23,7 @@ The following metadata is required:
 The following metadata is optional:
 
 - **thumbnail_start** - the line number of the start of the thumbnail code
+- **thumbnail_start_x** - the column of the start of the thumbnail code, counted on the source line
 
 Here is an example:
 
@@ -40,8 +41,6 @@ echo("Hello World");
 ```
 
 This is a [pull request](https://github.com/recho-dev/notebook/pull/82) you can refer to.
-
-If you prefer a `snapshot thumbnail`, place an image file named `[NOTEBOOK-NAME].snap.[FORMAT]` in `public/examples/` and add `@snap [NOTEBOOK-NAME].snap.[FORMAT]` to the metadata block at the top of your `.recho.js` file. For example, [sin-wave-radios.recho.js](/app/examples/sin-wave-radios.recho.js) now references [sin-wave-radios.snap.png](./public/examples/sin-wave-radios.snap.png).
 
 ## Editor & Runtime Development
 

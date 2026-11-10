@@ -16,3 +16,12 @@ it("leaves uncoloured output lines as Shiki wrote them", () => {
   const html = thumbnailHtml(shiki("//➜ 42", "echo(42);"));
   expect(html).toContain('<span class="line out first last"><span style="color:#999">//➜ 42</span></span>');
 });
+
+it("starts each line at thumbnail_start_x and keeps the output mark", () => {
+  const line = "//➜                            !####";
+  const html = thumbnailHtml(shiki(line), null, Infinity, 30);
+  const text = html.replace(/<[^>]+>/g, "");
+  expect(text).toContain(line.slice(29));
+  expect(text).not.toContain("//➜");
+  expect(html).toContain('class="line out first last"');
+});

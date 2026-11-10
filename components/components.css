@@ -1523,12 +1523,6 @@
   .card .s-aside {
     flex: none;
   }
-  .card .snap {
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-  }
 
   /* Thumbnail: a cropped code excerpt with no line numbers, faded out at the
      right and bottom. Its colours come from app/codeTheme.js. */

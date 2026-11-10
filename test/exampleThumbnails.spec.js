@@ -42,8 +42,4 @@ describe("example thumbnails", () => {
     const firstShown = example.content.split("\n")[example.outputStartLine - 1].trim();
     expect(html.replace(/<[^>]+>/g, "")).toContain(firstShown.slice(0, 3));
   });
-
-  it("skips examples with a snapshot image", async () => {
-    expect(await exampleThumbnail({...bySlug("addition"), snap: "x.png"})).toBeNull();
-  });
 });
